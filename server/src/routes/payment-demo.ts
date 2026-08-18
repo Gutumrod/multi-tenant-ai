@@ -2,6 +2,18 @@ import crypto from 'node:crypto';
 import type { Request, Response } from 'express';
 import { getConfiguredPaymentCore, getStripeAdapter } from '../lib/payments.js';
 import { PaymentError } from '../../../modules/payment/core/error.js';
+import { createWebhookReceiver } from '../../../modules/webhook-receiver/core/index.js';
+import { StripeWebhookVerifier } from '../../../modules/webhook-receiver/providers/stripe/index.js';
+
+function getWebhookReceiver() {
+  const secret = process.env.STRIPE_WEBHOOK_SECRET;
+  if (!secret) {
+    return null;
+  }
+  return createWebhookReceiver({
+    verifier: new StripeWebhookVerifier({ secret }),
+  });
+}
 
 export const demoChargeHandler = async (
   req: Request,
@@ -95,26 +107,36 @@ export const paymentWebhookHandler = async (
     return;
   }
 
-  let rawPayload: unknown = req.body;
+  const receiver = getWebhookReceiver();
+  if (!receiver) {
+    res.status(503).json({
+      error:
+        'Stripe webhook secret not configured on this server instance (set STRIPE_WEBHOOK_SECRET)',
+    });
+    return;
+  }
 
-  if (Buffer.isBuffer(rawPayload)) {
-    try {
-      rawPayload = JSON.parse(rawPayload.toString('utf-8'));
-    } catch {
-      res.status(400).json({ error: 'Invalid JSON body in webhook payload' });
-      return;
-    }
-  } else if (typeof rawPayload === 'string') {
-    try {
-      rawPayload = JSON.parse(rawPayload);
-    } catch {
-      res.status(400).json({ error: 'Invalid JSON body in webhook payload' });
-      return;
-    }
+  const rawBody = Buffer.isBuffer(req.body)
+    ? req.body.toString('utf-8')
+    : typeof req.body === 'string'
+      ? req.body
+      : '';
+
+  const result = await receiver.verify({
+    rawBody,
+    headers: req.headers,
+  });
+
+  if (!result.valid) {
+    res.status(401).json({
+      error: result.error?.message || 'Webhook signature verification failed',
+      code: result.error?.code,
+    });
+    return;
   }
 
   try {
-    const parseResult = stripeAdapter.parsePaymentEvent(rawPayload);
+    const parseResult = stripeAdapter.parsePaymentEvent(result.payload);
     if (!parseResult.success) {
       res.status(400).json({
         error: parseResult.error?.message || 'Failed to parse webhook event',
@@ -129,3 +151,4 @@ export const paymentWebhookHandler = async (
     res.status(400).json({ error: message });
   }
 };
+
