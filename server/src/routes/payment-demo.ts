@@ -1,9 +1,26 @@
 import crypto from 'node:crypto';
 import type { Request, Response } from 'express';
 import { getConfiguredPaymentCore, getStripeAdapter } from '../lib/payments.js';
+import { subscriptionCore } from '../lib/subscriptions.js';
 import { PaymentError } from '../../../modules/payment/core/error.js';
 import { createWebhookReceiver } from '../../../modules/webhook-receiver/core/index.js';
+import type { IdempotencyStore } from '../../../modules/webhook-receiver/core/types.js';
 import { StripeWebhookVerifier } from '../../../modules/webhook-receiver/providers/stripe/index.js';
+import type { SubscriptionBillingEvent } from '../../../modules/subscription/core/types.js';
+
+// In-memory idempotency store: dedupes replayed webhook events by event id so a
+// verified event is applied to subscription state at most once. (Persistent
+// store would be required for multi-instance deployments.)
+const processedEvents = new Set<string>();
+
+const idempotencyStore: IdempotencyStore = {
+  async has(key: string): Promise<boolean> {
+    return processedEvents.has(key);
+  },
+  async set(key: string): Promise<void> {
+    processedEvents.add(key);
+  },
+};
 
 function getWebhookReceiver() {
   const secret = process.env.STRIPE_WEBHOOK_SECRET;
@@ -12,7 +29,62 @@ function getWebhookReceiver() {
   }
   return createWebhookReceiver({
     verifier: new StripeWebhookVerifier({ secret }),
+    idempotencyStore,
   });
+}
+
+// Map a verified Stripe webhook event into a SubscriptionBillingEvent and apply
+// it to subscription state. accountId comes from the tenant-scoped metadata set
+// on the Stripe checkout/customer object (client_reference_id or metadata).
+function mapStripeEventToBilling(payload: unknown): SubscriptionBillingEvent | null {
+  if (!payload || typeof payload !== 'object') return null;
+  const event = payload as Record<string, any>;
+  const type: string = event.type || '';
+  const obj: Record<string, any> = event.data?.object || {};
+
+  const accountId: string | undefined =
+    obj.metadata?.account_id ||
+    obj.metadata?.tenantId ||
+    event.client_reference_id ||
+    obj.client_reference_id ||
+    obj.metadata?.shop_id;
+
+  if (!accountId) return null;
+
+  let eventType: SubscriptionBillingEvent['eventType'] | null = null;
+  switch (type) {
+    case 'customer.subscription.created':
+    case 'checkout.session.completed':
+      eventType = 'subscription.started';
+      break;
+    case 'invoice.paid':
+      eventType = 'subscription.renewed';
+      break;
+    case 'invoice.payment_failed':
+      eventType = 'subscription.payment_failed';
+      break;
+    case 'customer.subscription.deleted':
+      eventType = 'subscription.cancelled';
+      break;
+    case 'customer.subscription.updated':
+      eventType = 'subscription.renewed';
+      break;
+    default:
+      return null;
+  }
+
+  const currentPeriodEnd = obj.current_period_end
+    ? new Date(obj.current_period_end * 1000)
+    : undefined;
+
+  return {
+    eventType,
+    accountId,
+    planId: obj.plan?.id,
+    currentPeriodEnd,
+    eventId: event.id,
+    rawEvent: payload,
+  };
 }
 
 export const demoChargeHandler = async (
@@ -128,6 +200,15 @@ export const paymentWebhookHandler = async (
   });
 
   if (!result.valid) {
+    // A replayed event (same event id already processed) is NOT a signature
+    // failure. Stripe expects a 2xx for duplicates ("received, stop resending");
+    // returning 401 would make Stripe retry forever and eventually auto-disable
+    // the endpoint. We still do NOT re-apply the event (idempotency store
+    // already deduped it) — only the status code differs.
+    if (result.error?.code === 'WEBHOOK_REPLAY_DETECTED') {
+      res.status(200).json({ received: true, duplicate: true });
+      return;
+    }
     res.status(401).json({
       error: result.error?.message || 'Webhook signature verification failed',
       code: result.error?.code,
@@ -143,6 +224,14 @@ export const paymentWebhookHandler = async (
         code: parseResult.error?.code,
       });
       return;
+    }
+
+    // Apply the verified, mapped event to subscription state. This is the step
+    // that was previously missing: a verified webhook event now actually moves
+    // the subscription (trial -> paid, cancellation, etc.) via handleBillingEvent.
+    const billingEvent = mapStripeEventToBilling(result.payload);
+    if (billingEvent) {
+      await subscriptionCore.handleBillingEvent(billingEvent);
     }
 
     res.status(200).json({ received: true });

@@ -14,21 +14,22 @@ import {
 export function createApp(): express.Express {
   const app = express();
 
+  // Stripe webhook endpoint must mount BEFORE the global express.json() so the
+  // scoped express.raw() below can receive the raw request buffer for signature
+  // verification. If json() runs first it consumes/parses the body and rawBody
+  // is empty, breaking HMAC verification.
+  app.post(
+    '/payment/webhook',
+    express.raw({ type: 'application/json' }),
+    paymentWebhookHandler
+  );
+
   app.use(express.json());
 
   // Health check endpoint (public, does not require tenant context)
   app.get('/health', (_req, res) => {
     res.json({ ok: true });
   });
-
-  // Stripe webhook endpoint (public / not tenant-gated, Stripe sends raw payloads without tenant headers)
-  // Note: In production, Stripe signature verification requires access to the raw request buffer.
-  // We mount express.raw middleware scoped specifically to this route.
-  app.post(
-    '/payment/webhook',
-    express.raw({ type: 'application/json' }),
-    paymentWebhookHandler
-  );
 
   // Apply tenant middleware to all subsequent routes
   app.use(tenantMiddleware);
