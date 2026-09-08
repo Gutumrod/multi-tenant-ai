@@ -1,6 +1,6 @@
 # Multi-Tenant AI Starter Kit — Reference Server
 
-A standalone Express reference server demonstrating how all **6 Multi-Tenant AI Starter Kit modules** integrate and compose together into an end-to-end multi-tenant backend architecture.
+A standalone Express reference server demonstrating how all **7 Multi-Tenant AI Starter Kit modules** integrate and compose together into an end-to-end multi-tenant backend architecture.
 
 > **Note:** This server is **reference / example code** intended to prove that the modules compose cleanly with zero runtime overhead. It uses in-memory mock repositories and stubbed configurations. A starter-kit buyer would replace mock adapters with their production infrastructure (real database, real auth UI/frontend, secret management, telemetry collectors, and deployment pipelines).
 
@@ -8,7 +8,7 @@ A standalone Express reference server demonstrating how all **6 Multi-Tenant AI 
 
 ## Demonstrated Modules
 
-The reference server wires together all 6 starter kit modules:
+The reference server wires together all 7 starter kit modules:
 
 1. **`tenant-context`** — Resolves and validates tenant identity (`x-tenant-id` header) into a typed, immutable `TenantContext` attached to each request.
 2. **`auth-supabase`** — Authenticates users and checks role-based access control (RBAC) via Supabase JWT tokens (`Authorization: Bearer <token>`).
@@ -16,6 +16,7 @@ The reference server wires together all 6 starter kit modules:
 4. **`enterprise-features`** — Resiliency via `CircuitBreaker` (fail-fast on cascading provider outages) and distributed execution observability via `MemoryTracer` / span tracking.
 5. **`subscription`** — Tiered subscription plans (`free`, `pro`), entitlement evaluation, and quota limits (`ai_requests_per_month`).
 6. **`payment`** — Stripe billing integration handling charge creation with idempotency keys and incoming webhook event parsing.
+7. **`webhook-receiver`** — Provider-agnostic cryptographic webhook verification (Web Crypto only, no `node:crypto`). Wires `/payment/webhook` using `StripeWebhookVerifier` + `createWebhookReceiver` + `handleBillingEvent`. Runs on Cloudflare Workers, Deno, Bun, and Node.js 20+. Line and GitHub providers are contract placeholders (return `WEBHOOK_UNKNOWN_PROVIDER`; not implemented).
 
 ---
 
