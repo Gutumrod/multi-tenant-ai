@@ -530,7 +530,7 @@ The following features are **explicitly out of scope** for v0.1.0 of the Supabas
 
 A Stage 4 Reviewer MUST verify all of the following criteria before approving the module:
 
-1. [ ] **File Location:** Deliverable exists at `D:\AI-Workspace\projects\modules-hub\modules\auth-supabase\DESIGN.md`.
+1. [ ] **File Location:** Deliverable exists at `modules/auth-supabase/DESIGN.md` (repo-relative path, in the buyer package).
 2. [ ] **Runtime Independence:** Core code has zero `process.env` calls and zero `node:*` imports.
 3. [ ] **Supabase Decoupling:** Uses `SupabaseAuthClient` structural interface without mandatory heavy dependency on `@supabase/supabase-js`.
 4. [ ] **Public API Completeness:** Exports all 5 required functions (`getCurrentUser`, `requireUser`, `requireRole`, `requirePermission`, `requireTenantMembership`).
