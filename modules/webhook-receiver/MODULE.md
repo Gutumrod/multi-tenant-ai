@@ -186,13 +186,13 @@ const verifier = new GenericHmacVerifier({
 | `eventIdPath` | no | — | Dot-notation JSON path to extract the event ID from the parsed payload (e.g. `'id'`, `'event.id'`) |
 | `eventTypePath` | no | — | Dot-notation JSON path to extract the event type from the parsed payload (e.g. `'type'`, `'event.name'`) |
 
-### Contract placeholders (not yet implemented)
+### Provider status
 
-`providers/line/`, `providers/stripe/`, and `providers/github/` are included as contract
-stubs. Calling `receiver.verify(request, 'line' | 'stripe' | 'github')` currently returns
-`WEBHOOK_UNKNOWN_PROVIDER` with message "not yet implemented". Implement these by creating
-a file in `providers/<name>/` that exports a class or factory implementing `WebhookVerifier`
-— no changes to `core/` are required.
+`providers/stripe/` contains a working `StripeWebhookVerifier` that verifies Stripe's
+`stripe-signature` HMAC-SHA256 signature, enforces timestamp tolerance, and returns the
+verified event id/type/payload. `providers/line/` and `providers/github/` remain explicit
+contract placeholders and return `WEBHOOK_UNKNOWN_PROVIDER`. New providers can be added
+under `providers/<name>/` by implementing `WebhookVerifier` without modifying `core/`.
 
 ## Error codes
 

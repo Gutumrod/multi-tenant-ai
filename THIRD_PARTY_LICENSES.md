@@ -19,8 +19,9 @@ All seven modules — `tenant-context`, `ai-provider`, `subscription`, `payment`
 
 | Package | Version | License | Module dev dep? | Bundled into sold source? |
 |---------|---------|---------|-----------------|--------------------------|
-| `typescript` | `5.6.3` (pinned in modules) | Apache-2.0 | Yes (all modules) | No — tooling only |
-| `vitest` | `2.1.4` (pinned in modules) | MIT | Yes (all modules) | No — test tooling only |
+| `typescript` | `5.9.3` (pinned in modules) | Apache-2.0 | Yes (all modules) | No — tooling only |
+| `vitest` | `3.2.7` (pinned in modules) | MIT | Yes (all modules) | No — test tooling only |
+| `vite` | `6.4.3` (root dev dependency; deduped for Vitest) | MIT | Test-tool dependency | No — tooling only |
 
 ---
 
@@ -30,24 +31,24 @@ All seven modules — `tenant-context`, `ai-provider`, `subscription`, `payment`
 
 | Package | Version Range | License | Notes |
 |---------|---------------|---------|-------|
-| `express` | `^4.19.2` | MIT | HTTP server framework. MIT license; permissive. |
-| `@supabase/supabase-js` | `^2.45.4` | MIT / Apache-2.0 (dual) | Supabase JS client. The package is dual-licensed; verify the current published SPDX identifier in the package's `package.json` at the version resolved by the buyer's `npm install`. |
+| `express` | `5.2.1` | MIT | HTTP server framework; exact version locked by the root workspace lockfile. |
+| `@supabase/supabase-js` | `2.112.3` | MIT | Supabase JS client; exact version locked by the root workspace lockfile. |
 
 ### Dev Dependencies (tooling; NOT bundled into any runtime artifact)
 
 | Package | Version Range | License | Notes |
 |---------|---------------|---------|-------|
-| `typescript` | `^5.6.3` | Apache-2.0 | TypeScript compiler. Used for type-checking only. |
-| `tsx` | `^4.19.0` | MIT | TypeScript execute — used for `npm run dev` / `npm run start`. Present in the server runtime environment when the buyer runs `tsx`; not a compiled artifact. |
-| `vitest` | `^2.1.4` | MIT | Test runner. Used for `npm run test` only. |
-| `@types/express` | `^4.17.21` | MIT | TypeScript type definitions for Express. Dev only. |
-| `@types/node` | `^20.14.0` | MIT | TypeScript type definitions for Node.js. Dev only. |
+| `typescript` | `5.9.3` | Apache-2.0 | TypeScript compiler. Used for type-checking only. |
+| `tsx` | `4.23.12` | MIT | TypeScript execute — used for `npm run dev` / `npm run start`. |
+| `vitest` | `3.2.7` | MIT | Test runner. Used for `npm run test` only. |
+| `@types/express` | `5.0.6` | MIT | TypeScript type definitions for Express. Dev only. |
+| `@types/node` | `20.19.43` | MIT | TypeScript type definitions for Node.js. Dev only. |
 
 ---
 
 ## Notes on `@supabase/supabase-js` Licensing
 
-The `@supabase/supabase-js` package has historically been distributed under a dual MIT/Apache-2.0 license. Buyers should verify the SPDX license identifier in the specific resolved version's `package.json` before production use and distribution. Both MIT and Apache-2.0 are permissive open-source licenses that permit commercial use.
+The currently locked `@supabase/supabase-js` `2.112.3` package metadata declares the MIT license. Re-verify package metadata and required notices when preparing the final immutable release artifact.
 
 ---
 

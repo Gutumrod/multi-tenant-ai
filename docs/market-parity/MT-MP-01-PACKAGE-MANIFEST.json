@@ -1,0 +1,92 @@
+{
+  "schemaVersion": 1,
+  "product": "MT01",
+  "workspaceName": "multi-tenant-ai-starter-kit",
+  "workspaceVersion": "0.1.0",
+  "baseCommit": "a98acc121070f53320a0c2d04622a22fb2df6f4b",
+  "installContract": {
+    "workspaceRoot": ".",
+    "command": "npm ci",
+    "lockfile": "package-lock.json"
+  },
+  "toolchain": {
+    "node": ">=20",
+    "npm": ">=10",
+    "typescript": "5.9.3",
+    "vitest": "3.2.7",
+    "vite": "6.4.3",
+    "moduleDevDependencies": {
+      "typescript": "5.9.3",
+      "vitest": "3.2.7"
+    }
+  },
+  "modulePackages": [
+    {
+      "directory": "modules/tenant-context",
+      "packageName": "@module-hub/tenant-context",
+      "version": "0.2.0",
+      "private": true
+    },
+    {
+      "directory": "modules/ai-provider",
+      "packageName": "@module-hub/ai-provider",
+      "version": "0.2.0",
+      "private": true
+    },
+    {
+      "directory": "modules/subscription",
+      "packageName": "@module-hub/subscription",
+      "version": "0.1.0",
+      "private": true
+    },
+    {
+      "directory": "modules/payment",
+      "packageName": "@module-hub/payment",
+      "version": "0.1.0",
+      "private": true
+    },
+    {
+      "directory": "modules/auth-supabase",
+      "packageName": "@module-hub/auth-supabase",
+      "version": "0.1.0",
+      "private": true
+    },
+    {
+      "directory": "modules/enterprise-features",
+      "packageName": "@module-hub/enterprise-features",
+      "version": "0.3.0",
+      "private": true
+    },
+    {
+      "directory": "modules/webhook-receiver",
+      "packageName": "@module-hub/webhook-receiver",
+      "version": "0.1.0",
+      "private": true
+    }
+  ],
+  "referenceServer": {
+    "directory": "server",
+    "packageName": "multi-tenant-ai-server",
+    "version": "0.1.0",
+    "private": true,
+    "node": ">=20",
+    "runtimeDependencies": {
+      "@supabase/supabase-js": "2.112.3",
+      "express": "5.2.1"
+    },
+    "devDependencies": {
+      "@types/express": "5.0.6",
+      "@types/node": "20.19.43",
+      "tsx": "4.23.12",
+      "typescript": "5.9.3",
+      "vitest": "3.2.7"
+    }
+  },
+  "notes": [
+    "Module package names are local private workspace identifiers, not a promise of registry publication.",
+    "The root package-lock.json is the canonical buyer dependency lock."
+  ],
+  "rootDevDependencies": {
+    "vite": "6.4.3"
+  }
+}

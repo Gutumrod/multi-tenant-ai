@@ -1,0 +1,25 @@
+{
+  "name": "multi-tenant-ai-starter-kit",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "MT01 buyer workspace for the Multi-Tenant AI SaaS Starter Kit source distribution.",
+  "engines": {
+    "node": ">=20",
+    "npm": ">=10"
+  },
+  "workspaces": [
+    "modules/*",
+    "server"
+  ],
+  "scripts": {
+    "test": "npm run test --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "build": "npm run typecheck",
+    "lint": "node scripts/verify-buyer-hygiene.mjs && node scripts/verify-package-manifest.mjs",
+    "verify": "npm run typecheck && npm test && npm run build && npm run lint"
+  },
+  "devDependencies": {
+    "vite": "6.4.3"
+  }
+}

@@ -1,7 +1,8 @@
 # Tenant Context Module
 
-**Version:** 0.1.0 (P1)
-**Status:** ✅ Completed
+**Version:** 0.2.0 (P1)
+**Workspace package:** `@module-hub/tenant-context` (private/local; not a registry publication promise)
+**Status:** Implemented module contract; buyer-facing source remains pre-release.
 
 ## Overview
 
@@ -14,13 +15,19 @@
 - **Canonical Protection**: ระบบป้องกัน Metadata ไม่ให้เขียนทับฟิลด์สำคัญ (เช่น `tenantId`)
 - **Explicit Context Passing**: ออกแบบมาเพื่อส่งต่อผ่าน Parameter โดยตรง (Zero Global State) เพื่อความปลอดภัยในสภาพแวดล้อมแบบ Async/Edge
 - **Validation Helpers**: เครื่องมือตรวจสอบความถูกต้องของ Context ที่รับมาจากภายนอก
+- **Dynamic Resolution**: `DynamicTenantResolver` resolves registered tenants from tenant headers, subdomains, or configured custom domains.
 
 ## Installation
 
+MT01 ships this module as source inside the root npm workspace. From the repository root:
+
 ```bash
-# โมดูลนี้เป็น Pure TypeScript ไม่มีการพึ่งพา external dependencies
-npm install @module-hub/tenant-context
+npm ci
+npm run typecheck --workspace=@module-hub/tenant-context
+npm run test --workspace=@module-hub/tenant-context
 ```
+
+The workspace name is local/private and is not a claim that this package is published to npm.
 
 ## Quick Start
 

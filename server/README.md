@@ -27,16 +27,16 @@ The reference server wires together all 7 starter kit modules:
 
 ### Installation & Running
 
+Run from the MT01 repository root so the canonical workspace lock is used:
+
 ```bash
-# Install dependencies
-npm install
-
-# Run the development server in watch mode (defaults to port 3003)
-npm run dev
-
-# Run test suite
-npm run test
+npm ci
+npm run dev --workspace=multi-tenant-ai-server
+npm run test --workspace=multi-tenant-ai-server
+npm run typecheck --workspace=multi-tenant-ai-server
 ```
+
+The root `package-lock.json` is the supported dependency lock. Do not create an independent server lockfile.
 
 ---
 

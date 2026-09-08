@@ -8,6 +8,17 @@ A TypeScript backend blueprint providing seven composable modules for building m
 
 > **This is a source starter kit, not a hosted SaaS product.** Buyers receive the source code and integrate it into their own infrastructure. See [What's Excluded](#whats-excluded) before purchase.
 
+## Quick Start
+
+Requirements: Node.js 20+ and npm 10+.
+
+```bash
+npm ci
+npm run verify
+```
+
+The repository is one npm workspace covering all seven source modules plus the reference server. The root `package-lock.json` is the canonical dependency lock. Workspace package names are private/local identifiers; MT01 does not require access to a WSTERA or Modules Hub package registry.
+
 ---
 
 ## Module Manifest
@@ -78,10 +89,11 @@ See [server/README.md](server/README.md) for routes, configuration, and getting-
 
 ## Pricing and Licensing
 
-> **Target price posture (for Owner review — not final):** USD 149–199 per developer, single-developer license.
+> **Commercial posture locked for V1:** USD 149 one-time per single developer. Legal agreement text remains DRAFT pending Owner/legal review.
 
 - Licenses are sold per individual developer seat. No Team tier in V1.
-- This is a **single purchase** — no subscription, no recurring fee.
+- This is a **single purchase** — no monthly source-code rental or hosted license kill switch.
+- The purchased version remains usable perpetually under the eventual approved commercial-license boundary.
 - See [COMMERCIAL_LICENSE.md](COMMERCIAL_LICENSE.md) for full commercial terms (DRAFT).
 - See [LICENSE.md](LICENSE.md) for the source license (DRAFT).
 - See [EULA.md](EULA.md) for end-user license terms (DRAFT).
@@ -92,7 +104,7 @@ See [server/README.md](server/README.md) for routes, configuration, and getting-
 
 - **Purchased version**: Perpetual use. You may use the version you purchased indefinitely in unlimited commercial projects.
 - **Updates**: 12 months of updates from the date of purchase are included. Updates are delivered as immutable versioned releases.
-- **After 12 months**: No automatic updates. You continue using the purchased version. Additional update periods may be purchased separately if offered.
+- **After 12 months**: No automatic updates. You continue using the purchased version. A future optional Update Pass is planned at a target of USD 69/year, but it is not part of the current V1 purchase contract until separately approved/released.
 - This is **not** a lifetime-updates model.
 
 ---

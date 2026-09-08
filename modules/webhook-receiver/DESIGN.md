@@ -222,13 +222,13 @@ To ensure the core stays independent of provider implementations, verifiers are 
 ```
 WebhookReceiver (Core)
    ├── WebhookVerifier Registry (Map<string, WebhookVerifier>)
-   │      ├── generic-hmac (v0.1)
-   │      ├── line         (v0.x contract placeholder)
-   │      ├── stripe       (v0.x contract placeholder)
-   │      └── github       (v0.x contract placeholder)
+   │      ├── generic-hmac (v0.1 implemented)
+   │      ├── stripe       (v0.1 implemented)
+   │      ├── line         (contract placeholder)
+   │      └── github       (contract placeholder)
 ```
 
-Adding a new provider (e.g. Stripe or LINE) requires creating a file in `providers/<name>/` implementing `WebhookVerifier` without modifying `core/verify.ts`.
+Adding a new provider (for example LINE) requires creating a file in `providers/<name>/` implementing `WebhookVerifier` without modifying `core/verify.ts`.
 
 ---
 
@@ -371,7 +371,7 @@ webhook-receiver/
 │   │   └── hmac.ts       ← Web Crypto HMAC verification logic
 │   ├── line/             ← Contract placeholder for future LINE adapter
 │   │   └── index.ts
-│   ├── stripe/           ← Contract placeholder for future Stripe adapter
+│   ├── stripe/           ← Implemented Stripe signature verifier
 │   │   └── index.ts
 │   └── github/           ← Contract placeholder for future GitHub adapter
 │       └── index.ts

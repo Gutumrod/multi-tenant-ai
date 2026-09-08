@@ -1,31 +1,30 @@
-﻿# Current Status - 2026-09-02
+# Current Status — 2026-09-08
 
-**Product:** Multi-Tenant AI Starter Kit (MT01)
-**Repository branch:** $branch
-**HEAD before documentation pass:** $head
-**Purpose:** current-state overlay only. PRD/architecture contracts and historical evidence keep their own authority.
+**Product:** MT01 / Multi-Tenant AI SaaS Starter Kit
+**Active build branch:** `feature/mt01-market-parity-continuation`
+**Continuation base:** `a98acc121070f53320a0c2d04622a22fb2df6f4b`
+**Program:** MARKET-PARITY BUILD TO TEST-READY
 
-## Verified Current State
-Reference server exists and latest committed work fixed webhook middleware/order, billing-event wiring and replay status. It remains a source-product reference with in-memory/demo boundaries, not a release artifact.
+## Current Gate
 
-## Blockers / Gates
-MT-SR-01 + MT-SR-02 build-to-sell documentation and legal packaging pass began 2026-09-06 at master@92139cf. Seven-module contract locked (including webhook-receiver v0.1.0 as module #7). Draft legal documents (LICENSE.md, COMMERCIAL_LICENSE.md, EULA.md, THIRD_PARTY_LICENSES.md, PROVENANCE.md, SECURITY.md) and root README.md created this pass — all marked DRAFT, pending Owner and legal review before any public distribution or sale listing.
+**MT-MP-01 DEVELOPMENT GATE: PASS.** The repository now has a root npm workspace, one canonical lockfile, an exact package manifest, buyer-hygiene/package-contract verification scripts, and `docs/market-parity/MT-MP-01-PRODUCT-CONTRACT.md`.
 
-Remaining gates before a live product listing:
-- Owner review and legal sign-off on all DRAFT documents
-- Final price point confirmation (target USD 149-199, single-developer, no Team tier V1)
-- Fulfillment platform selection and integration
-- Clean-install proof (buyer environment, no internal dependencies)
-- Final immutable release artifact with regenerated PROVENANCE checksums
+MT-MP-01 reconciled source-proven drift found during clean verification: tenant-context broken tests/imports, ai-provider streaming/version overclaims, webhook Stripe placeholder drift, internal agent/handoff artifacts embedded in buyer source directories, and stale dependency/commercial metadata.
 
-## Next Authorized / Prepared Action
-Owner review of MT-SR-01 / MT-SR-02 DRAFT deliverables in this commit. After legal sign-off, proceed to L2: fulfillment and distribution setup. Do not treat the reference server as production-ready.
+## Development Verification
 
-## Portfolio Scheduling
-**DEFERRED TO P5**
+Final MT-MP-01 development verification used a fresh root `npm ci`; all 8 workspaces typechecked, all 22 test files / 239 tests passed, root build/static checks passed, buyer hygiene/package manifest checks passed, `npm audit` reported zero vulnerabilities, and the staged diff passed `git diff --cached --check`.
 
-## Evidence Basis
-master @ 92139cf; BRIEF.md and server/README.md.
+These results are development/package-contract evidence only, not final independent product acceptance.
 
-## Change Rule
-Update this file when branch/gate/runtime reality changes. Do not rewrite historical evidence to make an old result look current.
+## Product State After MT-MP-01
+
+Passing MT-MP-01 does **not** make MT01 TEST-READY or sell-ready. Production-reference persistence, full organization/team/RBAC lifecycle, durable billing/entitlement/reconciliation, buyer-facing reference app, deployment/config path, production observability/security adapters, email/storage adapters, setup hardening, agent-friendly repository work, and final release packaging remain later MT-MP phases.
+
+## Legal / Commercial
+
+V1 direction is USD 149 one-time / single developer, perpetual purchased version, 12 months released updates, no Team tier, with a planned optional USD 69/year Update Pass. Legal/license/refund documents remain DRAFT pending Owner/legal review.
+
+## Hard Stop
+
+Do not begin MT-MP-02, merge to `master`, deploy, publish, integrate WSTERA Billing Profile, or run final independent acceptance until MT-MP-01 has been reported to Owner and the next phase is explicitly authorized.

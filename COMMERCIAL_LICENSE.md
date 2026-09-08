@@ -27,9 +27,9 @@ One license covers one (1) individual developer seat. A developer is an individu
 
 ## Price
 
-**Target posture for Owner review: USD 149 – 199 per developer (one-time purchase)**
+**V1 commercial posture: USD 149 per developer (one-time purchase)**
 
-> This price range is a working target for Owner and market review. It is not final. Final price, currency options, and any promotional pricing require Owner approval before listing.
+> The USD 149 V1 price is the current Owner-approved commercial direction. This document is still DRAFT: jurisdiction, consumer-protection, refund mechanics, fulfillment wording, currency options, and any promotional pricing require final Owner/legal review before listing.
 
 ---
 
@@ -56,7 +56,7 @@ The Licensee may use the version of the Software purchased perpetually — with 
 - Updates are delivered as immutable versioned releases. The Licensor determines the update schedule; no specific update frequency is guaranteed.
 - After 12 months, the Licensee retains and may continue using the last version received. New versions released after the 12-month window are not automatically included.
 - This is **not** a lifetime-updates model. Do not advertise or represent it as such.
-- Additional update periods (if offered) may be purchased at the Licensor's then-current rate.
+- A future optional Update Pass is planned at a target of **USD 69/year**. It is not part of the current binding V1 terms unless separately approved and offered; non-renewal must never disable the purchased version.
 
 ---
 
