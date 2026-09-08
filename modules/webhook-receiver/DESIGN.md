@@ -564,7 +564,7 @@ export default {
 
 ## 14. Acceptance Criteria (Stage 4 Reviewer Checklist)
 
-1. `DESIGN.md` exists at `D:\AI-Workspace\projects\modules-hub\modules\webhook-receiver\DESIGN.md`.
+1. `DESIGN.md` exists at `modules/webhook-receiver/DESIGN.md` (repo-relative path, in the buyer package).
 2. Module public API matches `createWebhookReceiver` and `receiver.verify()` contracts in §2.
 3. Cryptographic operations use Web Crypto API (`crypto.subtle`) with zero `node:*` imports.
 4. Payload size limit guard halts processing BEFORE parsing JSON or performing cryptographic checks when body exceeds `payloadMaxBytes`.
