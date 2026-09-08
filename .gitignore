@@ -9,3 +9,4 @@ coverage/
 .secretary-relay/
 .DS_Store
 Thumbs.db
+supabase/.temp/

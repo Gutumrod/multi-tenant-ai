@@ -84,6 +84,11 @@ export interface IdempotencyStore {
   has(key: string): Promise<boolean>;
   /** Records an eventId in the dedup store with optional TTL. */
   set(key: string, ttlSeconds?: number): Promise<void>;
+  /**
+   * Optional atomic claim. Returns true only for the caller that acquired the key.
+   * Persistent multi-instance stores SHOULD implement this to close has/set races.
+   */
+  claim?(key: string, ttlSeconds?: number): Promise<boolean>;
 }
 
 export interface GenericHmacConfig {

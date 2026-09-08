@@ -469,6 +469,25 @@ describe('runIdempotencyStore', () => {
     await runIdempotencyStore(store, 'evt_ttl', 120);
     expect(await store.has('evt_ttl')).toBe(true);
   });
+
+  it('prefers an atomic claim and detects concurrent-style duplicate claims', async () => {
+    const claimed = new Set<string>();
+    let legacyHasCalls = 0;
+    const store: IdempotencyStore = {
+      async has() { legacyHasCalls += 1; return false; },
+      async set() { throw new Error('legacy set must not run when claim exists'); },
+      async claim(key) {
+        if (claimed.has(key)) return false;
+        claimed.add(key);
+        return true;
+      },
+    };
+
+    expect(await runIdempotencyStore(store, 'evt_atomic')).toBeUndefined();
+    const duplicate = await runIdempotencyStore(store, 'evt_atomic');
+    expect(duplicate?.error?.code).toBe('WEBHOOK_REPLAY_DETECTED');
+    expect(legacyHasCalls).toBe(0);
+  });
 });
 
 // ---------------------------------------------------------------------------

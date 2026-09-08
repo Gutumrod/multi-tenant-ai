@@ -1,6 +1,6 @@
 {
   "name": "@module-hub/webhook-receiver",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "description": "Reusable Webhook Receiver module — receives, verifies, and standardizes inbound webhooks using Web Crypto API. Host injects config, module verifies cryptographically without reading env.",

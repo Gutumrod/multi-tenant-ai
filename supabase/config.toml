@@ -1,0 +1,20 @@
+project_id = "multi-tenant-ai"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "graphql_public", "mt01"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+# mt01_private is intentionally NOT exposed through PostgREST.
+# Hosted Supabase projects must add `mt01` to Project Settings > Data API >
+# Exposed schemas. Keep `mt01_private` unexposed.
+
+[db]
+port = 54322
+major_version = 17
+
+[db.seed]
+enabled = false
+# Demo fixtures are opt-in: supabase/seed/mt_mp_02_demo.sql

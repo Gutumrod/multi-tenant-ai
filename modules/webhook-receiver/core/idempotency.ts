@@ -59,6 +59,17 @@ export async function runIdempotencyStore(
     return undefined;
   }
 
+  if (store.claim) {
+    const claimed = await store.claim(eventId, ttlSeconds);
+    if (!claimed) {
+      return failureResult(
+        'WEBHOOK_REPLAY_DETECTED',
+        'Replay detected: event ID has already been processed'
+      );
+    }
+    return undefined;
+  }
+
   if (await store.has(eventId)) {
     return failureResult(
       'WEBHOOK_REPLAY_DETECTED',

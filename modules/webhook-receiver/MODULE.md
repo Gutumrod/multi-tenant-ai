@@ -1,7 +1,7 @@
 # Webhook Receiver Module
 
-**Version:** 0.1.0 (P0, experimental)
-**Status:** Reusable embedded module — core implemented, docs stage.
+**Version:** 0.2.0 (P1, replay-safety hardening)
+**Status:** Reusable embedded module — core implemented and covered by automated tests.
 
 ## Architecture
 
@@ -58,11 +58,12 @@ pipeline in sequence:
    `WEBHOOK_MISSING_TIMESTAMP`, or `WEBHOOK_INVALID_TIMESTAMP` as appropriate.
 5. **Timestamp window check** — compares the parsed timestamp against `now ± toleranceSeconds`.
    Returns `WEBHOOK_EXPIRED_TIMESTAMP` when outside the window.
-6. **Idempotency & replay protection** — if `config.idempotencyStore` is present, checks
-   whether this event ID has already been processed. Returns `WEBHOOK_REPLAY_DETECTED`
-   on a duplicate.
-7. **Store update & result framing** — marks the event ID as processed in the store and
-   returns `{ valid: true, eventId, eventType, payload }`.
+6. **Idempotency & replay protection** — if `config.idempotencyStore` is present and it
+   implements `claim()`, the pipeline performs one atomic claim. Only the caller that
+   acquires the event ID continues; duplicates return `WEBHOOK_REPLAY_DETECTED`.
+7. **Legacy-store fallback & result framing** — older stores without `claim()` use the
+   backward-compatible `has()` → `set()` path. This path is suitable for single-process
+   stores only; persistent/multi-instance hosts should implement atomic `claim()`.
 
 On any failure the pipeline short-circuits and returns `{ valid: false, error }`.
 
@@ -141,8 +142,13 @@ interface WebhookVerifier {
 interface IdempotencyStore {
   has(key: string): Promise<boolean>;
   set(key: string, ttlSeconds?: number): Promise<void>;
+  claim?(key: string, ttlSeconds?: number): Promise<boolean>;
 }
 ```
+
+`claim()` is optional for backward compatibility, but it is the required production path
+for multi-instance persistence because it must make check-and-record one atomic operation.
+The MT01 Supabase reference adapter implements it with a database uniqueness claim.
 
 ## Provider architecture
 
