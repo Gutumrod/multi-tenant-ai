@@ -1,10 +1,14 @@
 # Supabase Auth Helpers Module — DESIGN.md
 
-**Version:** 0.1.0 (P0, experimental)
+**Version:** 0.1.1 (P0, experimental)
 **Status:** Design (Stage 1 — Architect). This file is the single source of truth for downstream agents (Stage 2 implementer, Stage 3 tester, Stage 4 reviewer).
 **Language / runtime:** TypeScript, ES2022, strict mode, `moduleResolution: Bundler`. Must run on Cloudflare Workers (no `node:*` imports; Web APIs only).
 
 ---
+
+## Metadata extraction contract (v0.1.1)
+
+`extractSupabaseMetadata` returns `{ appMetadata, userMetadata }` as separate objects. User-editable metadata is preserved for non-authorization use, but it cannot overwrite keys from `app_metadata`.
 
 ## 1. Purpose
 
