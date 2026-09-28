@@ -194,6 +194,23 @@ running process, but it is where the setup script and `db-check.mjs` live
 `npm ci` ติดตั้งเวอร์ชันตาม lockfile เป๊ะ ๆ และเป็นตัวเลือกที่ทำซ้ำได้ ส่วน `npm install`
 ก็ใช้ได้ถ้าคุณตั้งใจจะอัปเดต lockfile
 
+**Warning — `npm ci` under `NODE_ENV=production` omits devDependencies.**
+`tsx`, `typescript` and `vitest` are devDependencies, so an install performed in
+production mode produces a tree that **cannot run `npm run start`** (that script
+is `tsx src/index.ts`) and **cannot run `npm run typecheck`** (`tsc --noEmit`).
+Either run this step with `NODE_ENV` unset — the production value matters when you
+**start** the server, at section 3.4, not when you install — or, if you need
+`NODE_ENV=production` in the environment, install with
+`npm ci --include=dev`. The setup script in this section does the latter.
+
+**คำเตือน — `npm ci` ขณะตั้ง `NODE_ENV=production` จะไม่ติดตั้ง devDependencies**
+`tsx`, `typescript` และ `vitest` เป็น devDependencies การติดตั้งในโหมด production
+จึงได้ต้นไม้ที่ **รัน `npm run start` ไม่ได้** (สคริปต์นั้นคือ `tsx src/index.ts`) และ
+**รัน `npm run typecheck` ไม่ได้** (`tsc --noEmit`) ให้รันขั้นนี้โดยไม่ตั้ง `NODE_ENV`
+— ค่า production สำคัญตอน**สตาร์ท**เซิร์ฟเวอร์ที่ข้อ 3.4 ไม่ใช่ตอนติดตั้ง — หรือถ้าจำเป็น
+ต้องมี `NODE_ENV=production` ในสภาพแวดล้อม ให้ติดตั้งด้วย `npm ci --include=dev`
+สคริปต์ตั้งค่าในข้อนี้ใช้วิธีหลัง
+
 **Run this step from inside `server/`.** The command above changes into it first,
 and that is not optional: the manifest and the lockfile live in `server/`, not at
 the top level, so `npm ci` run from the delivered folder's root finds nothing to
@@ -212,7 +229,9 @@ is short and it is the script's own statement of what it does.
 - **What the script does.** Five things in order, then it stops: it checks that
   Node.js 22 or newer and npm are present; it checks the environment (`DATABASE_URL`
   set unless you asked for in-memory mode, `PORT` numeric if set, `DEMO_AUTH` not
-  `true`); it runs `npm ci` here, in `server/`, from the lockfile; it runs the
+  `true`); it runs `npm ci --include=dev` here, in `server/`, from the lockfile
+  (devDependencies included, so the tree can start and typecheck regardless of
+  `NODE_ENV`); it runs the
   project's own `npm run typecheck`; and it runs
   `scripts/house-swarm-7/db-check.mjs` to report whether the database is reachable
   and whether the six migration tables and the two seed plans exist yet.
@@ -538,7 +557,7 @@ own port if you did not use `3003`.
 | # | Command / คำสั่ง | Expected observation / สิ่งที่ต้องเห็น |
 |---|---|---|
 | 1 | `node --version` | `v22.` or higher. / `v22.` ขึ้นไป |
-| 2 | `cd server && npm ci` then `npm run typecheck` | exits 0 and prints no type error. / ออกด้วย 0 และไม่พิมพ์ type error |
+| 2 | `cd server && npm ci` then `npm run typecheck` (do **not** run this with `NODE_ENV=production` set — use `npm ci --include=dev` if you must, or the devDependencies `tsc`/`tsx` will be missing, §3.2) | exits 0 and prints no type error. / ออกด้วย 0 และไม่พิมพ์ type error |
 | 3 | `cd server && npm test` — read §6.1 first: it gives the `DATABASE_URL` prerequisite and a row-leak warning you must not skip | with `DATABASE_URL` **set against a fresh database** it exits 0 with every test file passing: `Test Files 5 passed (5)` and `Tests 51 passed (51)`. With `DATABASE_URL` **unset** it exits 0 with `Test Files 4 passed \| 1 skipped (5)` and `Tests 46 passed \| 5 skipped (51)`. / ออกด้วย 0 โดยไฟล์เทสต์ทั้งหมดผ่าน อ่าน §6.1 ก่อน เพราะมีเงื่อนไข `DATABASE_URL` และคำเตือนเรื่องแถวที่ค้างในฐานข้อมูล |
 | 4 | start with `DATABASE_URL` unset / สตาร์ทโดยไม่ตั้ง `DATABASE_URL` | logs `persistent=false` then `Server listening on port 3003`. / พิมพ์ `persistent=false` แล้ว `Server listening on port 3003` |
 | 5 | `curl -s http://127.0.0.1:3003/health` | `{"ok":true}` / เหมือนกัน |
@@ -682,7 +701,11 @@ code and restart:
 
     git -C . log --oneline -5
     git -C . checkout <PREVIOUS_REVISION>
-    cd server && npm ci && npm run start
+    cd server && npm ci --include=dev && npm run start
+
+(`--include=dev` for the same reason as section 3.2: with `NODE_ENV=production`
+in the environment, a plain `npm ci` omits the devDependencies that `npm run
+start` needs.)
 
 **ย้อนโค้ด ไม่ใช่ย้อนข้อมูล** checkout เรดิสทอรีเวอร์ชันก่อนหน้าแล้วสตาร์ทใหม่
 

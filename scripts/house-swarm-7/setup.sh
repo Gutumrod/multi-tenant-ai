@@ -11,7 +11,8 @@
 #   1. checks Node.js 22 or newer and npm are present;
 #   2. checks the environment, refusing to continue on a missing DATABASE_URL
 #      or on DEMO_AUTH=true;
-#   3. installs the dependencies with the lockfile (npm ci);
+#   3. installs the dependencies with the lockfile (npm ci --include=dev) —
+#      devDependencies included on purpose, see the note at step 3;
 #   4. runs the project's own typecheck;
 #   5. verifies database connectivity and the migration schema (db-check.mjs).
 #
@@ -137,15 +138,24 @@ fi
 
 # ---------------------------------------------------------------------------
 # 3. Install dependencies from the lockfile.
+#
+# --include=dev is NOT optional and it is not a convenience. npm honours
+# NODE_ENV=production and OMITS devDependencies from an install performed in
+# that environment, and this script's own step 2 asks the operator to set
+# NODE_ENV=production. `tsx` (which `npm run start` runs) and `typescript`
+# (which `npm run typecheck` runs) are devDependencies, so an install without
+# them produces a tree that can neither start nor typecheck and this script
+# fails at step 4. The flag restores the full, lockfile-pinned tree in every
+# NODE_ENV; it adds no dependency and changes no locked version.
 # ---------------------------------------------------------------------------
 cd "$SERVER_DIR"
 
 if [ -f package-lock.json ]; then
-  say "installing dependencies: npm ci (using the lockfile)"
-  npm ci --no-audit --no-fund || die "npm ci failed; fix the error above and run this script again"
+  say "installing dependencies: npm ci --include=dev (using the lockfile, devDependencies included)"
+  npm ci --include=dev --no-audit --no-fund || die "npm ci failed; fix the error above and run this script again"
 else
   warn "no package-lock.json found; falling back to npm install"
-  npm install --no-audit --no-fund || die "npm install failed; fix the error above and run this script again"
+  npm install --include=dev --no-audit --no-fund || die "npm install failed; fix the error above and run this script again"
 fi
 
 # ---------------------------------------------------------------------------

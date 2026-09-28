@@ -26,9 +26,16 @@ Five things, in this order, and then it stops:
    `DEMO_AUTH` is **not** `true`. / **ตรวจตัวแปรสภาพแวดล้อม** ตรวจว่า `DATABASE_URL`
    ถูกตั้งไว้ (เว้นแต่คุณขอโหมด in-memory) ว่า `PORT` เป็นตัวเลขถ้าคุณตั้ง และว่า
    `DEMO_AUTH` **ไม่ใช่** `true`
-3. **Installs dependencies.** `npm ci` from the lockfile, which is the
-   reproducible choice. / **ติดตั้ง dependency** ด้วย `npm ci` จาก lockfile ซึ่งเป็น
-   ตัวเลือกที่ทำซ้ำได้
+3. **Installs dependencies.** `npm ci --include=dev` from the lockfile, which is
+   the reproducible choice. **`--include=dev` is there for a reason:** npm omits
+   devDependencies when `NODE_ENV=production`, and `tsx` (`npm run start`) and
+   `typescript` (`npm run typecheck`) are devDependencies. Including them is what
+   lets this script work in the production environment step 2 describes. /
+   **ติดตั้ง dependency** ด้วย `npm ci --include=dev` จาก lockfile ซึ่งเป็นตัวเลือกที่
+   ทำซ้ำได้ **`--include=dev` มีเหตุผล:** npm จะไม่ติดตั้ง devDependencies เมื่อ
+   `NODE_ENV=production` และ `tsx` (`npm run start`) กับ `typescript`
+   (`npm run typecheck`) เป็น devDependencies การรวมมันเข้ามาคือสิ่งที่ทำให้สคริปต์นี้
+   ทำงานได้ในสภาพแวดล้อม production ที่ข้อ 2 อธิบาย
 4. **Runs the project's own typecheck.** `npm run typecheck`, the gate that
    already exists in the project. / **รัน typecheck ของโปรเจกต์เอง**
    `npm run typecheck` ซึ่งเป็น gate ที่โปรเจกต์มีอยู่แล้ว
@@ -100,7 +107,6 @@ the shell that launches it, then run it.
 ### 3.1 Against your own database / กับฐานข้อมูลของคุณเอง
 
     cd <your checkout>
-    export NODE_ENV=production
     export DATABASE_URL='postgres://DB_USER:DB_PASSWORD@DB_HOST:5432/DB_NAME'
     sh scripts/house-swarm-7/setup.sh
 
@@ -110,6 +116,25 @@ with your own values — there is no address in this repository to copy.
 
 `DATABASE_URL` จำเป็นในโหมดนี้ ถ้าไม่มี สคริปต์จะปฏิเสธและ exit ไม่เป็นศูนย์ แทนที่จะ
 ชี้ไปที่อยู่ของตัวเอง ให้แทนทุกส่วนด้วยค่าของคุณเอง — ไม่มีที่อยู่ในเรดิสทอรีนี้ให้คัดลอก
+
+**`NODE_ENV` is deliberately not exported in this example, and this step does not
+need it.** npm honours `NODE_ENV=production` and **omits devDependencies** from an
+install made in that environment, and `tsx`, `typescript` and `vitest` are
+devDependencies — so an install made under `NODE_ENV=production` produces a tree
+that cannot run `npm run start` (it needs `tsx`) or `npm run typecheck` (it needs
+`typescript`). Set `NODE_ENV=production` when you **start** the server — that is
+what makes the `DEMO_AUTH` refusal operate — not before the install. The script
+itself is safe either way: it installs with **`npm ci --include=dev`**, which
+includes devDependencies in every environment.
+
+**ตัวอย่างนี้ไม่ได้ export `NODE_ENV` โดยตั้งใจ และขั้นนี้ไม่ต้องใช้มัน** npm เคารพ
+`NODE_ENV=production` และ**จะไม่ติดตั้ง devDependencies** เมื่อติดตั้งในสภาพแวดล้อมนั้น
+ส่วน `tsx`, `typescript` และ `vitest` เป็น devDependencies การติดตั้งภายใต้
+`NODE_ENV=production` จึงได้ต้นไม้ที่รัน `npm run start` ไม่ได้ (ต้องใช้ `tsx`) และรัน
+`npm run typecheck` ไม่ได้ (ต้องใช้ `typescript`) ให้ตั้ง `NODE_ENV=production` ตอน**สตาร์ท**
+เซิร์ฟเวอร์ ซึ่งเป็นสิ่งที่ทำให้การปฏิเสธ `DEMO_AUTH` ทำงาน ไม่ใช่ก่อนติดตั้ง และตัวสคริปต์
+เองปลอดภัยทั้งสองแบบ เพราะติดตั้งด้วย **`npm ci --include=dev`** ซึ่งรวม devDependencies
+ในทุกสภาพแวดล้อม
 
 ### 3.2 Without a database / ไม่มีฐานข้อมูล
 
@@ -132,14 +157,15 @@ Prints the usage text and exits 0. / พิมพ์ข้อความวิ�
 
 ### 3.4 Running it the second time / รันครั้งที่สอง
 
-Run exactly the same command again. The script is **idempotent**: `npm ci`
-reinstalls the lockfile's versions cleanly, the typecheck reruns, and the
-database check reports the same result or moves from `PENDING` to passed once the
-server has created the schema. Nothing accumulates and nothing is written.
+Run exactly the same command again. The script is **idempotent**: `npm ci
+--include=dev` reinstalls the lockfile's versions cleanly, the typecheck reruns,
+and the database check reports the same result or moves from `PENDING` to passed
+once the server has created the schema. Nothing accumulates and nothing is
+written.
 
-รันคำสั่งเดิมซ้ำได้เลย สคริปต์**รันซ้ำได้**: `npm ci` ติดตั้งเวอร์ชันตาม lockfile ใหม่
-สะอาด typecheck รันใหม่ และการตรวจฐานข้อมูลให้ผลเดิม หรือเปลี่ยนจาก `PENDING` เป็นผ่าน
-เมื่อเซิร์ฟเวอร์สร้างสคีมาแล้ว ไม่มีอะไรสะสมและไม่มีอะไรถูกเขียน
+รันคำสั่งเดิมซ้ำได้เลย สคริปต์**รันซ้ำได้**: `npm ci --include=dev` ติดตั้งเวอร์ชันตาม
+lockfile ใหม่สะอาด typecheck รันใหม่ และการตรวจฐานข้อมูลให้ผลเดิม หรือเปลี่ยนจาก `PENDING`
+เป็นผ่านเมื่อเซิร์ฟเวอร์สร้างสคีมาแล้ว ไม่มีอะไรสะสมและไม่มีอะไรถูกเขียน
 
 ### 3.5 Platforms / แพลตฟอร์ม
 
