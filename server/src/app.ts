@@ -10,6 +10,7 @@ import {
   demoChargeHandler,
   paymentWebhookHandler,
 } from './routes/payment-demo.js';
+import { webhookRateLimitMiddleware } from './lib/rate-limit.js';
 import {
   createDemoAuthMiddleware,
   demoAuthRefusalMessage,
@@ -32,8 +33,20 @@ export function createApp(): express.Express {
   // scoped express.raw() below can receive the raw request buffer for signature
   // verification. If json() runs first it consumes/parses the body and rawBody
   // is empty, breaking HMAC verification.
+  //
+  // ORDERING (H7-FU-RATELIMIT): webhookRateLimitMiddleware runs FIRST, ahead of
+  // express.raw() and the handler, so a flood of requests is refused without
+  // spending CPU on HMAC verification, and without any provider or database
+  // work. The limiter is deliberately not mounted on any other route — the paid
+  // routes are quota-gated elsewhere and keep their existing behaviour.
+  //
+  // The limiter neither reads nor alters the body: express.raw() below is still
+  // the first thing that touches it, so the raw buffer HMAC needs is unchanged.
+  // See server/src/lib/rate-limit.ts for the key choice, the environment
+  // variables and the failure mode.
   app.post(
     '/payment/webhook',
+    webhookRateLimitMiddleware,
     express.raw({ type: 'application/json' }),
     paymentWebhookHandler
   );

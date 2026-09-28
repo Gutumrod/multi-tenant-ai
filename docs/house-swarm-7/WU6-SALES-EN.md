@@ -297,12 +297,24 @@ claim that any of the following exists.
   Supabase Postgres ของคุณเองใช้ได้ เพราะการต่อเป็น PostgreSQL ธรรมดา
   **ชั้น persistence ไม่ใช่ Supabase-backed**: มันคุยกับ PostgreSQL ผ่านไดรเวอร์ pg
   ไม่มีส่วนใดของคิทนี้ที่เคยถูกทดสอบกับโปรเจกต์ Supabase และไม่มีข้อใดในเอกสารนี้อ้างเช่นนั้น
-- **N5 — No rate limiting on `POST /payment/webhook`.** That route is authenticated
-  by webhook signature, not by tenant identity, and it has **no rate limit** and
-  no replay-window defence beyond its idempotency ledger. Do not treat it as
-  hardened. / **N5 — ไม่มี rate limit บน `POST /payment/webhook`** เส้นทางนั้นยืนยัน
-  ด้วยลายเซ็น webhook ไม่ใช่ตัวตน tenant และ **ไม่มี rate limit** และไม่มีการป้องกัน
-  การเล่นซ้ำเกินกว่า ledger กันซ้ำของมัน อย่าถือว่ามันแข็งแรงแล้ว
+- **N5 — The rate limit on `POST /payment/webhook` is in-process only.** That
+  route now HAS a rate limit: the Module Hub `rate-limit` module is vendored at
+  `modules/rate-limit/` and mounted ahead of the signature check, so a flood is
+  refused with **429** `RATE_LIMITED` and a `Retry-After` header without
+  spending CPU on HMAC verification. What it still does **not** do: its counter
+  lives in one process's memory, so a **multi-instance deployment shares no
+  counter** and the effective ceiling multiplies by the number of instances, and
+  one key covers the endpoint rather than the caller, so a burst of legitimate
+  Stripe deliveries is throttled together with an attacker's flood. It remains
+  no substitute for TLS, a supervisor or a shared store. Do not treat it as
+  hardened. / **N5 — rate limit บน `POST /payment/webhook` เป็นแบบในโปรเซสเดียว**
+  เส้นทางนั้น**มี** rate limit แล้ว: โมดูล `rate-limit` จาก Module Hub ถูก vendor
+  ไว้ที่ `modules/rate-limit/` และ mount **ก่อน** การตรวจลายเซ็น คำขอที่ทะลักจึงถูกปฏิเสธ
+  ด้วย **429** `RATE_LIMITED` พร้อม header `Retry-After` โดยไม่เสีย CPU ไปกับการตรวจ HMAC
+  สิ่งที่มันยัง**ไม่**ทำ: ตัวนับอยู่ในหน่วยความจำของโปรเซสเดียว การ deploy **หลายอินสแตนซ์
+  จึงไม่แชร์ตัวนับกัน** เพดานที่แท้จริงจึงคูณตามจำนวนอินสแตนซ์ และใช้คีย์เดียวครอบทั้ง
+  เส้นทางไม่ใช่ต่อผู้เรียก การทะลักของ Stripe ที่ถูกต้องจึงถูกหน่วงไปพร้อมกับของ attacker
+  มันยังแทน TLS, supervisor หรือ shared store ไม่ได้ อย่าถือว่ามันแข็งแรงแล้ว
 - **N6 — No multi-instance deployment proof, and no deployment at all.** No
   deployment has ever been performed anywhere by the authors: the product has been
   run and exercised on a developer machine against a local PostgreSQL only.

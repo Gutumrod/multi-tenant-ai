@@ -279,7 +279,7 @@ place. Nothing reads it. Do not treat it as a configuration file.
 ไฟล์ `server/.env.example` ในเรดิสทอรีนี้เป็น**เอกสารเท่านั้น** มันคือรายการชื่อตัวแปร
 ที่โค้ดอ่าน เก็บไว้ให้เห็นครบในที่เดียว ไม่มีอะไรอ่านมัน อย่าถือว่ามันเป็นไฟล์คอนฟิก
 
-**The complete set of variables the server reads — exactly ten:**
+**The complete set of variables the server reads — exactly thirteen:**
 
 | Variable / ตัวแปร | Required? / ต้องใส่ไหม | Meaning / ความหมาย |
 |---|---|---|
@@ -294,6 +294,8 @@ place. Nothing reads it. Do not treat it as a configuration file.
 | `GEMINI_API_KEY` | optional / ไม่บังคับ | Gemini key, alternative to the above. / คีย์ Gemini ใช้แทนตัวข้างบนได้ |
 | `STRIPE_SECRET_KEY` | optional / ไม่บังคับ | Your own Stripe secret key, for the payment demo route. / คีย์ลับ Stripe ของคุณเอง สำหรับเส้นทาง payment demo |
 | `STRIPE_WEBHOOK_SECRET` | optional / ไม่บังคับ | Your own Stripe webhook signing secret, for verifying incoming webhooks. / signing secret สำหรับ webhook ของ Stripe ของคุณเอง ใช้ยืนยัน webhook ที่เข้ามา |
+| `WEBHOOK_RATE_LIMIT_MAX` | optional / ไม่บังคับ | Rate limit for `POST /payment/webhook`: requests allowed per window. Unit is **requests** (a count, not seconds). Default `60`. A value that is not a positive integer is rejected, clamped to `60`, and warned about — it can never disable the limiter. / rate limit ของ `POST /payment/webhook`: จำนวนคำขอที่อนุญาตต่อหนึ่งหน้าต่าง หน่วยเป็น**จำนวนคำขอ** (ไม่ใช่วินาที) ค่าเริ่มต้น `60` ค่าที่ไม่ใช่จำนวนเต็มบวกจะถูกปฏิเสธ clamp เป็น `60` และมีคำเตือน — ปิด limiter ไม่ได้เด็ดขาด |
+| `WEBHOOK_RATE_LIMIT_WINDOW_MS` | optional / ไม่บังคับ | Length of the rate limit window for `POST /payment/webhook`. Unit is **milliseconds**, not seconds. Default `60000` (60 requests per 60 seconds). See `docs/house-swarm-7/FU-RATELIMIT.md`. / ความยาวหน้าต่างของ rate limit สำหรับ `POST /payment/webhook` หน่วยเป็น**มิลลิวินาที** ไม่ใช่วินาที ค่าเริ่มต้น `60000` (60 คำขอต่อ 60 วินาที) ดู `docs/house-swarm-7/FU-RATELIMIT.md` |
 
 Set them for the process. A POSIX shell does it on the command line, so the value
 exists only in that process and is written to no file:

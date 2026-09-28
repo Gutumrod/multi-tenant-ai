@@ -245,9 +245,18 @@ that any of the following exists.
   real project.** Supabase auth is untested; a buyer's own Supabase Postgres connection
   string works because the connection is plain PostgreSQL; the persistence layer is not
   Supabase-backed and talks to PostgreSQL through the pg driver.
-- **N5 — ไม่มี rate limit บน `POST /payment/webhook`** เส้นทางนั้นยืนยันด้วยลายเซ็น webhook
-  ไม่ใช่ตัวตน tenant และ **ไม่มี rate limit** และไม่มีการป้องกันการเล่นซ้ำเกินกว่า ledger
-  กันซ้ำของมัน อย่าถือว่ามันแข็งแรงแล้ว / **No rate limiting on `POST /payment/webhook`.**
+- **N5 — rate limit บน `POST /payment/webhook` เป็นแบบในโปรเซสเดียว** เส้นทางนั้น
+  **มี** rate limit แล้ว: โมดูล `rate-limit` จาก Module Hub ถูก vendor ไว้ที่
+  `modules/rate-limit/` และ mount **ก่อน** การตรวจลายเซ็น คำขอที่ทะลักจึงถูกปฏิเสธด้วย **429**
+  `RATE_LIMITED` พร้อม header `Retry-After` โดยไม่เสีย CPU ไปกับการตรวจ HMAC สิ่งที่มันยัง**ไม่**ทำ:
+  ตัวนับอยู่ในหน่วยความจำของโปรเซสเดียว การ deploy **หลายอินสแตนซ์จึงไม่แชร์ตัวนับกัน** เพดาน
+  ที่แท้จริงจึงคูณตามจำนวนอินสแตนซ์ และใช้คีย์เดียวครอบทั้งเส้นทางไม่ใช่ต่อผู้เรียก การทะลักของ
+  Stripe ที่ถูกต้องจึงถูกหน่วงไปพร้อมกับของ attacker มันยังแทน TLS, supervisor หรือ shared store
+  ไม่ได้ อย่าถือว่ามันแข็งแรงแล้ว / **The rate limit on `POST /payment/webhook` is in-process
+  only.** That route now HAS a rate limit, mounted ahead of the signature check, so a flood is
+  refused with 429 `RATE_LIMITED` and a `Retry-After` header. It is still single-process: a
+  multi-instance deployment shares no counter, and one key covers the endpoint rather than the
+  caller.
 - **N6 — ไม่มีหลักฐาน deploy หลายอินสแตนซ์ และไม่มีการ deploy เลย** ไม่เคยมีการ deploy
   ที่ใดเลยโดยผู้เขียน: สินค้านี้ถูกรันและทดสอบบนเครื่องนักพัฒนา กับ PostgreSQL ในเครื่อง
   เท่านั้น การรันหลายอินสแตนซ์ยังไม่ถูกทดสอบ และโหมดหน่วยความจำแยกตามโปรเซส
