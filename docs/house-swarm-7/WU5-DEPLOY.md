@@ -558,7 +558,7 @@ own port if you did not use `3003`.
 |---|---|---|
 | 1 | `node --version` | `v22.` or higher. / `v22.` ขึ้นไป |
 | 2 | `cd server && npm ci` then `npm run typecheck` (do **not** run this with `NODE_ENV=production` set — use `npm ci --include=dev` if you must, or the devDependencies `tsc`/`tsx` will be missing, §3.2) | exits 0 and prints no type error. / ออกด้วย 0 และไม่พิมพ์ type error |
-| 3 | `cd server && npm test` — read §6.1 first: it gives the `DATABASE_URL` prerequisite and a row-leak warning you must not skip | with `DATABASE_URL` **set against a fresh database** it exits 0 with every test file passing: `Test Files 5 passed (5)` and `Tests 51 passed (51)`. With `DATABASE_URL` **unset** it exits 0 with `Test Files 4 passed \| 1 skipped (5)` and `Tests 46 passed \| 5 skipped (51)`. / ออกด้วย 0 โดยไฟล์เทสต์ทั้งหมดผ่าน อ่าน §6.1 ก่อน เพราะมีเงื่อนไข `DATABASE_URL` และคำเตือนเรื่องแถวที่ค้างในฐานข้อมูล |
+| 3 | `cd server && npm test` — read §6.1 first: it gives the `DATABASE_URL` prerequisite and states what the suite does to your database | with `DATABASE_URL` **set against a fresh database** it exits 0 with every test file passing: `Test Files 6 passed (6)` and `Tests 58 passed (58)`. With `DATABASE_URL` **unset** it exits 0 with `Test Files 5 passed \| 1 skipped (6)` and `Tests 53 passed \| 5 skipped (58)`. / ออกด้วย 0 โดยไฟล์เทสต์ทั้งหมดผ่าน อ่าน §6.1 ก่อน เพราะมีเงื่อนไข `DATABASE_URL` และระบุว่าชุดเทสต์แตะฐานข้อมูลของคุณอย่างไร |
 | 4 | start with `DATABASE_URL` unset / สตาร์ทโดยไม่ตั้ง `DATABASE_URL` | logs `persistent=false` then `Server listening on port 3003`. / พิมพ์ `persistent=false` แล้ว `Server listening on port 3003` |
 | 5 | `curl -s http://127.0.0.1:3003/health` | `{"ok":true}` / เหมือนกัน |
 | 6 | `curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:3003/` | `200` — the sample UI landing page is served. / `200` — หน้าแรกของ UI ตัวอย่างถูกเสิร์ฟ |
@@ -567,70 +567,86 @@ own port if you did not use `3003`.
 | 9 | `curl -s http://127.0.0.1:3003/ui/plans.json` | `200` with a JSON body containing `free` and `pro` and their entitlements, read from **your** database. / `200` พร้อม JSON ที่มี `free` และ `pro` และ entitlement ของมัน อ่านจากฐานข้อมูล**ของคุณ** |
 | 10 | start with `NODE_ENV=production DEMO_AUTH=true` / สตาร์ทด้วย `NODE_ENV=production DEMO_AUTH=true` | logs a `[demo-auth] REFUSED:` line, and `GET /me` answers `503` with code `DEMO_AUTH_REFUSED_IN_PRODUCTION`. / พิมพ์บรรทัด `[demo-auth] REFUSED:` และ `GET /me` ตอบ `503` พร้อมรหัส `DEMO_AUTH_REFUSED_IN_PRODUCTION` |
 
-### 6.1 `npm test` in detail — the `DATABASE_URL` prerequisite and the rows it leaves behind / รายละเอียดของ `npm test` — เงื่อนไข `DATABASE_URL` และแถวที่มันทิ้งไว้
+### 6.1 `npm test` in detail — the `DATABASE_URL` prerequisite and what the suite does to your database / รายละเอียดของ `npm test` — เงื่อนไข `DATABASE_URL` และสิ่งที่ชุดเทสต์ทำกับฐานข้อมูลของคุณ
 
 **Prerequisite: `DATABASE_URL` changes what you observe.** The first observation
-in checklist item 3 — `Test Files 5 passed (5)` and `Tests 51 passed (51)` — holds
+in checklist item 3 — `Test Files 6 passed (6)` and `Tests 58 passed (58)` — holds
 **only when `DATABASE_URL` is set**. `server/tests/postgres-persistence.test.ts`
 is an integration suite that skips itself when no database is configured. With
 `DATABASE_URL` **unset** the same command still exits 0, but the observed result
-is `Test Files 4 passed | 1 skipped (5)` and `Tests 46 passed | 5 skipped (51)`,
+is `Test Files 5 passed | 1 skipped (6)` and `Tests 53 passed | 5 skipped (58)`,
 and the five skipped tests are that file's. Both results are a pass; they are
 different observations of the same suite, and the condition is the database.
+`server/tests/` holds six test files; with `DATABASE_URL` set all six run.
 
-**เงื่อนไข: `DATABASE_URL` เปลี่ยนสิ่งที่คุณเห็น** ผลแรกในข้อ 3 — `Test Files 5 passed (5)`
-และ `Tests 51 passed (51)` — เกิด**เฉพาะเมื่อตั้ง `DATABASE_URL`** ไฟล์
+**เงื่อนไข: `DATABASE_URL` เปลี่ยนสิ่งที่คุณเห็น** ผลแรกในข้อ 3 — `Test Files 6 passed (6)`
+และ `Tests 58 passed (58)` — เกิด**เฉพาะเมื่อตั้ง `DATABASE_URL`** ไฟล์
 `server/tests/postgres-persistence.test.ts` เป็นชุด integration ที่ข้ามตัวเองเมื่อไม่มี
 ฐานข้อมูล ถ้า**ไม่ตั้ง** `DATABASE_URL` คำสั่งเดิมยังออกด้วย 0 แต่ผลที่เห็นคือ
-`Test Files 4 passed | 1 skipped (5)` และ `Tests 46 passed | 5 skipped (51)` โดยห้าเทสต์
+`Test Files 5 passed | 1 skipped (6)` และ `Tests 53 passed | 5 skipped (58)` โดยห้าเทสต์
 ที่ข้ามคือของไฟล์นั้น ทั้งสองผลถือว่าผ่าน เป็นการสังเกตชุดเดียวกันต่างเงื่อนไข และเงื่อนไขคือฐานข้อมูล
+`server/tests/` มีไฟล์เทสต์หกไฟล์ เมื่อตั้ง `DATABASE_URL` ทั้งหกไฟล์จะรัน
 
-**Warning — with `DATABASE_URL` set, `npm test` writes subscription and ledger rows
-into whatever database is configured, and does not clean them up.** Do **not**
-point these tests at a database you care about: not a production database, not a
-staging database, and not one holding data you want to keep. Run them against a
-scratch database you created for the purpose, and treat that database as
-single-use; if you have no scratch database, run the suite with `DATABASE_URL`
-unset so it stays hermetic. The rows come from two test files, and only one of
-them leaks:
+**What `DATABASE_URL` set means for your database — the rows are cleaned up.**
+With `DATABASE_URL` set, `npm test` writes subscription and ledger rows into
+whatever database is configured, and **it deletes exactly the rows it created
+again before it exits**, so repeated runs against one database leave nothing
+behind. Measured on the author's local test database: three consecutive
+full-suite runs each reported `Test Files 6 passed (6)` and `Tests 58 passed (58)`,
+and the row counts after all three runs were `subscriptions` 0 and
+`billing_event_ledger` 0. Pointing a test suite at a scratch database rather than
+a production one is still the right habit, but this suite is **repeatable**: the
+same database can be used run after run. The rows come from two test files, and
+both of them clean up after themselves:
 
 - `server/tests/postgres-persistence.test.ts` — creates its own rows under one
   account id and deletes them again in its own teardown, so it leaves nothing
   behind.
-- `server/tests/webhook.test.ts` — **this is the one that leaks.** It creates
-  subscriptions through the real subscription core for account ids of the form
-  `acct_apply_<timestamp>` and `acct_replay_<timestamp>`, and posts signed
-  payment events with the fixed ids `evt_apply_1` and `evt_replay_1`. It never
-  deletes anything, so real rows stay in `subscriptions` and
-  `billing_event_ledger` after the suite exits.
+- `server/tests/webhook.test.ts` — creates subscriptions through the real
+  subscription core for account ids of the form `acct_apply_<timestamp>` and
+  `acct_replay_<timestamp>`, and posts signed payment events with the fixed ids
+  `evt_apply_1` and `evt_replay_1`. Its teardown deletes exactly the rows that run
+  created: the subscriptions for the account ids it generated, and the two ledger
+  rows its fixed event ids claimed. No table is truncated, and no row this file
+  did not create is touched.
 
-Observed by the author of this manual, on a local test database: the row counts
-before a full suite run were
-`{"subscriptions":5,"billing_event_ledger":3,"usage_counters":0}` and after it
-were `{"subscriptions":7,"billing_event_ledger":3,"usage_counters":0}` — two
-extra `subscriptions` rows for the `acct_apply_…` and `acct_replay_…` accounts
-that `server/tests/webhook.test.ts` created, and no cleanup.
+**History, so that an older copy does not mislead you.** An earlier version of
+`server/tests/webhook.test.ts` deleted nothing, so a run left real rows in
+`subscriptions` and `billing_event_ledger`, and re-running the suite against the
+same database used to **fail**. The second run reported
+`tests/webhook.test.ts:101 AssertionError: expected 'active' to be 'cancelled'`,
+because the file's two billing-event ids are fixed (`evt_apply_1`,
+`evt_replay_1`) and the ledger's `event_id` is its primary key — a row left from
+an earlier run made the redelivery dedupe, so the subscription never reached
+`cancelled`. That was a defect in the suite; it is fixed. **If you find a
+row-leak warning in another copy of this manual, or in any document written
+before this one, that warning is obsolete.**
 
-**คำเตือน — เมื่อตั้ง `DATABASE_URL` แล้ว `npm test` จะเขียนแถวของ subscription และ
-ledger ลงฐานข้อมูลที่ถูกตั้งไว้ และไม่ลบให้** **อย่า**ชี้เทสต์เหล่านี้ไปที่ฐานข้อมูลที่คุณ
-ไม่อยากเสีย: ไม่ใช่ฐานข้อมูล production ไม่ใช่ staging และไม่ใช่ฐานข้อมูลที่มีข้อมูลที่คุณ
-ต้องการเก็บ ให้รันกับฐานข้อมูลทดสอบที่คุณสร้างขึ้นเพื่อการนี้ และถือว่าฐานข้อมูลนั้นใช้ครั้งเดียว
-ถ้าไม่มีฐานข้อมูลทดสอบ ให้รันชุดเทสต์โดย**ไม่ตั้ง** `DATABASE_URL` เพื่อให้มันเป็น hermetic
-แถวเหล่านั้นมาจากไฟล์เทสต์สองไฟล์ และมีเพียงไฟล์เดียวที่ทิ้งแถวไว้:
+**การตั้ง `DATABASE_URL` หมายถึงอะไรกับฐานข้อมูลของคุณ — แถวถูกลบให้เรียบร้อย**
+เมื่อตั้ง `DATABASE_URL` แล้ว `npm test` จะเขียนแถวของ subscription และ ledger ลงฐานข้อมูล
+ที่ถูกตั้งไว้ และ **มันลบแถวที่ตัวเองสร้างทิ้งก่อนจบ** การรันซ้ำบนฐานข้อมูลเดิมจึงไม่ทิ้งอะไรไว้
+วัดบนฐานข้อมูลทดสอบในเครื่องผู้เขียน: สามรอบรันติดกันรายงาน `Test Files 6 passed (6)` และ
+`Tests 58 passed (58)` ทุกรอบ และจำนวนแถวหลังทั้งสามรอบคือ `subscriptions` 0 และ
+`billing_event_ledger` 0 การชี้ชุดเทสต์ไปที่ฐานข้อมูลทดสอบแทน production ยังเป็นนิสัยที่ถูก
+แต่ชุดเทสต์นี้**รันซ้ำได้**: ใช้ฐานข้อมูลเดิมซ้ำได้ทุกรอบ แถวเหล่านั้นมาจากไฟล์เทสต์สองไฟล์ และ
+ทั้งสองไฟล์เก็บกวาดของตัวเอง:
 
 - `server/tests/postgres-persistence.test.ts` — สร้างแถวของตัวเองใต้ account id เดียว และ
   ลบใน teardown ของตัวเอง จึงไม่ทิ้งอะไรไว้
-- `server/tests/webhook.test.ts` — **ไฟล์นี้คือตัวที่ทิ้งแถวไว้** มันสร้าง subscription
-  ผ่าน core จริงด้วย account id รูปแบบ `acct_apply_<timestamp>` และ
-  `acct_replay_<timestamp>` และส่ง payment event ที่เซ็นแล้วด้วย id คงที่ `evt_apply_1`
-  และ `evt_replay_1` มันไม่ลบอะไรเลย แถวจริงจึงค้างอยู่ใน `subscriptions` และ
-  `billing_event_ledger` หลังชุดเทสต์จบ
+- `server/tests/webhook.test.ts` — สร้าง subscription ผ่าน core จริงด้วย account id รูปแบบ
+  `acct_apply_<timestamp>` และ `acct_replay_<timestamp>` และส่ง payment event ที่เซ็นแล้วด้วย
+  id คงที่ `evt_apply_1` และ `evt_replay_1` teardown ของมันลบเฉพาะแถวที่รอบนั้นสร้าง: แถว
+  subscription ของ account id ที่มันสร้าง และแถว ledger สองแถวที่ event id คงที่ของมันจับจอง
+  ไม่มีการ truncate ตาราง และไม่แตะแถวที่ไฟล์นี้ไม่ได้สร้าง
 
-ผู้เขียนคู่มือนี้เห็นจริงบนฐานข้อมูลทดสอบในเครื่อง: จำนวนแถวก่อนรันชุดเทสต์ทั้งหมดคือ
-`{"subscriptions":5,"billing_event_ledger":3,"usage_counters":0}` และหลังรันคือ
-`{"subscriptions":7,"billing_event_ledger":3,"usage_counters":0}` — เพิ่มมาสองแถวใน
-`subscriptions` สำหรับบัญชี `acct_apply_…` และ `acct_replay_…` ที่
-`server/tests/webhook.test.ts` สร้างขึ้น และไม่มีการลบ
+**ประวัติ เพื่อไม่ให้สำเนาเก่าทำให้คุณเข้าใจผิด** `server/tests/webhook.test.ts` เวอร์ชันก่อน
+**ไม่**ลบอะไรเลย การรันหนึ่งครั้งจึงทิ้งแถวจริงไว้ใน `subscriptions` และ
+`billing_event_ledger` และการรันซ้ำบนฐานข้อมูลเดิม**เคยล้มเหลว** รอบที่สองรายงาน
+`tests/webhook.test.ts:101 AssertionError: expected 'active' to be 'cancelled'` เพราะ id ของ
+billing event สองตัวของไฟล์นี้คงที่ (`evt_apply_1`, `evt_replay_1`) และ `event_id` ของ ledger
+เป็น primary key — แถวที่ค้างจากรอบก่อนทำให้การส่งซ้ำถูก dedupe subscription จึงไม่ถึงสถานะ
+`cancelled` นั่นเป็น defect ของชุดเทสต์ และแก้แล้ว **ถ้าคุณพบคำเตือนเรื่องแถวค้างในคู่มือ
+สำเนาอื่น หรือในเอกสารใดที่เขียนก่อนหน้านี้ คำเตือนนั้นล้าสมัยแล้ว**
 
 ### The routes this server actually registers / เส้นทางที่เซิร์ฟเวอร์นี้ลงทะเบียนจริง
 
@@ -670,13 +686,14 @@ output looks like — they are **not** a claim about your machine or your host.
 
 - `node --version` → `v24.19.0`; `npm --version` → `11.11.1`
 - `npm run typecheck` → exit code 0
-- `npm test` → exit code 0, summary lines `Test Files  5 passed (5)` and
-  `Tests  51 passed (51)` — observed with `DATABASE_URL` set, on the local test
+- `npm test` → exit code 0, summary lines `Test Files  6 passed (6)` and
+  `Tests  58 passed (58)` — observed with `DATABASE_URL` set, on the local test
   database (with `DATABASE_URL` unset the same command gives
-  `4 passed | 1 skipped (5)` and `46 passed | 5 skipped (51)`; see §6.1)
-- `npm test` with `DATABASE_URL` set left two extra `subscriptions` rows behind
-  (`{"subscriptions":5,…}` → `{"subscriptions":7,…}`), created by
-  `server/tests/webhook.test.ts`; see §6.1
+  `5 passed | 1 skipped (6)` and `53 passed | 5 skipped (58)`; see §6.1)
+- `npm test` with `DATABASE_URL` set left **no** rows behind: three consecutive
+  runs against one database each reported `6 passed (6)` / `58 passed (58)`, and
+  the row counts afterwards were `subscriptions` 0 and `billing_event_ledger` 0 —
+  the suite deletes the rows it creates; see §6.1
 - start without `DATABASE_URL` → `persistent=false subscriptions=Object usageCounters=Object`
 - `GET /health` → `{"ok":true}`; `GET /` → HTTP 200; `GET /me` with `x-tenant-id` → HTTP 503
 - start with a database URL → `persistent=true subscriptions=PostgresSubscriptionRepository usageCounters=PostgresUsageCounterRepository`
@@ -693,8 +710,35 @@ preserving; the database does.
 ส่วนฐานข้อมูลมี
 
 **1. Stop the new process.** Stop the process you started, or disable the service
-unit, so nothing is mid-migration while you act. / **หยุดโปรเซสใหม่** หยุดโปรเซสที่คุณ
-เริ่ม หรือปิด service unit เพื่อไม่ให้มีอะไรกำลัง migration ระหว่างที่คุณดำเนินการ
+unit, so nothing is mid-migration while you act. On Windows Git-Bash, where this
+stop command was verified, killing the `npm run start` wrapper is **not** enough —
+the `tsx` child keeps listening on the port, and that was observed four times in
+this work stream (pids 23736, 29192, 24496 and 30144 all outlived their wrapper).
+Find the pid that owns the port and kill **that** one, then prove the port is free:
+
+    netstat -ano | grep :3003
+    cmd.exe /c "taskkill /F /PID <pid>"
+    netstat -ano | grep LISTENING | grep :3003     # prints nothing when the port is free
+
+The first `netstat` lists the socket with the pid that is LISTENING on it; substitute
+that pid for `<pid>`. The last command is the check: when it prints nothing, nothing
+is listening on the port any more. Substitute your own port if you did not use
+`3003`. On a systemd host the equivalent is `systemctl stop <your-unit>`.
+
+/ **หยุดโปรเซสใหม่** หยุดโปรเซสที่คุณเริ่ม หรือปิด service unit เพื่อไม่ให้มีอะไรกำลัง
+migration ระหว่างที่คุณดำเนินการ บน Windows Git-Bash ซึ่งเป็นเชลล์ที่ตรวจคำสั่งหยุดนี้
+การฆ่า wrapper `npm run start` **ไม่พอ** — ลูก `tsx` ยังฟังพอร์ตอยู่ และสังเกตเห็นสี่ครั้ง
+ในสายงานนี้ (pid 23736, 29192, 24496 และ 30144 อยู่รอดเกิน wrapper ทั้งหมด) ให้หา pid
+ที่ถือพอร์ตแล้วฆ่า**ตัวนั้น** แล้วพิสูจน์ว่าพอร์ตว่าง:
+
+    netstat -ano | grep :3003
+    cmd.exe /c "taskkill /F /PID <pid>"
+    netstat -ano | grep LISTENING | grep :3003     # ไม่พิมพ์อะไรเมื่อพอร์ตว่าง
+
+`netstat` ตัวแรกแสดง socket พร้อม pid ที่ LISTENING อยู่ ให้แทน pid นั้นใน `<pid>`
+คำสั่งสุดท้ายคือการตรวจ: เมื่อไม่พิมพ์อะไร แปลว่าไม่มีอะไรฟังพอร์ตนั้นแล้ว ถ้าคุณไม่ได้ใช้
+พอร์ต `3003` ให้เปลี่ยนเป็นพอร์ตของคุณ บนโฮสต์ที่ใช้ systemd คำสั่งเทียบเท่าคือ
+`systemctl stop <unit ของคุณ>`
 
 **2. Roll back the code, not the data.** Check out the previous revision of the
 code and restart:
@@ -713,8 +757,35 @@ start` needs.)
 unavailable — restore the previous folder copy instead.** As stated in section
 3.1, a delivered folder normally carries no `.git` directory, so **`git clone`
 and `git checkout` are unavailable** and the three commands above fail with a git
-error. The rollback that needs no git history is a folder swap, and it is the
+error — verified: in this delivery `git log` and `git checkout` both print
+`fatal: not a git repository (or any of the parent directories): .git` and **exit
+128**. The rollback that needs no git history is a folder swap, and it is the
 recommended path whenever you are unsure the folder is a repository:
+
+**The copy you swap back to must be taken at delivery time, before any change is
+made.** A folder copy named `multi-tenant-ai.previous` **does not ship with this
+delivery** — the delivered folder contains no such folder, so the instruction
+below cannot be executed as written unless you made the copy yourself. Take it
+the moment you receive the delivery and before you run any command that changes
+anything:
+
+    cp -R multi-tenant-ai multi-tenant-ai.previous    # before your first change
+
+**If you did not take that copy**, the folder swap is still available to you and
+is not lost: you can reconstruct the previous state without it. Unpack the
+archive you were given (or copy the delivered folder) **again** to a second
+location, which restores exactly the state the delivery arrived in, and use that
+fresh copy as `multi-tenant-ai.previous`:
+
+    cp -R <THE_DELIVERED_FOLDER> multi-tenant-ai.previous    # the untouched state
+
+That is the same content the copy would have held, because it is the same
+delivery. It cannot recover changes you made *before* the unmodified copy was
+made, which is exactly why the copy belongs at delivery time. If you no longer
+have the archive or the original folder at all, say so plainly: there is no
+source of the previous folder in this delivery, git history is unavailable, and
+the previous state cannot be reconstructed — the fallback then is the current
+tree plus the database, whose schema is untouched by a code rollback (step 3).
 
 1. **Stop the process** (step 1 above) so nothing is mid-migration.
 2. **Keep a copy of the current folder** before you change it, so this rollback
@@ -732,8 +803,30 @@ applies: do not reverse the migrations by dropping tables.
 **ถ้าโฟลเดอร์ส่งมอบไม่ใช่เรดิสทอรี `git checkout` ใช้ไม่ได้ — ให้กู้จากสำเนาโฟลเดอร์
 ก่อนหน้าแทน** ตามที่ระบุในข้อ 3.1 โฟลเดอร์ส่งมอบปกติไม่มีไดเรกทอรี `.git` ดังนั้น
 **`git clone` และ `git checkout` ใช้ไม่ได้** และสามคำสั่งข้างบนจะล้มเหลวด้วยข้อผิดพลาดของ
-git การย้อนกลับที่ไม่ต้องใช้ประวัติ git คือการสลับโฟลเดอร์ และเป็นวิธีที่แนะนำเมื่อคุณไม่แน่ใจ
+git — ตรวจแล้ว: ในงานส่งมอบนี้ `git log` และ `git checkout` พิมพ์
+`fatal: not a git repository (or any of the parent directories): .git` และ **ออกด้วยรหัส
+128** การย้อนกลับที่ไม่ต้องใช้ประวัติ git คือการสลับโฟลเดอร์ และเป็นวิธีที่แนะนำเมื่อคุณไม่แน่ใจ
 ว่าโฟลเดอร์นั้นเป็นเรดิสทอรี
+
+**สำเนาที่จะสลับกลับต้องทำตอนรับงาน ก่อนแก้สิ่งใด** สำเนาโฟลเดอร์ชื่อ
+`multi-tenant-ai.previous` **ไม่ได้แถมมากับงานส่งมอบนี้** โฟลเดอร์ส่งมอบไม่มีโฟลเดอร์นั้น
+คำสั่งด้านล่างจึงรันตามตัวอักษรไม่ได้ เว้นแต่คุณทำสำเนาเอง ให้ทำทันทีที่รับงานและก่อนรัน
+คำสั่งใดที่เปลี่ยนแปลงอะไร:
+
+    cp -R multi-tenant-ai multi-tenant-ai.previous    # ก่อนการแก้ครั้งแรกของคุณ
+
+**ถ้าคุณไม่ได้ทำสำเนานั้นไว้** การสลับโฟลเดอร์ยังทำได้และไม่ได้หายไป: คุณสร้างสภาพก่อนหน้า
+กลับคืนได้โดยไม่ต้องมีสำเนา แตกไฟล์ archive ที่คุณได้รับ (หรือคัดลอกโฟลเดอร์ส่งมอบ) **อีกครั้ง**
+ไปยังตำแหน่งที่สอง ซึ่งคืนสภาพที่งานส่งมอบมาถึงเป๊ะ ๆ แล้วใช้สำเนาใหม่นั้นเป็น
+`multi-tenant-ai.previous`:
+
+    cp -R <โฟลเดอร์ส่งมอบของคุณ> multi-tenant-ai.previous    # สภาพที่ยังไม่ถูกแตะ
+
+นั่นคือเนื้อหาเดียวกับที่สำเนาจะมี เพราะเป็นงานส่งมอบเดียวกัน มันกู้การแก้ไขที่คุณทำ*ก่อน*ที่
+สำเนาที่ไม่ถูกแตะจะถูกสร้างไม่ได้ ซึ่งเป็นเหตุผลว่าทำไมสำเนาจึงควรทำตอนรับงาน ถ้าคุณไม่มี
+archive หรือโฟลเดอร์ต้นฉบับแล้ว ให้พูดตรง ๆ ว่า: ไม่มีแหล่งของโฟลเดอร์ก่อนหน้าในงานส่งมอบนี้
+ประวัติ git ใช้ไม่ได้ และสภาพก่อนหน้าสร้างคืนไม่ได้ ทางถอยในกรณีนั้นคือต้นไม้ปัจจุบันบวก
+ฐานข้อมูล ซึ่งสคีมาไม่ถูกแตะจากการย้อนโค้ด (ข้อ 3)
 
 1. **หยุดโปรเซส** (ข้อ 1 ข้างบน) เพื่อไม่ให้มีอะไรกำลัง migration
 2. **เก็บสำเนาโฟลเดอร์ปัจจุบัน** ก่อนแก้ เพื่อให้การย้อนกลับนี้ย้อนกลับได้อีกชั้น
