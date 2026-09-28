@@ -180,6 +180,35 @@ export function createStripeAdapter(config: StripeAdapterConfig): PaymentProvide
     return 'pending';
   }
 
+  /**
+   * WU-1 CORRECTNESS: Stripe's refund API accepts a PaymentIntent id (`pi_...`),
+   * not a Checkout Session id (`cs_...`). Checkout mode is the default flow, so
+   * `createPayment` returns `cs_...`; resolve it to the session's payment_intent
+   * before calling `/refunds`.
+   *
+   * Fails closed: when the id cannot be resolved to a payment_intent this throws
+   * a PaymentError instead of sending an invalid refund request.
+   */
+  async function resolvePaymentIntentId(paymentId: string): Promise<string> {
+    if (!paymentId.startsWith('cs_')) {
+      return paymentId;
+    }
+
+    const session = await stripeRequest(`/checkout/sessions/${paymentId}`, 'GET');
+    const paymentIntentId: unknown = session?.payment_intent;
+
+    if (typeof paymentIntentId !== 'string' || paymentIntentId.length === 0) {
+      throw new PaymentError({
+        message: `Cannot refund checkout session ${paymentId}: it has no payment_intent (session status=${session?.status ?? 'unknown'}, payment_status=${session?.payment_status ?? 'unknown'}). Refund the payment_intent once the session is paid.`,
+        code: 'PAYMENT_NOT_FOUND',
+        provider: 'stripe',
+        rawProviderError: { sessionId: paymentId, status: session?.status, paymentStatus: session?.payment_status },
+      });
+    }
+
+    return paymentIntentId;
+  }
+
   return {
     name: 'stripe',
 
@@ -282,7 +311,7 @@ export function createStripeAdapter(config: StripeAdapterConfig): PaymentProvide
 
     async refundPayment(request: RefundPaymentRequest, _options?: PaymentOptions): Promise<PaymentResult> {
       const payload: Record<string, any> = {
-        payment_intent: request.paymentId,
+        payment_intent: await resolvePaymentIntentId(request.paymentId),
       };
       if (request.amount !== undefined) {
         payload.amount = request.amount;

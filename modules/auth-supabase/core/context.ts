@@ -39,12 +39,16 @@ export async function getCurrentUser(
   if (!user) return null;
 
   // 1. Resolve Roles
+  // WU-1 SECURITY: authorization reads server-controlled claims only
+  // (`app_metadata`, which the end user cannot write). `user_metadata` is
+  // user-writable in Supabase (`auth.updateUser({ data })`) and must never be
+  // an authorization source — see security-user-metadata.test.ts.
   let roles: string[] = [];
   if (options?.roleResolver) {
     roles = await options.roleResolver(user);
   } else {
     // Default role resolution
-    const metadataRoles = (user.app_metadata?.roles || user.user_metadata?.roles) as string[] | undefined;
+    const metadataRoles = user.app_metadata?.roles as string[] | undefined;
     roles = metadataRoles || (user.role ? [user.role] : []);
   }
 
@@ -53,8 +57,8 @@ export async function getCurrentUser(
   if (options?.tenantResolver) {
     tenantId = await options.tenantResolver(user);
   } else {
-    // Default tenant resolution
-    tenantId = (user.app_metadata?.tenant_id || user.user_metadata?.tenant_id) as string | undefined;
+    // Default tenant resolution (server-controlled claim only)
+    tenantId = user.app_metadata?.tenant_id as string | undefined;
   }
 
   // 3. Resolve Permissions
@@ -62,8 +66,8 @@ export async function getCurrentUser(
   if (options?.permissionResolver) {
     permissions = await options.permissionResolver(user, roles);
   } else {
-    // Default permission resolution
-    permissions = (user.app_metadata?.permissions || user.user_metadata?.permissions) as string[] || [];
+    // Default permission resolution (server-controlled claim only)
+    permissions = (user.app_metadata?.permissions as string[] | undefined) || [];
   }
 
   const context: AuthContext = {
@@ -72,9 +76,10 @@ export async function getCurrentUser(
     roles,
     tenantId,
     permissions,
+    // `user_metadata` is deliberately NOT spread here: it is user-writable and
+    // would otherwise override `app_metadata` with attacker-controlled values.
     metadata: {
-      ...user.app_metadata,
-      ...user.user_metadata
+      ...user.app_metadata
     }
   };
 
