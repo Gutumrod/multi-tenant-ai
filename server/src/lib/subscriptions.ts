@@ -7,6 +7,13 @@ import {
   type SubscriptionCore,
 } from '../../../modules/subscription/core/service.js';
 import type { Plan } from '../../../modules/subscription/core/types.js';
+import type {
+  PlanRepository,
+  SubscriptionRepository,
+} from '../../../modules/subscription/core/repository.js';
+import { getPgPool } from './persistence/pg.js';
+import { runMigrations } from './persistence/migrate.js';
+import { createPostgresRepositories } from './persistence/pg-repositories.js';
 
 export const SEED_PLANS: Plan[] = [
   {
@@ -34,7 +41,44 @@ export const SEED_PLANS: Plan[] = [
 const mockPlanRepo = createMockPlanRepository(SEED_PLANS);
 const mockSubscriptionRepo = createMockSubscriptionRepository([]);
 
+const pool = getPgPool();
+const pgRepositories = pool ? createPostgresRepositories(pool) : null;
+
+// With DATABASE_URL set the reference server uses the real database (migrations
+// are applied before the repositories are handed out). Without it the process
+// keeps the in-memory repositories so hermetic unit tests and DB-less runs are
+// unchanged. SEED_PLANS stays the seed definition for both paths; the migration
+// set upserts the same two plans.
 export const subscriptionCore: SubscriptionCore = createSubscriptionCore(
-  mockSubscriptionRepo,
-  mockPlanRepo
+  pgRepositories ? pgRepositories.subscriptions : mockSubscriptionRepo,
+  pgRepositories ? pgRepositories.plans : mockPlanRepo
 );
+
+/**
+ * Resolves the subscription repositories for this process, running pending
+ * migrations first when a database is configured. Never awaited at module load
+ * so that importing this module cannot hang or fail on a DB-less host.
+ */
+export async function initSubscriptionRepositories(): Promise<{
+  subscriptionRepo: SubscriptionRepository;
+  planRepo: PlanRepository;
+  persistent: boolean;
+}> {
+  if (!pool) {
+    return {
+      subscriptionRepo: mockSubscriptionRepo,
+      planRepo: mockPlanRepo,
+      persistent: false,
+    };
+  }
+
+  await runMigrations(pool);
+  const repositories = createPostgresRepositories(pool);
+  await Promise.all(SEED_PLANS.map((plan) => repositories.plans.save(plan)));
+
+  return {
+    subscriptionRepo: repositories.subscriptions,
+    planRepo: repositories.plans,
+    persistent: true,
+  };
+}
