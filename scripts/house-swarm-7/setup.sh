@@ -15,6 +15,9 @@
 #      devDependencies included on purpose, see the note at step 3;
 #   4. runs the project's own typecheck;
 #   5. verifies database connectivity and the migration schema (db-check.mjs).
+#      The verdict is taken from db-check's EXIT CODE, not from its wording, so
+#      a check that fails for an unanticipated reason is a failure here too.
+#      See the note at step 5 for how the file is handed to `node`.
 #
 # What this script does NOT do, by design:
 #   * it does NOT start the server and does NOT deploy anything;
@@ -169,27 +172,91 @@ npm run typecheck || die "typecheck failed; the source tree does not compile, so
 #    boot (server/src/index.ts runs them before it listens), so this step
 #    reports an un-migrated-but-reachable database as PENDING rather than
 #    pretending either way. An unreachable database is a real failure.
+#
+#    HOW THE VERDICT IS REACHED. db-check.mjs exits 0 only when every check
+#    passed; any failure makes it exit non-zero. The exit code is therefore the
+#    verdict and it decides this branch FIRST, before any wording is matched:
+#
+#      exit 0        -> passed, and nothing else needs to be inspected;
+#      exit non-zero -> failed. The wording of db-check's output is then used
+#                       only to pick the right EXPLANATION for a failure that is
+#                       already established — the two recognised cases
+#                       (connection, migration schema) keep their helpful
+#                       messages, and any unrecognised failure is reported with
+#                       its real exit code and db-check's own output, then stops
+#                       the script. A non-zero exit can never reach the pass
+#                       branch.
+#
+#    Matching the output text alone is what this replaces: any failure whose
+#    message was not one of the two exact sentences used to fall through to
+#    "passed" while the script still exited 0.
+#
+#    WHY THE MIGRATION CASE IS TESTED BEFORE THE CONNECTION CASE. On a real
+#    reachable-but-unmigrated database db-check prints BOTH lines: it records
+#    "CHECK migration-tables FAIL ..." and then, inside its own error handler,
+#    records "CHECK connection FAIL relation \"plans\" does not exist" — the
+#    follow-up query for the seed plans fails because the tables do not exist
+#    yet, and that is reported under the connection name. Testing for
+#    "connection FAIL" first therefore caught the PENDING case and reported a
+#    perfectly reachable, merely un-migrated database as "could not connect".
+#    A genuine connection failure cannot be mis-ordered this way: when the
+#    connection really fails the tables are never queried, so db-check prints no
+#    "CHECK migration-tables" line at all and this falls through to the
+#    connection case, exactly as before. db-check.mjs itself is not modified
+#    here (it is outside this repair's scope); only the order of the two
+#    explanations in this script changes.
+#
+#    HOW THE FILE IS HANDED TO `node`. The path is RELATIVE to the repository
+#    root and never absolute. On Windows/Git-Bash the absolute path this script
+#    computes is a POSIX path such as /d/AI-Workspace/... ; `node` is a native
+#    program and does not translate it, so it looked the file up under the
+#    current drive (D:\d\AI-Workspace\...\db-check.mjs) and the step failed with
+#    MODULE_NOT_FOUND — and then reported that failure as a pass. A relative
+#    path has no drive letter and no leading slash to mistranslate, so it
+#    resolves identically under Git-Bash on Windows and under POSIX sh on Linux.
+#    It is also exactly the command docs/house-swarm-7/WU5-DEPLOY.md §5 tells the
+#    operator to run by hand, and db-check.mjs resolves its own location, so it
+#    does not care which directory it is started from.
 # ---------------------------------------------------------------------------
 if [ "$IN_MEMORY" -eq 1 ]; then
   say "skipping the database check because --in-memory was requested"
 else
-  say "verifying the database: node scripts/house-swarm-7/db-check.mjs"
+  DB_CHECK_REL="scripts/house-swarm-7/db-check.mjs"
 
+  if [ ! -f "$REPO_ROOT/$DB_CHECK_REL" ]; then
+    die "$DB_CHECK_REL was not found under $REPO_ROOT, so the database cannot be verified. The distribution is incomplete; do not treat this database as checked."
+  fi
+
+  say "verifying the database: node $DB_CHECK_REL (run from the repository root)"
+
+  cd "$REPO_ROOT"
   CHECK_STATUS=0
-  CHECK_OUT=$(node "$REPO_ROOT/scripts/house-swarm-7/db-check.mjs" 2>&1) || CHECK_STATUS=$?
+  CHECK_OUT=$(node "$DB_CHECK_REL" 2>&1) || CHECK_STATUS=$?
   printf '%s\n' "$CHECK_OUT"
 
-  case "$CHECK_OUT" in
-    *"CHECK connection FAIL"*)
-      die "could not connect to the database in DATABASE_URL (exit $CHECK_STATUS). Check the host, port, database name and credentials, then run this script again."
-      ;;
-    *"CHECK migration-tables FAIL"*)
-      say "PENDING: the database is reachable, but the migration schema is not created yet."
-      say "The server creates it at boot. Do this next, then run this script again:"
-      say "    cd server && npm run start"
-      ;;
-    *) say "database checks passed (exit $CHECK_STATUS)" ;;
-  esac
+  if [ "$CHECK_STATUS" -eq 0 ]; then
+    say "database checks passed (db-check exited 0)"
+  else
+    case "$CHECK_OUT" in
+      *"CHECK migration-tables FAIL"*)
+        # Intentional, documented outcome (scripts/house-swarm-7/setup.md §3.3):
+        # the database is reachable but the server has not run its migrations
+        # yet, and the server creates the schema at boot. Not a failure.
+        # Tested BEFORE the connection case on purpose — see the note above.
+        say "PENDING: the database is reachable, but the migration schema is not created yet."
+        say "The server creates it at boot. Do this next, then run this script again:"
+        say "    cd server && npm run start"
+        ;;
+      *"CHECK connection FAIL"*)
+        die "could not connect to the database in DATABASE_URL (db-check exited $CHECK_STATUS). Check the host, port, database name and credentials, then run this script again."
+        ;;
+      *)
+        # An unrecognised failure. The exit code is the verdict, so this is a
+        # failure; db-check's own output is printed verbatim above.
+        die "the database check failed (db-check exited $CHECK_STATUS) and reported a result this script does not recognise. Read db-check's output printed above and fix it before deploying; this script will not treat it as a pass."
+        ;;
+    esac
+  fi
 fi
 
 # ---------------------------------------------------------------------------
