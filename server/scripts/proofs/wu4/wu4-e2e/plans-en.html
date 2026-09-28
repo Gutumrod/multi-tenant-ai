@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en" data-locale="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light" />
+    <title data-i18n="page.plans.title">Choose a plan — sample UI</title>
+    <link rel="stylesheet" href="assets/app.css" />
+  </head>
+  <body data-page="plans">
+    <header class="site-header" data-include="header">
+    <div class="site-header__inner">
+      <a class="brand" href="/?lang=en" data-i18n="site.title">Multi-Tenant AI Starter Kit — sample UI</a>
+      <nav class="site-nav" data-role="site-nav">
+        <a href="/?lang=en" data-i18n="nav.home">Home</a>
+        <a href="/signup?lang=en" data-i18n="nav.signup">Sign up</a>
+        <a href="/login?lang=en" data-i18n="nav.login">Log in</a>
+        <a href="/plans?lang=en" aria-current="page" data-i18n="nav.plans">Choose a plan</a>
+        <a href="/app?lang=en" data-i18n="nav.app">Use the AI</a>
+      </nav>
+      <div class="langswitch">
+        <span class="langswitch__label" data-i18n="lang.label">Language</span>
+        <a href="?lang=th" data-locale-option="th" data-i18n="lang.th">Thai</a>
+        <a href="?lang=en" data-locale-option="en" aria-current="true" data-i18n="lang.en">English</a>
+      </div>
+    </div>
+    </header>
+
+    <main class="page">
+      <h1 data-i18n="plans.title">Choose a plan</h1>
+      <p class="lede" data-i18n="plans.intro">The plan you pick is written to the subscription table of the database this server is connected to. If your account already has an active subscription the server answers 409 and nothing changes.</p>
+
+      <h2 data-i18n="plans.identity.title">Acting as</h2>
+      <p data-i18n="plans.identity.body">The subscription is created for this demo tenant id. Change it by logging in with another id.</p>
+      <dl class="facts">
+        <dt data-i18n="app.identity.title">Demo identity in use</dt>
+        <dd data-account-value>—</dd>
+      </dl>
+      <div class="note" data-account-none hidden>
+        <span data-i18n="app.identity.none">No demo tenant id is stored in this browser.</span>
+        <a href="login.html" data-continue="login.html" data-i18n="app.identity.go_login">Go to log in</a>
+      </div>
+
+      <div class="status" data-status="plans" data-tone="plain"></div>
+
+      <div data-panel="plan-table" hidden>
+        <table>
+          <thead>
+            <tr>
+              <th data-i18n="plans.table.plan">Plan</th>
+              <th data-i18n="plans.table.id">Plan id (database)</th>
+              <th data-i18n="plans.table.name">Name (database)</th>
+              <th data-i18n="plans.table.price">Price (database)</th>
+              <th data-i18n="plans.table.ai">ai_requests_per_month</th>
+              <th data-i18n="plans.table.payments">payments_per_month</th>
+              <th data-i18n="plans.table.action">Action</th>
+            </tr>
+          </thead>
+          <tbody data-role="plan-rows"></tbody>
+        </table>
+      </div>
+
+      <div data-panel="plans-unavailable" hidden>
+        <h3 data-i18n="plans.nodb.title">The plan list could not be read</h3>
+        <p data-i18n="plans.nodb.detail">The server could not read its plan repository, so no catalogue is shown. Fix the database connection and reload.</p>
+      </div>
+
+      <div data-panel="plans-refusal" hidden>
+        <h3 data-i18n="app.response.title">Server response, printed as received</h3>
+        <dl class="facts">
+          <dt data-i18n="app.response.status">HTTP status</dt>
+          <dd data-role="plans-refusal-status">—</dd>
+        </dl>
+        <pre class="code-block" data-role="plans-refusal-body">—</pre>
+      </div>
+    </main>
+
+    <footer class="site-footer" data-include="footer">
+    <div class="site-footer__inner">
+      <p data-i18n="footer.note">Sample UI shipped with the Multi-Tenant AI Starter Kit reference server. No external CDN, no web font, no stock photo.</p>
+      <p><span class="tag" data-role="demo-auth-flag">DEMO_AUTH on</span></p>
+    </div>
+    </footer>
+
+    <script type="module" src="assets/app.js"></script>
+  </body>
+</html>

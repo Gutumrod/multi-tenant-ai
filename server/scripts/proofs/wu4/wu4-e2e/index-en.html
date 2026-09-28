@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en" data-locale="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light" />
+    <title data-i18n="page.index.title">Sample UI — Multi-Tenant AI Starter Kit</title>
+    <link rel="stylesheet" href="assets/app.css" />
+  </head>
+  <body data-page="index">
+    <header class="site-header" data-include="header">
+    <div class="site-header__inner">
+      <a class="brand" href="/?lang=en" data-i18n="site.title">Multi-Tenant AI Starter Kit — sample UI</a>
+      <nav class="site-nav" data-role="site-nav">
+        <a href="/?lang=en" aria-current="page" data-i18n="nav.home">Home</a>
+        <a href="/signup?lang=en" data-i18n="nav.signup">Sign up</a>
+        <a href="/login?lang=en" data-i18n="nav.login">Log in</a>
+        <a href="/plans?lang=en" data-i18n="nav.plans">Choose a plan</a>
+        <a href="/app?lang=en" data-i18n="nav.app">Use the AI</a>
+      </nav>
+      <div class="langswitch">
+        <span class="langswitch__label" data-i18n="lang.label">Language</span>
+        <a href="?lang=th" data-locale-option="th" data-i18n="lang.th">Thai</a>
+        <a href="?lang=en" data-locale-option="en" aria-current="true" data-i18n="lang.en">English</a>
+      </div>
+    </div>
+    </header>
+
+    <main class="page">
+      <h1 data-i18n="landing.title">A sample UI for the Multi-Tenant AI Starter Kit</h1>
+      <p class="lede" data-i18n="landing.intro">These screens call the real HTTP endpoints of the reference server running on this machine. Nothing here is a mock-up: every plan, limit, counter and error you see is read from the running server and its database.</p>
+
+      <div class="card card--banner">
+        <p class="card__title" data-i18n="demo.banner.title">Demonstration mode</p>
+        <p data-i18n="demo.banner.body">This is a sample UI. Authentication mode is read live from the server and shown on the &quot;Use the AI&quot; screen.</p>
+      </div>
+
+      <h2 data-i18n="landing.flow.title">The flow you can walk end to end</h2>
+      <ol>
+        <li data-i18n="landing.flow.step1">Sign up or log in: enter a demo tenant id, because this sample UI has no user accounts of its own.</li>
+        <li data-i18n="landing.flow.step2">Choose a plan: the choice is written to the subscription table in the local database.</li>
+        <li data-i18n="landing.flow.step3">Use the AI: one request consumes one unit of the plan entitlement ai_requests_per_month.</li>
+        <li data-i18n="landing.flow.step4">See the quota: the plan, the usage counter and the limit are shown as the server returns them.</li>
+      </ol>
+
+      <div class="actions">
+        <a class="btn" href="signup.html" data-continue="signup.html" data-i18n="nav.signup">Sign up</a>
+        <a class="btn btn--secondary" href="login.html" data-continue="login.html" data-i18n="nav.login">Log in</a>
+        <a class="btn btn--secondary" href="plans.html" data-continue="plans.html" data-i18n="nav.plans">Choose a plan</a>
+        <a class="btn btn--secondary" href="app.html" data-continue="app.html" data-i18n="nav.app">Use the AI</a>
+      </div>
+
+      <h2 data-i18n="landing.what.title">What these screens do</h2>
+      <p data-i18n="landing.what.body">Five static pages are served by the same Express app as the API: the landing page, sign up, log in, choose a plan, and use the AI. There is no build step and no front-end framework.</p>
+
+      <h2 data-i18n="landing.demo.title">Demonstration identity mode (DEMO_AUTH)</h2>
+      <p data-i18n="landing.demo.body">DEMO_AUTH is off by default. While it is off, every paid endpoint sits behind the real authentication middleware and answers 503 &quot;Auth not configured&quot; until you point the server at your own Supabase project. When DEMO_AUTH=true, this UI can use a demo tenant id that you type, so the four screens are walkable against your local database. It is not authentication: no password, no user record, no token, and the server refuses to enable it when NODE_ENV=production.</p>
+
+      <h2 data-i18n="landing.start.title">Running it on a clean machine</h2>
+      <p data-i18n="landing.start.body">Node 20 or newer with npm. Install once in server/, then start the server. With no DATABASE_URL the server keeps its in-memory repositories; with DATABASE_URL it uses PostgreSQL and applies the migrations at boot. The exact commands are in docs/house-swarm-7/WU4-SAMPLE-UI.md.</p>
+
+      <h2 data-i18n="landing.honesty.title">What this UI is not</h2>
+      <p data-i18n="landing.honesty.body">No marketing copy, no testimonials, no invented metrics, no stock photos and no external requests of any kind. Every visible sentence comes from the locale dictionary in web/assets/i18n.js.</p>
+
+      <h2 data-i18n="landing.notimpl.title">Not implemented — do not expect these</h2>
+      <p data-i18n="landing.notimpl.intro">These capabilities are not part of this build, and this page does not pretend otherwise:</p>
+      <ul class="capability-list" data-role="not-implemented-list">
+        <li data-not-implemented="opentelemetry-exporter">
+          <strong data-i18n="landing.notimpl.otel">OpenTelemetry exporter: the tracing module only records spans in process memory (MemoryTracer). There is no OTLP endpoint and no collector export.</strong>
+        </li>
+        <li data-not-implemented="line-webhook-verifier">
+          <strong data-i18n="landing.notimpl.line">LINE webhook verifier: the verifier returns the error code WEBHOOK_UNKNOWN_PROVIDER and states that it is not implemented.</strong>
+        </li>
+        <li data-not-implemented="github-webhook-verifier">
+          <strong data-i18n="landing.notimpl.github">GitHub webhook verifier: same behaviour — WEBHOOK_UNKNOWN_PROVIDER, not implemented.</strong>
+        </li>
+        <li data-not-implemented="real-supabase-auth">
+          <strong data-i18n="landing.notimpl.supabase">Real Supabase authentication: the authentication path exists, but it is unverified here because this repository ships no Supabase project and no credentials.</strong>
+        </li>
+        <li data-not-implemented="production-deployment">
+          <strong data-i18n="landing.notimpl.deploy">Production deployment: there is no container, no reverse proxy, no TLS and no process supervisor in this repository. Run it on your own machine only.</strong>
+        </li>
+        <li data-not-implemented="demo-identity-is-not-authentication">
+          <strong data-i18n="landing.notimpl.demo">Demo identity is not authentication: it is a tenant id typed into a form, with no password and no session token.</strong>
+        </li>
+      </ul>
+    </main>
+
+    <footer class="site-footer" data-include="footer">
+    <div class="site-footer__inner">
+      <p data-i18n="footer.note">Sample UI shipped with the Multi-Tenant AI Starter Kit reference server. No external CDN, no web font, no stock photo.</p>
+      <p><span class="tag" data-role="demo-auth-flag">DEMO_AUTH on</span></p>
+    </div>
+    </footer>
+
+    <script type="module" src="assets/app.js"></script>
+  </body>
+</html>

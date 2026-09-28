@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="th" data-locale="th">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light" />
+    <title data-i18n="page.login.title">[page.login.title]</title>
+    <link rel="stylesheet" href="assets/app.css" />
+  </head>
+  <body data-page="login">
+    <header class="site-header" data-include="header"><!--{{shell}}--></header>
+
+    <main class="page">
+      <h1 data-i18n="login.title">[login.title]</h1>
+      <p class="lede" data-i18n="login.intro">[login.intro]</p>
+
+      <h2 data-i18n="login.identity.title">[login.identity.title]</h2>
+
+      <form data-form="login">
+        <div class="field">
+          <label for="tenant-id" data-i18n="login.tenant.label">[login.tenant.label]</label>
+          <input
+            id="tenant-id"
+            name="tenantId"
+            type="text"
+            autocomplete="off"
+            spellcheck="false"
+            maxlength="64"
+            data-i18n-placeholder="login.tenant.placeholder"
+            placeholder="[login.tenant.placeholder]"
+          />
+        </div>
+        <div class="actions">
+          <button type="submit" class="btn" data-i18n="login.continue">[login.continue]</button>
+          <a class="btn btn--secondary" href="signup.html" data-continue="signup.html" data-i18n="login.no_account">[login.no_account]</a>
+        </div>
+        <div class="status" data-status="login" data-tone="plain" hidden></div>
+      </form>
+
+      <div class="note" data-i18n="login.notreal.body">[login.notreal.body]</div>
+    </main>
+
+    <footer class="site-footer" data-include="footer"><!--{{shell}}--></footer>
+
+    <script type="module" src="assets/app.js"></script>
+  </body>
+</html>

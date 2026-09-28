@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="th" data-locale="th">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light" />
+    <title data-i18n="page.app.title">[page.app.title]</title>
+    <link rel="stylesheet" href="assets/app.css" />
+  </head>
+  <body data-page="app">
+    <header class="site-header" data-include="header"><!--{{shell}}--></header>
+
+    <main class="page">
+      <h1 data-i18n="app.title">[app.title]</h1>
+      <p class="lede" data-i18n="app.intro">[app.intro]</p>
+
+      <div class="note" data-panel="no-identity" hidden>
+        <span data-i18n="app.identity.none">[app.identity.none]</span>
+        <a href="login.html" data-continue="login.html" data-i18n="app.identity.go_login">[app.identity.go_login]</a>
+      </div>
+
+      <h2 data-i18n="app.identity.title">[app.identity.title]</h2>
+      <dl class="facts">
+        <dt data-i18n="app.identity.title">[app.identity.title]</dt>
+        <dd data-account-value>[common.value_unread]</dd>
+      </dl>
+
+      <h2 data-i18n="app.authmode.title">[app.authmode.title]</h2>
+      <div class="status" data-status="authmode" data-tone="plain"></div>
+      <p class="note note--strong" data-status="authmode-detail"></p>
+      <pre class="code-block" data-role="authmode-body">[common.value_unread]</pre>
+
+      <h2 data-i18n="app.quota.title">[app.quota.title]</h2>
+      <div class="status" data-status="quota" data-tone="plain"></div>
+      <dl class="facts">
+        <dt data-i18n="app.quota.feature">[app.quota.feature]</dt>
+        <dd data-role="quota-feature">[app.quota.feature_value]</dd>
+        <dt data-i18n="app.quota.plan">[app.quota.plan]</dt>
+        <dd data-role="quota-plan">[common.value_unread]</dd>
+        <dt data-i18n="app.quota.usage">[app.quota.usage]</dt>
+        <dd data-role="quota-usage">[common.value_unread]</dd>
+        <dt data-i18n="app.quota.limit">[app.quota.limit]</dt>
+        <dd data-role="quota-limit">[common.value_unread]</dd>
+      </dl>
+      <div class="actions">
+        <button type="button" class="btn btn--secondary" data-action="refresh-status" data-i18n="app.quota.refresh">[app.quota.refresh]</button>
+      </div>
+
+      <h2 data-i18n="app.ai.title">[app.ai.title]</h2>
+      <form data-form="ai">
+        <div class="field">
+          <label for="prompt" data-i18n="app.ai.prompt.label">[app.ai.prompt.label]</label>
+          <input
+            id="prompt"
+            name="prompt"
+            type="text"
+            autocomplete="off"
+            spellcheck="false"
+            data-i18n-placeholder="app.ai.prompt.placeholder"
+            placeholder="[app.ai.prompt.placeholder]"
+          />
+        </div>
+        <div class="actions">
+          <button type="submit" class="btn" data-action="use-ai" data-i18n="app.ai.submit">[app.ai.submit]</button>
+        </div>
+      </form>
+      <div class="status" data-status="ai" data-tone="plain" hidden></div>
+
+      <div data-panel="ai-result" hidden>
+        <h3 data-i18n="app.ai.result_title">[app.ai.result_title]</h3>
+        <dl class="facts">
+          <dt data-i18n="app.response.status">[app.response.status]</dt>
+          <dd data-role="ai-result-status">[common.value_unread]</dd>
+          <dt data-i18n="app.response.code">[app.response.code]</dt>
+          <dd data-role="ai-result-code">[common.value_unread]</dd>
+          <dt data-i18n="app.response.limit">[app.response.limit]</dt>
+          <dd data-role="ai-result-limit">[common.value_unread]</dd>
+          <dt data-i18n="app.response.usage">[app.response.usage]</dt>
+          <dd data-role="ai-result-usage">[common.value_unread]</dd>
+          <dt data-i18n="app.response.server_message">[app.response.server_message]</dt>
+          <dd data-role="ai-result-error">[common.value_unread]</dd>
+        </dl>
+
+        <h3 data-i18n="app.response.title">[app.response.title]</h3>
+        <p class="note" data-i18n="app.response.hint">[app.response.hint]</p>
+        <pre class="code-block" data-role="ai-raw">[common.value_unread]</pre>
+      </div>
+
+      <h2 data-i18n="landing.notimpl.title">[landing.notimpl.title]</h2>
+      <p data-i18n="landing.notimpl.intro">[landing.notimpl.intro]</p>
+      <ul class="capability-list" data-role="not-implemented-list">
+        <li data-not-implemented="opentelemetry-exporter">
+          <strong data-i18n="landing.notimpl.otel">[landing.notimpl.otel]</strong>
+        </li>
+        <li data-not-implemented="line-webhook-verifier">
+          <strong data-i18n="landing.notimpl.line">[landing.notimpl.line]</strong>
+        </li>
+        <li data-not-implemented="github-webhook-verifier">
+          <strong data-i18n="landing.notimpl.github">[landing.notimpl.github]</strong>
+        </li>
+        <li data-not-implemented="real-supabase-auth">
+          <strong data-i18n="landing.notimpl.supabase">[landing.notimpl.supabase]</strong>
+        </li>
+        <li data-not-implemented="production-deployment">
+          <strong data-i18n="landing.notimpl.deploy">[landing.notimpl.deploy]</strong>
+        </li>
+        <li data-not-implemented="demo-identity-is-not-authentication">
+          <strong data-i18n="landing.notimpl.demo">[landing.notimpl.demo]</strong>
+        </li>
+      </ul>
+    </main>
+
+    <footer class="site-footer" data-include="footer"><!--{{shell}}--></footer>
+
+    <script type="module" src="assets/app.js"></script>
+  </body>
+</html>

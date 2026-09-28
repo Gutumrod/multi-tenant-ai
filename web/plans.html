@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="th" data-locale="th">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light" />
+    <title data-i18n="page.plans.title">[page.plans.title]</title>
+    <link rel="stylesheet" href="assets/app.css" />
+  </head>
+  <body data-page="plans">
+    <header class="site-header" data-include="header"><!--{{shell}}--></header>
+
+    <main class="page">
+      <h1 data-i18n="plans.title">[plans.title]</h1>
+      <p class="lede" data-i18n="plans.intro">[plans.intro]</p>
+
+      <h2 data-i18n="plans.identity.title">[plans.identity.title]</h2>
+      <p data-i18n="plans.identity.body">[plans.identity.body]</p>
+      <dl class="facts">
+        <dt data-i18n="app.identity.title">[app.identity.title]</dt>
+        <dd data-account-value>[common.value_unread]</dd>
+      </dl>
+      <div class="note" data-account-none hidden>
+        <span data-i18n="app.identity.none">[app.identity.none]</span>
+        <a href="login.html" data-continue="login.html" data-i18n="app.identity.go_login">[app.identity.go_login]</a>
+      </div>
+
+      <div class="status" data-status="plans" data-tone="plain"></div>
+
+      <div data-panel="plan-table" hidden>
+        <table>
+          <thead>
+            <tr>
+              <th data-i18n="plans.table.plan">[plans.table.plan]</th>
+              <th data-i18n="plans.table.id">[plans.table.id]</th>
+              <th data-i18n="plans.table.name">[plans.table.name]</th>
+              <th data-i18n="plans.table.price">[plans.table.price]</th>
+              <th data-i18n="plans.table.ai">[plans.table.ai]</th>
+              <th data-i18n="plans.table.payments">[plans.table.payments]</th>
+              <th data-i18n="plans.table.action">[plans.table.action]</th>
+            </tr>
+          </thead>
+          <tbody data-role="plan-rows"></tbody>
+        </table>
+      </div>
+
+      <div data-panel="plans-unavailable" hidden>
+        <h3 data-i18n="plans.nodb.title">[plans.nodb.title]</h3>
+        <p data-i18n="plans.nodb.detail">[plans.nodb.detail]</p>
+      </div>
+
+      <div data-panel="plans-refusal" hidden>
+        <h3 data-i18n="app.response.title">[app.response.title]</h3>
+        <dl class="facts">
+          <dt data-i18n="app.response.status">[app.response.status]</dt>
+          <dd data-role="plans-refusal-status">[common.value_unread]</dd>
+        </dl>
+        <pre class="code-block" data-role="plans-refusal-body">[common.value_unread]</pre>
+      </div>
+    </main>
+
+    <footer class="site-footer" data-include="footer"><!--{{shell}}--></footer>
+
+    <script type="module" src="assets/app.js"></script>
+  </body>
+</html>
