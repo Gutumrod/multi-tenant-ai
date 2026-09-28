@@ -941,10 +941,13 @@ deployment ปลอดภัยสำหรับ production: คุณยั�
 
 ## 9. Limits — ข้อจำกัด
 
-What is still **not implemented**. Do not read anything above as a claim that
-these exist.
+What is still **not implemented**, and what is implemented but **not hardened**.
+Do not read anything above as a claim that these exist, or that they are safe for
+an internet-facing multi-instance deployment.
 
-สิ่งที่**ยังไม่ได้ทำ** อย่าตีความข้อใดข้างบนว่าเป็นคำรับรองว่าสิ่งเหล่านี้มีอยู่
+สิ่งที่**ยังไม่ได้ทำ** และสิ่งที่ทำแล้วแต่**ยังไม่แข็งแรงพอสำหรับ production**
+อย่าตีความข้อใดข้างบนว่าเป็นคำรับรองว่าสิ่งเหล่านี้มีอยู่ หรือปลอดภัยสำหรับการ deploy
+หลายอินสแตนซ์ที่เปิดสู่อินเทอร์เน็ต
 
 1. **No OpenTelemetry exporter.** The tracing module records spans in process
    memory only. There is no OTLP endpoint and no collector export. / **ไม่มี
@@ -962,12 +965,51 @@ these exist.
    ยืนยันตัวตน Supabase จริงกับโปรเจกต์ของคุณ** เส้นทาง auth มีในโค้ด แต่ไม่เคยถูกใช้
    กับโปรเจกต์ Supabase จริง เพราะเรดิสทอรีนี้ไม่มีและผู้เขียนไม่ได้ใช้ คุณจะเป็น
    คนแรกที่ชี้มันไปที่โปรเจกต์จริง และส่วนนั้นยังไม่ถูกทดสอบ
-5. **No rate limiting on `POST /payment/webhook`.** The endpoint is authenticated
-   by webhook signature verification, not by tenant identity, and it has no rate
-   limit and no replay-window defence beyond its idempotency ledger. Do not treat
-   it as hardened. / **ไม่มี rate limiting บน `POST /payment/webhook`** เส้นทางนี้
-   ยืนยันด้วยลายเซ็น webhook ไม่ใช่ด้วยตัวตน tenant และไม่มี rate limit และไม่มี
-   การป้องกันการเล่นซ้ำเกินกว่า ledger กันซ้ำของมัน อย่าถือว่ามันแข็งแรงแล้ว
+5. **Rate limiting on `POST /payment/webhook` is in-process only.** The route
+   **is** rate limited. `server/src/app.ts` mounts `webhookRateLimitMiddleware`
+   on `POST /payment/webhook` ahead of `express.raw()` and ahead of the handler,
+   so a request over the limit is refused **before** signature verification and
+   **before** any HMAC work is done — a flood costs no HMAC. The limiter is not
+   new code written for this delivery: it is the Module Hub `rate-limit` module,
+   vendored at `modules/rate-limit/` (provenance in
+   `modules/rate-limit/PROVENANCE-RATELIMIT.md`), wired on the host side by
+   `server/src/lib/rate-limit.ts`. A refusal is **HTTP 429**, body code
+   **`RATE_LIMITED`**, carrying a **`Retry-After`** header. The limits are the two
+   environment variables listed in §3.3: `WEBHOOK_RATE_LIMIT_MAX`, default `60`
+   requests, and `WEBHOOK_RATE_LIMIT_WINDOW_MS`, default `60000` milliseconds —
+   that is 60 requests per 60 seconds. `docs/house-swarm-7/FU-RATELIMIT.md` is the
+   full account of it. What it is **not**: the counter lives in one process's
+   memory, so the limit is **per-instance and resets when the process restarts**;
+   several instances behind a load balancer share no counter, so the effective
+   ceiling multiplies by the number of instances; and one key covers the endpoint
+   rather than the caller, so a burst of legitimate Stripe deliveries is throttled
+   together with a flood of hostile ones. It is a process-protection limit, **not**
+   a substitute for a rate limit at your edge or reverse proxy in a multi-instance
+   deployment. Replay defence is a separate question and unchanged: the signature
+   verifier refuses a signature whose timestamp falls outside its tolerance window
+   (code `WEBHOOK_EXPIRED_TIMESTAMP`), and the subscription ledger's idempotency is
+   what makes a redelivered event apply at most once. An earlier version of this
+   section asserted the opposite about rate limiting; that statement is obsolete.
+   / **rate limiting บน `POST /payment/webhook` เป็นแบบในโปรเซสเดียว**
+   เส้นทางนี้**มี** rate limit แล้ว `server/src/app.ts` ติดตั้ง
+   `webhookRateLimitMiddleware` บน `POST /payment/webhook` **ก่อน** `express.raw()`
+   และก่อน handler คำขอที่เกินขีดจึงถูกปฏิเสธ**ก่อน**การตรวจลายเซ็นและ**ก่อน**งาน HMAC
+   การยิงถล่มจึงไม่กินงาน HMAC ตัวจำกัดนี้ไม่ใช่โค้ดใหม่ของงานนี้: มันคือโมดูล
+   `rate-limit` จาก Module Hub ที่ vendor ไว้ที่ `modules/rate-limit/` (ที่มา
+   `modules/rate-limit/PROVENANCE-RATELIMIT.md`) ต่อสายฝั่งโฮสต์ใน
+   `server/src/lib/rate-limit.ts` การปฏิเสธคือ **HTTP 429** รหัสใน body
+   **`RATE_LIMITED`** พร้อม header **`Retry-After`** ขีดจำกัดคือตัวแปรสภาพแวดล้อมสองตัว
+   ในข้อ 3.3: `WEBHOOK_RATE_LIMIT_MAX` ค่าเริ่มต้น `60` คำขอ และ
+   `WEBHOOK_RATE_LIMIT_WINDOW_MS` ค่าเริ่มต้น `60000` มิลลิวินาที คือ 60 คำขอต่อ 60 วินาที
+   รายละเอียดทั้งหมดอยู่ที่ `docs/house-swarm-7/FU-RATELIMIT.md` สิ่งที่มัน**ไม่**ใช่:
+   ตัวนับอยู่ในหน่วยความจำของโปรเซสเดียว ขีดจำกัดจึง**แยกตามอินสแตนซ์และรีเซ็ตเมื่อโปรเซส
+   รีสตาร์ท** หลายอินสแตนซ์หลังโหลดบาลานเซอร์ไม่แชร์ตัวนับ เพดานจริงจึงคูณตามจำนวน
+   อินสแตนซ์ และคีย์หนึ่งตัวคลุมทั้งเส้นทางไม่ใช่ต่อผู้เรียก การส่งของ Stripe ที่ถูกต้อง
+   จึงถูกจำกัดไปพร้อมการยิงถล่ม มันเป็นขีดจำกัดเพื่อป้องกันโปรเซส **ไม่**ใช่สิ่งทดแทน
+   rate limit ที่ edge หรือ reverse proxy ของคุณในการ deploy หลายอินสแตนซ์ การป้องกัน
+   การเล่นซ้ำเป็นเรื่องแยกและไม่เปลี่ยน: ตัวตรวจลายเซ็นปฏิเสธลายเซ็นที่เวลาอยู่นอกหน้าต่าง
+   tolerance (รหัส `WEBHOOK_EXPIRED_TIMESTAMP`) และ idempotency ของ ledger คือสิ่งที่ทำให้
+   เหตุการณ์ที่ส่งซ้ำมีผลครั้งเดียว ฉบับก่อนของข้อนี้เขียนไว้ตรงกันข้าม คำกล่าวนั้นล้าสมัยแล้ว
 6. **No multi-instance deployment proof.** Everything here was run as a single
    process against a single database. Running several instances behind a load
    balancer has not been tested, and the in-memory fallback is per-process.

@@ -31,15 +31,17 @@ set the server uses PostgreSQL and reports `persistent=true`; with no
 **ที่เก็บข้อมูลแบบ in-memory ยังคงอยู่โดยเจตนา เพื่อใช้ในเทสต์และเพื่อรันโดยไม่มีฐานข้อมูล**
 — ไม่ใช่ทางเลือกเดียวอีกต่อไป
 
-## 2. Still NOT implemented — do not read anything above as saying otherwise
+## 2. Still NOT implemented, and limits that are implemented but narrow — do not read anything above as saying otherwise
 
 1. **No OpenTelemetry exporter.** Spans are held in process memory only; there is no OTLP endpoint and no collector export.
 2. **No LINE webhook verifier.** The verifier returns `WEBHOOK_UNKNOWN_PROVIDER`.
 3. **No GitHub webhook verifier.** Same behaviour.
 4. **No real Supabase auth verification.** The auth path exists in code but has **never** been exercised against a real Supabase project. A buyer's own Supabase **Postgres** connection string works, because that connection is plain PostgreSQL; the **Supabase auth product is untested**.
-5. **No rate limiting on `POST /payment/webhook`.**
+5. **`POST /payment/webhook` IS rate limited, but the limiter is in-process only.** The route carries `webhookRateLimitMiddleware` (`server/src/app.ts`), mounted **ahead of** `express.raw()` and the handler, so a request over the limit is refused **before** signature verification and before any HMAC work. The limiter is the Module Hub `rate-limit` module, vendored at `modules/rate-limit/` and wired by `server/src/lib/rate-limit.ts`; a refusal is **HTTP 429** with code **`RATE_LIMITED`** and a `Retry-After` header. Limits: `WEBHOOK_RATE_LIMIT_MAX` (default `60` requests) per `WEBHOOK_RATE_LIMIT_WINDOW_MS` (default `60000` ms) — see `docs/house-swarm-7/FU-RATELIMIT.md`. **What it is not:** the counter lives in one process's memory, so it is **per-instance and resets on restart**, several instances share no counter, and one key covers the endpoint rather than the caller. It is not a substitute for an edge/proxy rate limit in a multi-instance deployment.
 6. **No deployment has ever been performed anywhere**, and there is no multi-instance or clustered proof. Everything measured so far ran on a developer machine against a local PostgreSQL.
 7. **The UI evidence is HTTP-level and saved HTML — there are no screenshots**, and no headless browser was driven.
+
+**Correction, kept visible.** This document previously listed item 5 as "No rate limiting on `POST /payment/webhook`". That assertion was true when it was written and is **no longer true**: rate limiting was added to that route in the follow-up work unit H7-FU-RATELIMIT. It is corrected rather than deleted so that no older copy of this file can mislead a reader.
 
 ## 3. Commercial terms — Owner decision, still open
 
