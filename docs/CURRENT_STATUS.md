@@ -1,0 +1,75 @@
+# Current Status — Multi-Tenant AI Starter Kit (MT01)
+
+**Purpose:** current-state overlay only. The product contracts and the historical
+evidence keep their own authority.
+
+**จุดประสงค์:** เอกสารนี้บอกสถานะปัจจุบันเท่านั้น สัญญาผลิตภัณฑ์และหลักฐานเชิงประวัติ
+ยังคงมีอำนาจของตัวเอง
+
+**Prepared by:** HOUSE-SWARM-7 WU-6 · **Date:** 2026-09-28 · **Base:** `6010332`
+(`codex/house-swarm-7-wu1-20260927`)
+
+---
+
+## 1. What has changed since the 2026-09-02 status
+
+The previous status described a reference server with **in-memory/demo boundaries**.
+That is no longer accurate for the areas listed below. The following are now
+**implemented and measured on a real PostgreSQL 16.4 database**:
+
+| Area | Before | Now | How it was proven |
+|---|---|---|---|
+| Persistence | in-memory repositories | **PostgreSQL repositories** with versioned SQL migrations, seeded plans, and a billing-event ledger | `server/scripts/proofs/wu2/db-proof.mjs` (write → read back → survives reconnect) · restart-persistence proof across two OS processes |
+| Usage quota | counted in one place only, not enforced | **enforced before the provider is called**, with a single atomic SQL statement (no read-then-write) | unentitled account → **402 `QUOTA_NOT_ENTITLED`** · over-quota account → **429 `QUOTA_EXCEEDED`** with `provider_fetch_attempts=0` · a successful call consumes exactly one unit (counter 0 → 1 → 2), a failed provider call consumes none |
+| Migrations | none | **two** files, applied at startup before the port opens, idempotent | `server/scripts/proofs/wu2/migrate-runner-proof.mts` → exit 0, `migration_runner_idempotent=true`; creates 6 tables |
+| Sample user interface | none | **five pages in Thai and English** (index, signup, login, plans, app), 124 dictionary keys per language with identical key sets | `server/scripts/proofs/wu4/e2e-web.mjs` → 9/9 · `i18n-parity.mjs` → 8/8 · ten saved HTML pages |
+
+**In-memory repositories are retained deliberately, for tests and for running
+without a database** — they are no longer the only option. When `DATABASE_URL` is
+set the server uses PostgreSQL and reports `persistent=true`; with no
+`DATABASE_URL` it degrades to in-memory and reports `persistent=false`.
+**ที่เก็บข้อมูลแบบ in-memory ยังคงอยู่โดยเจตนา เพื่อใช้ในเทสต์และเพื่อรันโดยไม่มีฐานข้อมูล**
+— ไม่ใช่ทางเลือกเดียวอีกต่อไป
+
+## 2. Still NOT implemented — do not read anything above as saying otherwise
+
+1. **No OpenTelemetry exporter.** Spans are held in process memory only; there is no OTLP endpoint and no collector export.
+2. **No LINE webhook verifier.** The verifier returns `WEBHOOK_UNKNOWN_PROVIDER`.
+3. **No GitHub webhook verifier.** Same behaviour.
+4. **No real Supabase auth verification.** The auth path exists in code but has **never** been exercised against a real Supabase project. A buyer's own Supabase **Postgres** connection string works, because that connection is plain PostgreSQL; the **Supabase auth product is untested**.
+5. **No rate limiting on `POST /payment/webhook`.**
+6. **No deployment has ever been performed anywhere**, and there is no multi-instance or clustered proof. Everything measured so far ran on a developer machine against a local PostgreSQL.
+7. **The UI evidence is HTTP-level and saved HTML — there are no screenshots**, and no headless browser was driven.
+
+## 3. Commercial terms — Owner decision, still open
+
+**No price, licence or purchase link is set by this document.** Draft legal
+documents exist on the `wip/windows-sync-20260925` branch (`LICENSE.md`,
+`COMMERCIAL_LICENSE.md`, `EULA.md`, `THIRD_PARTY_LICENSES.md`, `PROVENANCE.md`)
+and carry a **target** figure for Owner review. That figure is **not approved**
+and must not be published or quoted as a price.
+
+**ยังไม่มีการกำหนดราคา/สัญญาอนุญาตในเอกสารนี้** เอกสารกฎหมายฉบับร่างอยู่บน branch
+`wip/windows-sync-20260925` และมีตัวเลข *เป้าหมาย* สำหรับ Owner พิจารณา
+**ยังไม่อนุมัติ** ห้ามนำไปประกาศหรืออ้างเป็นราคา
+
+## 4. Remaining gates before any sale listing
+
+- Owner review and legal sign-off on the DRAFT legal documents, and an explicit price/licence decision
+- A second, independent pass over the deployment manual after the F1–F7 findings were closed — the manual has been corrected but **not yet re-tested end to end by a fresh agent since the corrections**
+- Fulfillment platform selection and integration
+- A clean-install proof on a buyer-style environment with none of the internal dependencies
+- A final immutable release artifact with regenerated PROVENANCE checksums
+- Verification against a real Supabase project, if the buyer's auth path is to be claimed
+
+## 5. Evidence basis
+
+- `601033249d2b1ab005d1ca83dfbe33f66af6e356` (WU-1) plus the HOUSE-SWARM-7 layers WU-2 … WU-6
+- Reports: `WSTERA-House/reports/REPORT-HOUSE-SWARM-7-WU{2,3,4,5,6}-2026-09-28.md`
+- Gate logs: `WSTERA-House/reports/evidence/house-swarm-7-wu{4,5,6}-commander-gates.log`
+- Sales documents and the claim-by-claim evidence map: `docs/house-swarm-7/WU6-SALES-EN.md`, `WU6-SALES-TH.md`, `WU6-CLAIMS-EVIDENCE.md`
+
+## 6. Change rule
+
+Update this file when the branch, gate or runtime reality changes. Do not rewrite
+historical evidence to make an old result look current.

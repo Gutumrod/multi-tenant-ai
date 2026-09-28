@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="th" data-locale="th">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light" />
+    <title data-i18n="page.signup.title">[page.signup.title]</title>
+    <link rel="stylesheet" href="assets/app.css" />
+  </head>
+  <body data-page="signup">
+    <header class="site-header" data-include="header"><!--{{shell}}--></header>
+
+    <main class="page">
+      <h1 data-i18n="signup.title">[signup.title]</h1>
+      <p class="lede" data-i18n="signup.intro">[signup.intro]</p>
+
+      <h2 data-i18n="signup.identity.title">[signup.identity.title]</h2>
+      <p data-i18n="signup.identity.body">[signup.identity.body]</p>
+
+      <form data-form="signup">
+        <div class="field">
+          <label for="tenant-id" data-i18n="signup.tenant.label">[signup.tenant.label]</label>
+          <input
+            id="tenant-id"
+            name="tenantId"
+            type="text"
+            autocomplete="off"
+            spellcheck="false"
+            maxlength="64"
+            data-i18n-placeholder="signup.tenant.placeholder"
+            placeholder="[signup.tenant.placeholder]"
+          />
+          <span class="field__help" data-i18n="signup.tenant.help">[signup.tenant.help]</span>
+        </div>
+        <div class="actions">
+          <button type="submit" class="btn" data-i18n="signup.continue">[signup.continue]</button>
+          <button type="button" class="btn btn--secondary" data-action="generate-id" data-i18n="signup.tenant.generate">[signup.tenant.generate]</button>
+          <a class="btn btn--secondary" href="login.html" data-continue="login.html" data-i18n="signup.have_account">[signup.have_account]</a>
+        </div>
+        <div class="status" data-status="signup" data-tone="plain" hidden></div>
+      </form>
+
+      <h2 data-i18n="signup.plans.title">[signup.plans.title]</h2>
+      <p class="note" data-i18n="signup.plans.note">[signup.plans.note]</p>
+
+      <div data-panel="plan-table" hidden>
+        <table>
+          <thead>
+            <tr>
+              <th data-i18n="plans.table.id">[plans.table.id]</th>
+              <th data-i18n="plans.table.name">[plans.table.name]</th>
+              <th data-i18n="plans.table.price">[plans.table.price]</th>
+              <th data-i18n="plans.table.ai">[plans.table.ai]</th>
+              <th data-i18n="plans.table.payments">[plans.table.payments]</th>
+            </tr>
+          </thead>
+          <tbody data-role="plan-rows-signup"></tbody>
+        </table>
+      </div>
+
+      <div data-panel="plans-unavailable" hidden>
+        <h3 data-i18n="plans.nodb.title">[plans.nodb.title]</h3>
+        <p data-i18n="plans.nodb.detail">[plans.nodb.detail]</p>
+      </div>
+    </main>
+
+    <footer class="site-footer" data-include="footer"><!--{{shell}}--></footer>
+
+    <script type="module" src="assets/app.js"></script>
+  </body>
+</html>
