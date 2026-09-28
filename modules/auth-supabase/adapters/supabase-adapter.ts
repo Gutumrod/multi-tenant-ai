@@ -15,12 +15,13 @@ export function isSupabaseAuthClient(client: any): client is SupabaseAuthClient 
 /**
  * Utility to extract metadata from a raw Supabase user.
  *
- * WU-1 SECURITY: returns server-controlled claims only. `user_metadata` is
- * writable by the end user in Supabase, so it is never merged here and can
- * never override `app_metadata`.
+ * WU-1 SECURITY: keeps server-controlled app claims and user-editable profile
+ * metadata separate. `user_metadata` never overrides `app_metadata` and must
+ * not be used as an authorization source.
  */
 export function extractSupabaseMetadata(user: SupabaseUser) {
   return {
-    ...user.app_metadata
+    appMetadata: user.app_metadata ?? {},
+    userMetadata: user.user_metadata ?? {}
   };
 }

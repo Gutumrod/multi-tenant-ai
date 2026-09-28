@@ -1,6 +1,6 @@
 # Supabase Auth Helpers Module
 
-**Version:** 0.1.0 (P1)
+**Version:** 0.1.1 (P1)
 **Status:** ✅ Completed
 
 ## Overview
@@ -84,5 +84,8 @@ async function handleRequest(jwt: string) {
 - `message`: ข้อความอธิบายข้อผิดพลาด
 
 ## Limitations
-- v0.1.0 เน้นการอ่านสถานะ Auth จาก JWT/Session เท่านั้น ไม่ครอบคลุมการจัดการ Password หรือการออก Token ใหม่
+- v0.1.1 เพิ่มการคืน app metadata และ user metadata แยก namespace; ไม่ครอบคลุมการจัดการ Password หรือการออก Token ใหม่
+
+## Security note (v0.1.1)
+`extractSupabaseMetadata` returns `appMetadata` and `userMetadata` separately. A key from user-editable metadata cannot overwrite an application metadata key.
 - การจัดการ Role/Permission แบบซับซ้อน (Hierarchy) ควรทำผ่าน custom resolvers
