@@ -1,7 +1,8 @@
 import crypto from 'node:crypto';
 import type { Request, Response } from 'express';
 import { getConfiguredPaymentCore, getStripeAdapter } from '../lib/payments.js';
-import { subscriptionCore } from '../lib/subscriptions.js';
+import { quotaGate, quotaRefusalResponse } from '../lib/quota.js';
+import { subscriptionCore, PAYMENTS_PER_MONTH } from '../lib/subscriptions.js';
 import { PaymentError } from '../../../modules/payment/core/error.js';
 import { createWebhookReceiver } from '../../../modules/webhook-receiver/core/index.js';
 import type { IdempotencyStore } from '../../../modules/webhook-receiver/core/types.js';
@@ -111,8 +112,27 @@ export const demoChargeHandler = async (
     return;
   }
 
+  const accountId = req.tenantContext?.tenantId;
+  if (!accountId) {
+    res.status(400).json({ error: 'Missing tenant context' });
+    return;
+  }
+
+  // Quota gate: creating a Stripe payment is a paid resource (an outbound
+  // Stripe API call), so the entitlement is checked and the unit consumed
+  // BEFORE the payment core is resolved or used.
+  const featureKey = PAYMENTS_PER_MONTH;
+  const quota = await quotaGate.assertAndConsumeQuota({ accountId, featureKey });
+  if (!quota.allowed) {
+    const refusal = quotaRefusalResponse(quota);
+    res.status(refusal.status).json(refusal.body);
+    return;
+  }
+
   const paymentCore = getConfiguredPaymentCore();
   if (!paymentCore) {
+    // Nothing was sent to Stripe, so give the consumed unit back.
+    await quotaGate.releaseQuota({ accountId, featureKey });
     res.status(503).json({
       error:
         'No payment provider configured on this server instance (set STRIPE_SECRET_KEY)',
@@ -123,6 +143,16 @@ export const demoChargeHandler = async (
   const idempotencyKey = crypto.randomUUID();
   const referenceId = `demo_charge_${crypto.randomUUID()}`;
   const tenantId = req.tenantContext?.tenantId;
+
+  /**
+   * The Stripe call itself failed (thrown, or a non-success result): release the
+   * consumed unit so an error never burns the payments quota. Returns the
+   * refusal-adjusted payload fields the caller merges into its response.
+   */
+  const releaseConsumed = async (): Promise<{ usage: number; limit: number | null }> => {
+    const usage = await quotaGate.releaseQuota({ accountId, featureKey });
+    return { usage, limit: quota.limit };
+  };
 
   try {
     const result = await paymentCore.createPayment({
@@ -135,6 +165,7 @@ export const demoChargeHandler = async (
     });
 
     if (!result.success) {
+      const released = await releaseConsumed();
       const err = result.error;
       const status =
         err?.status ||
@@ -147,22 +178,25 @@ export const demoChargeHandler = async (
         error: err?.message || 'Payment processing failed',
         code: err?.code,
         provider: err?.provider,
+        ...released,
       });
       return;
     }
 
-    res.json(result);
+    res.json({ ...result, usage: quota.usage, limit: quota.limit });
   } catch (error: unknown) {
+    const released = await releaseConsumed();
     if (error instanceof PaymentError) {
       res.status(error.status || 400).json({
         error: error.message,
         code: error.code,
         provider: error.provider,
+        ...released,
       });
       return;
     }
     const message = error instanceof Error ? error.message : String(error);
-    res.status(502).json({ error: message });
+    res.status(502).json({ error: message, ...released });
   }
 };
 

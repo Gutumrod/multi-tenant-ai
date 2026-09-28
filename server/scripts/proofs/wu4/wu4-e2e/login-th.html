@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="th" data-locale="th">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light" />
+    <title data-i18n="page.login.title">เข้าสู่ระบบ — หน้าตัวอย่าง</title>
+    <link rel="stylesheet" href="assets/app.css" />
+  </head>
+  <body data-page="login">
+    <header class="site-header" data-include="header">
+    <div class="site-header__inner">
+      <a class="brand" href="/?lang=th" data-i18n="site.title">Multi-Tenant AI Starter Kit — หน้าตัวอย่าง</a>
+      <nav class="site-nav" data-role="site-nav">
+        <a href="/?lang=th" data-i18n="nav.home">หน้าแรก</a>
+        <a href="/signup?lang=th" data-i18n="nav.signup">สมัคร</a>
+        <a href="/login?lang=th" aria-current="page" data-i18n="nav.login">เข้าสู่ระบบ</a>
+        <a href="/plans?lang=th" data-i18n="nav.plans">เลือกแพ็กเกจ</a>
+        <a href="/app?lang=th" data-i18n="nav.app">ใช้ AI</a>
+      </nav>
+      <div class="langswitch">
+        <span class="langswitch__label" data-i18n="lang.label">ภาษา</span>
+        <a href="?lang=th" data-locale-option="th" aria-current="true" data-i18n="lang.th">ไทย</a>
+        <a href="?lang=en" data-locale-option="en" data-i18n="lang.en">อังกฤษ</a>
+      </div>
+    </div>
+    </header>
+
+    <main class="page">
+      <h1 data-i18n="login.title">เข้าสู่ระบบ</h1>
+      <p class="lede" data-i18n="login.intro">การเข้าสู่ระบบที่นี่คือการใส่ demo tenant id เดิมอีกครั้ง ไม่มีรหัสผ่าน ไม่มีอีเมล และไม่มีการตรวจสอบ ดังนั้นหน้านี้ไม่ใช่การยืนยันตัวตน มันแค่บอกหน้าตัวอย่างว่าจะส่ง tenant id ตัวไหน</p>
+
+      <h2 data-i18n="login.identity.title">demo tenant id ของคุณ</h2>
+
+      <form data-form="login">
+        <div class="field">
+          <label for="tenant-id" data-i18n="login.tenant.label">demo tenant id</label>
+          <input
+            id="tenant-id"
+            name="tenantId"
+            type="text"
+            autocomplete="off"
+            spellcheck="false"
+            maxlength="64"
+            data-i18n-placeholder="login.tenant.placeholder"
+            placeholder="id ที่เคยใช้"
+          />
+        </div>
+        <div class="actions">
+          <button type="submit" class="btn" data-i18n="login.continue">ไปหน้าใช้ AI ต่อ</button>
+          <a class="btn btn--secondary" href="signup.html" data-continue="signup.html" data-i18n="login.no_account">ยังไม่มี id? สมัคร</a>
+        </div>
+        <div class="status" data-status="login" data-tone="plain" hidden></div>
+      </form>
+
+      <div class="note" data-i18n="login.notreal.body">เมื่อ DEMO_AUTH ปิด เซิร์ฟเวอร์จะไม่สนใจ id นี้ในทุก endpoint ที่มีค่าใช้จ่าย และจะตอบ 503 &quot;Auth not configured&quot; แทน การเข้าสู่ระบบจริงต้องใช้โปรเจกต์ Supabase ของคุณเอง</div>
+    </main>
+
+    <footer class="site-footer" data-include="footer">
+    <div class="site-footer__inner">
+      <p data-i18n="footer.note">หน้าตัวอย่างที่แถมมากับ reference server ของ Multi-Tenant AI Starter Kit · ไม่โหลดฟอนต์หรือรูปจากภายนอก ไม่มี CDN ไม่มีรูปสต็อก</p>
+      <p><span class="tag" data-role="demo-auth-flag">DEMO_AUTH on</span></p>
+    </div>
+    </footer>
+
+    <script type="module" src="assets/app.js"></script>
+  </body>
+</html>

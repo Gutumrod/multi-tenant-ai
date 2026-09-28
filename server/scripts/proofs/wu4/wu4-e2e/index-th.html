@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="th" data-locale="th">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light" />
+    <title data-i18n="page.index.title">หน้าตัวอย่าง — Multi-Tenant AI Starter Kit</title>
+    <link rel="stylesheet" href="assets/app.css" />
+  </head>
+  <body data-page="index">
+    <header class="site-header" data-include="header">
+    <div class="site-header__inner">
+      <a class="brand" href="/?lang=th" data-i18n="site.title">Multi-Tenant AI Starter Kit — หน้าตัวอย่าง</a>
+      <nav class="site-nav" data-role="site-nav">
+        <a href="/?lang=th" aria-current="page" data-i18n="nav.home">หน้าแรก</a>
+        <a href="/signup?lang=th" data-i18n="nav.signup">สมัคร</a>
+        <a href="/login?lang=th" data-i18n="nav.login">เข้าสู่ระบบ</a>
+        <a href="/plans?lang=th" data-i18n="nav.plans">เลือกแพ็กเกจ</a>
+        <a href="/app?lang=th" data-i18n="nav.app">ใช้ AI</a>
+      </nav>
+      <div class="langswitch">
+        <span class="langswitch__label" data-i18n="lang.label">ภาษา</span>
+        <a href="?lang=th" data-locale-option="th" aria-current="true" data-i18n="lang.th">ไทย</a>
+        <a href="?lang=en" data-locale-option="en" data-i18n="lang.en">อังกฤษ</a>
+      </div>
+    </div>
+    </header>
+
+    <main class="page">
+      <h1 data-i18n="landing.title">หน้าตัวอย่างของ Multi-Tenant AI Starter Kit</h1>
+      <p class="lede" data-i18n="landing.intro">หน้าพวกนี้เรียก HTTP endpoint จริงของ reference server ที่รันอยู่บนเครื่องนี้ ไม่มีอะไรเป็นภาพmock: แพ็กเกจ เพดาน ตัวนับ และข้อผิดพลาดที่เห็น ล้วนอ่านมาจากเซิร์ฟเวอร์ที่กำลังรันและฐานข้อมูลของมัน</p>
+
+      <div class="card card--banner">
+        <p class="card__title" data-i18n="demo.banner.title">โหมดสาธิต</p>
+        <p data-i18n="demo.banner.body">นี่คือหน้าตัวอย่าง · โหมดการยืนยันตัวตนจะอ่านจากเซิร์ฟเวอร์จริง และแสดงในหน้า &quot;ใช้ AI&quot;</p>
+      </div>
+
+      <h2 data-i18n="landing.flow.title">เส้นทางที่เดินได้ครบ</h2>
+      <ol>
+        <li data-i18n="landing.flow.step1">สมัครหรือเข้าสู่ระบบ: ใส่ demo tenant id เพราะหน้าตัวอย่างนี้ไม่มีบัญชีผู้ใช้ของตัวเอง</li>
+        <li data-i18n="landing.flow.step2">เลือกแพ็กเกจ: ตัวเลือกจะถูกเขียนลงตาราง subscription ในฐานข้อมูล local</li>
+        <li data-i18n="landing.flow.step3">ใช้ AI: หนึ่งคำขอใช้โควตา ai_requests_per_month หนึ่งหน่วย</li>
+        <li data-i18n="landing.flow.step4">ดูโควตา: แพ็กเกจ ตัวนับการใช้ และเพดาน จะแสดงตามที่เซิร์ฟเวอร์ตอบกลับมา</li>
+      </ol>
+
+      <div class="actions">
+        <a class="btn" href="signup.html" data-continue="signup.html" data-i18n="nav.signup">สมัคร</a>
+        <a class="btn btn--secondary" href="login.html" data-continue="login.html" data-i18n="nav.login">เข้าสู่ระบบ</a>
+        <a class="btn btn--secondary" href="plans.html" data-continue="plans.html" data-i18n="nav.plans">เลือกแพ็กเกจ</a>
+        <a class="btn btn--secondary" href="app.html" data-continue="app.html" data-i18n="nav.app">ใช้ AI</a>
+      </div>
+
+      <h2 data-i18n="landing.what.title">หน้าพวกนี้ทำอะไร</h2>
+      <p data-i18n="landing.what.body">มี 5 หน้า static ที่เสิร์ฟโดย express app ตัวเดียวกับ API: หน้าแรก สมัคร เข้าสู่ระบบ เลือกแพ็กเกจ และใช้ AI ไม่มีขั้นตอน build และไม่มีเฟรมเวิร์กฝั่งหน้าเว็บ</p>
+
+      <h2 data-i18n="landing.demo.title">โหมดตัวตนสาธิต (DEMO_AUTH)</h2>
+      <p data-i18n="landing.demo.body">DEMO_AUTH ปิดเป็นค่าเริ่มต้น ระหว่างที่ปิด ทุก endpoint ที่มีค่าใช้จ่ายอยู่หลัง auth middleware ตัวจริง และจะตอบ 503 &quot;Auth not configured&quot; จนกว่าจะชี้เซิร์ฟเวอร์ไปที่โปรเจกต์ Supabase ของคุณเอง เมื่อ DEMO_AUTH=true หน้าตัวอย่างนี้ใช้ demo tenant id ที่พิมพ์เองได้ เพื่อให้เดินครบทั้งสี่หน้าจอกับฐานข้อมูล local ได้ · นี่ไม่ใช่การยืนยันตัวตน: ไม่มีรหัสผ่าน ไม่มีบัญชีผู้ใช้ ไม่มีโทเคน และเซิร์ฟเวอร์จะปฏิเสธที่จะเปิดโหมดนี้เมื่อ NODE_ENV=production</p>
+
+      <h2 data-i18n="landing.start.title">รันบนเครื่องสะอาด</h2>
+      <p data-i18n="landing.start.body">ต้องมี Node 20 ขึ้นไปพร้อม npm ติดตั้งครั้งเดียวในโฟลเดอร์ server/ แล้วสตาร์ทเซิร์ฟเวอร์ ถ้าไม่ตั้ง DATABASE_URL เซิร์ฟเวอร์จะใช้ repository ในหน่วยความจำ ถ้าตั้ง DATABASE_URL จะใช้ PostgreSQL และรัน migration ให้ตอนบูต คำสั่งทั้งหมดอยู่ใน docs/house-swarm-7/WU4-SAMPLE-UI.md</p>
+
+      <h2 data-i18n="landing.honesty.title">หน้าตัวอย่างนี้ไม่ใช่อะไร</h2>
+      <p data-i18n="landing.honesty.body">ไม่มีข้อความโฆษณา ไม่มีคำรับรองจากลูกค้า ไม่มีตัวเลขที่กุขึ้น ไม่มีรูปสต็อก และไม่มีการเรียกออกไปภายนอกเลย ทุกประโยคที่เห็นมาจาก dictionary ภาษาใน web/assets/i18n.js</p>
+
+      <h2 data-i18n="landing.notimpl.title">ยังไม่ได้ทำ — อย่าคาดหวังสิ่งเหล่านี้</h2>
+      <p data-i18n="landing.notimpl.intro">ความสามารถต่อไปนี้ยังไม่มีในบิลด์นี้ และหน้านี้ก็ไม่แกล้งทำเป็นว่ามี:</p>
+      <ul class="capability-list" data-role="not-implemented-list">
+        <li data-not-implemented="opentelemetry-exporter">
+          <strong data-i18n="landing.notimpl.otel">OpenTelemetry exporter: โมดูล tracing เก็บ span ไว้ในหน่วยความจำของ process เท่านั้น (MemoryTracer) ไม่มี OTLP endpoint และไม่มีการส่งออกไป collector</strong>
+        </li>
+        <li data-not-implemented="line-webhook-verifier">
+          <strong data-i18n="landing.notimpl.line">LINE webhook verifier: ตัวตรวจสอบคืนรหัสข้อผิดพลาด WEBHOOK_UNKNOWN_PROVIDER และระบุตรง ๆ ว่ายังไม่ได้ทำ</strong>
+        </li>
+        <li data-not-implemented="github-webhook-verifier">
+          <strong data-i18n="landing.notimpl.github">GitHub webhook verifier: พฤติกรรมเดียวกัน — WEBHOOK_UNKNOWN_PROVIDER ยังไม่ได้ทำ</strong>
+        </li>
+        <li data-not-implemented="real-supabase-auth">
+          <strong data-i18n="landing.notimpl.supabase">การยืนยันตัวตน Supabase จริง: เส้นทาง auth มีอยู่ แต่ยังพิสูจน์ที่นี่ไม่ได้ เพราะเรดิสทอรีนี้ไม่มีโปรเจกต์ Supabase และไม่มี credential</strong>
+        </li>
+        <li data-not-implemented="production-deployment">
+          <strong data-i18n="landing.notimpl.deploy">การ deploy ขึ้น production: ไม่มี container ไม่มี reverse proxy ไม่มี TLS และไม่มี process supervisor ในเรดิสทอรีนี้ ใช้รันบนเครื่องตัวเองเท่านั้น</strong>
+        </li>
+        <li data-not-implemented="demo-identity-is-not-authentication">
+          <strong data-i18n="landing.notimpl.demo">ตัวตนสาธิตไม่ใช่การยืนยันตัวตน: มันคือ tenant id ที่พิมพ์ในฟอร์ม ไม่มีรหัสผ่านและไม่มี session token</strong>
+        </li>
+      </ul>
+    </main>
+
+    <footer class="site-footer" data-include="footer">
+    <div class="site-footer__inner">
+      <p data-i18n="footer.note">หน้าตัวอย่างที่แถมมากับ reference server ของ Multi-Tenant AI Starter Kit · ไม่โหลดฟอนต์หรือรูปจากภายนอก ไม่มี CDN ไม่มีรูปสต็อก</p>
+      <p><span class="tag" data-role="demo-auth-flag">DEMO_AUTH on</span></p>
+    </div>
+    </footer>
+
+    <script type="module" src="assets/app.js"></script>
+  </body>
+</html>

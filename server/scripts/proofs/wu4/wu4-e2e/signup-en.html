@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en" data-locale="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light" />
+    <title data-i18n="page.signup.title">Sign up — sample UI</title>
+    <link rel="stylesheet" href="assets/app.css" />
+  </head>
+  <body data-page="signup">
+    <header class="site-header" data-include="header">
+    <div class="site-header__inner">
+      <a class="brand" href="/?lang=en" data-i18n="site.title">Multi-Tenant AI Starter Kit — sample UI</a>
+      <nav class="site-nav" data-role="site-nav">
+        <a href="/?lang=en" data-i18n="nav.home">Home</a>
+        <a href="/signup?lang=en" aria-current="page" data-i18n="nav.signup">Sign up</a>
+        <a href="/login?lang=en" data-i18n="nav.login">Log in</a>
+        <a href="/plans?lang=en" data-i18n="nav.plans">Choose a plan</a>
+        <a href="/app?lang=en" data-i18n="nav.app">Use the AI</a>
+      </nav>
+      <div class="langswitch">
+        <span class="langswitch__label" data-i18n="lang.label">Language</span>
+        <a href="?lang=th" data-locale-option="th" data-i18n="lang.th">Thai</a>
+        <a href="?lang=en" data-locale-option="en" aria-current="true" data-i18n="lang.en">English</a>
+      </div>
+    </div>
+    </header>
+
+    <main class="page">
+      <h1 data-i18n="signup.title">Sign up</h1>
+      <p class="lede" data-i18n="signup.intro">This sample UI has no user accounts of its own: it cannot create one, and it stores no password. Enter a demo tenant id to act as, or generate one, and the id is kept in this browser only.</p>
+
+      <h2 data-i18n="signup.identity.title">Step 1 — demo identity</h2>
+      <p data-i18n="signup.identity.body">The id you enter is sent as the x-tenant-id and x-demo-account headers. The server only accepts it when DEMO_AUTH=true.</p>
+
+      <form data-form="signup">
+        <div class="field">
+          <label for="tenant-id" data-i18n="signup.tenant.label">Demo tenant id</label>
+          <input
+            id="tenant-id"
+            name="tenantId"
+            type="text"
+            autocomplete="off"
+            spellcheck="false"
+            maxlength="64"
+            data-i18n-placeholder="signup.tenant.placeholder"
+            placeholder="for example demo_shop_1"
+          />
+          <span class="field__help" data-i18n="signup.tenant.help">Letters, digits and the characters . _ - @ are accepted, up to 64 characters. Nothing is verified: this is not authentication.</span>
+        </div>
+        <div class="actions">
+          <button type="submit" class="btn" data-i18n="signup.continue">Continue to choose a plan</button>
+          <button type="button" class="btn btn--secondary" data-action="generate-id" data-i18n="signup.tenant.generate">Generate an id</button>
+          <a class="btn btn--secondary" href="login.html" data-continue="login.html" data-i18n="signup.have_account">Already have an id? Log in</a>
+        </div>
+        <div class="status" data-status="signup" data-tone="plain" hidden></div>
+      </form>
+
+      <h2 data-i18n="signup.plans.title">Step 2 — the plans the server actually has</h2>
+      <p class="note" data-i18n="signup.plans.note">Read from the server plan table when this page was served. Choosing a plan happens on the next screen, and this page creates no account and no subscription.</p>
+
+      <div data-panel="plan-table" hidden>
+        <table>
+          <thead>
+            <tr>
+              <th data-i18n="plans.table.id">Plan id (database)</th>
+              <th data-i18n="plans.table.name">Name (database)</th>
+              <th data-i18n="plans.table.price">Price (database)</th>
+              <th data-i18n="plans.table.ai">ai_requests_per_month</th>
+              <th data-i18n="plans.table.payments">payments_per_month</th>
+            </tr>
+          </thead>
+          <tbody data-role="plan-rows-signup"></tbody>
+        </table>
+      </div>
+
+      <div data-panel="plans-unavailable" hidden>
+        <h3 data-i18n="plans.nodb.title">The plan list could not be read</h3>
+        <p data-i18n="plans.nodb.detail">The server could not read its plan repository, so no catalogue is shown. Fix the database connection and reload.</p>
+      </div>
+    </main>
+
+    <footer class="site-footer" data-include="footer">
+    <div class="site-footer__inner">
+      <p data-i18n="footer.note">Sample UI shipped with the Multi-Tenant AI Starter Kit reference server. No external CDN, no web font, no stock photo.</p>
+      <p><span class="tag" data-role="demo-auth-flag">DEMO_AUTH on</span></p>
+    </div>
+    </footer>
+
+    <script type="module" src="assets/app.js"></script>
+  </body>
+</html>
