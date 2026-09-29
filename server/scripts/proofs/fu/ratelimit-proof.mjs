@@ -50,7 +50,7 @@ const LIMIT = 5;
 const WINDOW_MS = 60_000;
 
 const SECRET = 'whsec_h7fulimit_proof_placeholder_secret';
-const PLACEHOLDER_KEY = 'sk_test_h7fulimitproofplaceholder';
+const PLACEHOLDER_KEY = 'sk_test_fake_placeholder';
 
 const results = [];
 

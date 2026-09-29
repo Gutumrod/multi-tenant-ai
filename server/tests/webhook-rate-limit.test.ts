@@ -33,7 +33,7 @@ import { createMemoryStore } from '../../modules/rate-limit/index.js';
  */
 
 const SIGNATURE_SECRET = 'whsec_h7_fu_rate_limit_test_secret';
-const STRIPE_SECRET_PLACEHOLDER = 'sk_test_h7fulimitplaceholder';
+const STRIPE_SECRET_PLACEHOLDER = 'sk_test_fake_placeholder';
 
 vi.setConfig({ testTimeout: 30000, hookTimeout: 30000 });
 
