@@ -115,7 +115,7 @@ non-zero, rather than pointing at an address of its own. Replace every part of i
 with your own values — there is no address in this repository to copy.
 
 `DATABASE_URL` จำเป็นในโหมดนี้ ถ้าไม่มี สคริปต์จะปฏิเสธและ exit ไม่เป็นศูนย์ แทนที่จะ
-ชี้ไปที่อยู่ของตัวเอง ให้แทนทุกส่วนด้วยค่าของคุณเอง — ไม่มีที่อยู่ในเรดิสทอรีนี้ให้คัดลอก
+ชี้ไปที่อยู่ของตัวเอง ให้แทนทุกส่วนด้วยค่าของคุณเอง — ไม่มีที่อยู่ในที่เก็บโค้ดนี้ให้คัดลอก
 
 **`NODE_ENV` is deliberately not exported in this example, and this step does not
 need it.** npm honours `NODE_ENV=production` and **omits devDependencies** from an

@@ -51,7 +51,7 @@ declared boundary forbids the module from doing itself: resolving the identity k
 reading the environment, and mapping a refusal to an HTTP response.
 
 มันคือ**การนำโมดูล `rate-limit` จาก Module Hub กลับมาใช้** ไม่ใช่โค้ดใหม่ที่เขียนขึ้นสำหรับ
-งานนี้ โมดูลให้แกนการนับ หน่วยเก็บในหน่วยความจำ และ error ตอนปฏิเสธ ส่วนฝั่ง Host (เรดิสทอรีนี้)
+งานนี้ โมดูลให้แกนการนับ หน่วยเก็บในหน่วยความจำ และ error ตอนปฏิเสธ ส่วนฝั่ง Host (ที่เก็บโค้ดนี้)
 ให้เฉพาะสามอย่างที่ขอบเขตของโมดูลห้ามโมดูลทำเอง คือ การหาคีย์ระบุตัวตน การอ่าน environment
 และการแปลงการปฏิเสธเป็น HTTP response
 
@@ -62,12 +62,12 @@ reading the environment, and mapping a refusal to an HTTP response.
 The module is vendored into this repository at `modules/rate-limit/`. Its provenance
 is recorded in full in **`modules/rate-limit/PROVENANCE-RATELIMIT.md`**; the short form:
 
-โมดูลนี้ถูกคัดลอกเข้ามาในเรดิสทอรีนี้ที่ `modules/rate-limit/` ที่มาแบบเต็มบันทึกไว้ใน
+โมดูลนี้ถูกคัดลอกเข้ามาในที่เก็บโค้ดนี้ที่ `modules/rate-limit/` ที่มาแบบเต็มบันทึกไว้ใน
 **`modules/rate-limit/PROVENANCE-RATELIMIT.md`** ฉบับย่อ:
 
 | Field / ฟิลด์ | Value / ค่า |
 |---|---|
-| source repo / เรดิสทอรีต้นทาง | `modules-hub` |
+| source repo / `repo` ต้นทาง | `modules-hub` |
 | source commit / คอมมิตต้นทาง | `cd88c570ab57f6976d15f85d09973d0cfbf0cd63` |
 | version / เวอร์ชัน | `0.1.0` (upstream) / `0.1.0` (MT01 copy, `modules/rate-limit/VERSION`) |
 | provenance pointer / ที่ชี้ที่มา | `modules/rate-limit/PROVENANCE-RATELIMIT.md` |
@@ -78,8 +78,8 @@ repositories at runtime: the files under `modules/rate-limit/` are copies held i
 this repository, and the staged upstream reference was opened read-only and never
 written to.
 
-**`modules-hub` ไม่ถูกแก้ไขเลย** ไม่มีไฟล์ใดจาก `modules-hub` ถูก import ข้ามเรดิสทอรีตอน
-รันไทม์ ไฟล์ใต้ `modules/rate-limit/` เป็นสำเนาที่เก็บอยู่ภายในเรดิสทอรีนี้ และสำเนาอ้างอิง
+**`modules-hub` ไม่ถูกแก้ไขเลย** ไม่มีไฟล์ใดจาก `modules-hub` ถูก import ข้ามรีโปตอน
+รันไทม์ ไฟล์ใต้ `modules/rate-limit/` เป็นสำเนาที่เก็บอยู่ภายในที่เก็บโค้ดนี้ และสำเนาอ้างอิง
 ต้นทางที่ stage ไว้ถูกเปิดแบบอ่านเท่านั้น ไม่ถูกเขียนทับ
 
 The module's own test files came across with it, so its behaviour is verifiable here
@@ -87,7 +87,7 @@ rather than only at the source repository. The one local change on top of the co
 metadata in `modules/rate-limit/package.json` (`private`, `description`); no runtime
 dependency was added and no module source file was edited. See the provenance file.
 
-ไฟล์เทสของโมดูลเองติดมาด้วย พฤติกรรมของมันจึงตรวจสอบได้ในเรดิสทอรีนี้ ไม่ใช่แค่ที่ต้นทาง
+ไฟล์เทสของโมดูลเองติดมาด้วย พฤติกรรมของมันจึงตรวจสอบได้ในที่เก็บโค้ดนี้ ไม่ใช่แค่ที่ต้นทาง
 การแก้ไขฝั่ง MT01 เพียงอย่างเดียวคือ metadata ใน `modules/rate-limit/package.json`
 (`private`, `description`) ไม่มีการเพิ่ม dependency ตอนรันไทม์ และไม่มีการแก้ไฟล์ซอร์สของ
 โมดูล ดูรายละเอียดในไฟล์ที่มา

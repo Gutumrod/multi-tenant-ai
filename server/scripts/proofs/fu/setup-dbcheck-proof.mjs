@@ -25,9 +25,9 @@
  *
  * DEFECT 2 — on Windows/Git-Bash the step could not run at all, and reported
  * that failure as success. `REPO_ROOT` is a POSIX path such as
- * `/d/AI-Workspace/...`; it was handed straight to native `node.exe`, which does
+ * `/d/path/to/project/...`; it was handed straight to native `node.exe`, which does
  * not translate it, so node looked the file up under the current drive and died
- * with `Cannot find module 'D:\d\AI-Workspace\...\db-check.mjs'`. Git-Bash's
+ * with `Cannot find module 'D:\d\path\to\project\...\db-check.mjs'`. Git-Bash's
  * `MSYS_NO_PATHCONV` / `MSYS2_ARG_CONV_EXCL` make that rewrite happen; with
  * either one set the absolute POSIX path fails. The same file invoked through a
  * RELATIVE path runs fine and reports `db-check: all 4 checks PASSED` in every

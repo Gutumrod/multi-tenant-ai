@@ -8,8 +8,8 @@ Copy provenance for the Module Reuse Check performed by HOUSE-SWARM-7 WU-2
     source_repo:    modules-hub
     source_version: 0.1.0 (MT01 copy) / 0.1.0 (upstream)
     source_commit:  84ebb0d9a0734a6b91a2c78e8f66759736393efa
-    source_path:    modules/subscription   (read-only staging:
-                    D:/AI-Workspace/runtime/hermes-native/workspace/house-swarm-7/wu2/hub84)
+    source_path:    modules/subscription   (read-only staging: vendor-internal
+                    staging copy, not part of the delivered folder)
     copied_at:      2026-09-28 (UTC)
     evidence:       reports/evidence/house-swarm-7-wu2-provenance.txt
     base revision:  601033249d2b1ab005d1ca83dfbe33f66af6e356

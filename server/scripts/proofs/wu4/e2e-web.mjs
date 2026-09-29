@@ -28,20 +28,47 @@
  *   - Prints no credential: the connection string is never echoed, only the
  *     host, port and database name that the loopback guard already validated.
  *   - Removes every row it created before exiting.
+ *   - HERMETIC BY DEFAULT: the three AI provider key variables are removed from
+ *     this process's own environment before the AI branch is decided, so the
+ *     branch never depends on what the caller's shell happens to export. The
+ *     provider branch is reachable only by explicit opt-in (see below).
  *
- * The AI provider branch is reported, never faked. This machine has no AI
- * provider key configured, so the "one request consumes one quota unit"
- * observation cannot be made end to end: the handler validates the prompt,
- * passes the quota gate, then finds no provider and returns 503 after releasing
- * the unit. The ai-use check therefore proves the gate RAN on that route by (a)
- * observing the handler's own no-provider 503 — unreachable unless the gate
- * allowed the request — and (b) observing the real 429 QUOTA_EXCEEDED refusal
- * from the same route for an account whose counter is at the plan limit. The
- * check detail names the branch. If an AI provider key IS present in the
- * environment the check takes the provider branch instead and asserts the 200
- * response plus a counter incremented by exactly one, read back from PostgreSQL.
+ * The AI provider branch is chosen hermetically, and reported, never faked.
+ * At start-up — before the branch is decided — this harness REMOVES
+ * OPENAI_API_KEY, ANTHROPIC_API_KEY and GEMINI_API_KEY from its own
+ * process.env, so every machine takes the same branch. That is the defect this
+ * fixes: an earlier revision decided the branch from the caller's environment,
+ * so a reviewer who had OPENAI_API_KEY exported entered the provider branch,
+ * made one real provider call, and reported 8/9 on the very tree that reports
+ * 9/9 with the key absent. A harness whose result depends on the reviewer's
+ * shell is not evidence.
+ *
+ * The DEFAULT branch is therefore `branch=no-provider-configured`: with the
+ * three key variables removed there is no AI provider, so the "one request
+ * consumes one quota unit" observation cannot be made end to end — the handler
+ * validates the prompt, passes the quota gate, then finds no provider and
+ * returns 503 after releasing the unit. The ai-use check therefore proves the
+ * gate RAN on that route by (a) observing the handler's own no-provider 503 —
+ * unreachable unless the gate allowed the request — and (b) observing the real
+ * 429 QUOTA_EXCEEDED refusal from the same route for an account whose counter is
+ * at the plan limit. The check detail names the branch it actually took.
+ *
+ * The PROVIDER branch, `branch=provider-configured`, stays reachable
+ * deliberately, behind ONE explicit opt-in environment variable:
+ *
+ *     WU4_E2E_PROVIDER_BRANCH=1
+ *
+ * With that variable set to 1 (or true) the removal is skipped, the caller's
+ * three key variables are KEPT, and the check takes the provider branch: one
+ * real provider call, asserting the 200 response plus a counter incremented by
+ * exactly one, read back from PostgreSQL. It is opt-in only — without it the
+ * branch cannot be entered, on any machine — and the harness prints an INFO line
+ * saying which of the two it did, naming this variable. No key value is ever
+ * read, printed or forwarded; only the variable names are reported.
  *
  * Usage:  DATABASE_URL=postgres://.../mt01_dev node scripts/proofs/wu4/e2e-web.mjs
+ *         WU4_E2E_PROVIDER_BRANCH=1 OPENAI_API_KEY=... DATABASE_URL=... \
+ *           node scripts/proofs/wu4/e2e-web.mjs      (real provider call; opt-in)
  */
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -57,6 +84,62 @@ const DICTIONARY_FILE = join(REPO_DIR, 'web/assets/i18n.js');
 
 const DATABASE_URL = process.env.DATABASE_URL;
 const results = [];
+
+/**
+ * The three AI provider key variables the handler reads
+ * (`server/src/routes/ai-demo.ts`), and the ONE variable that re-opens the
+ * provider branch deliberately.
+ */
+const PROVIDER_KEY_VARS = ['OPENAI_API_KEY', 'ANTHROPIC_API_KEY', 'GEMINI_API_KEY'];
+const PROVIDER_BRANCH_ENV = 'WU4_E2E_PROVIDER_BRANCH';
+
+/** True for the values accepted as an explicit opt-in: `1` or `true`. */
+function optInSet(value) {
+  return /^(?:1|true)$/i.test(String(value ?? ''));
+}
+
+/**
+ * HERMETIC BY DEFAULT. Removes the three provider key variables from THIS
+ * process's own environment, before anything decides which AI branch to take, so
+ * the branch is deterministic on every machine. Without this the branch depended
+ * on the caller's shell: a reviewer with OPENAI_API_KEY exported entered the
+ * provider branch, made one real provider call, and measured 8/9 on the same tree
+ * that measures 9/9 when the key is absent — a result that is not evidence.
+ *
+ * The provider branch stays reachable, but only behind the explicit opt-in
+ * `WU4_E2E_PROVIDER_BRANCH=1` (or `=true`). No key VALUE is ever read, printed
+ * or compared here — only the variable NAMES, and only to report what was done.
+ */
+function applyProviderKeyHygiene() {
+  const optedIn = optInSet(process.env[PROVIDER_BRANCH_ENV]);
+  const present = PROVIDER_KEY_VARS.filter(
+    (name) => typeof process.env[name] === 'string' && process.env[name] !== ''
+  );
+
+  if (optedIn) return { optedIn, present, removed: [], kept: present };
+
+  for (const name of PROVIDER_KEY_VARS) delete process.env[name];
+  return { optedIn, present, removed: present, kept: [] };
+}
+
+const PROVIDER_HYGIENE = applyProviderKeyHygiene();
+
+if (PROVIDER_HYGIENE.optedIn) {
+  info(
+    `provider-key-hygiene opt-in ${PROVIDER_BRANCH_ENV}=1: the caller's AI provider key variable(s) ` +
+      `(${PROVIDER_HYGIENE.present.length > 0 ? PROVIDER_HYGIENE.present.join(',') : 'none'}) were KEPT in this ` +
+      `process's environment, so the provider branch is reachable and will be taken`
+  );
+} else {
+  info(
+    `provider-key-hygiene hermetic default: removed ${PROVIDER_KEY_VARS.join(', ')} from this process's ` +
+      `environment before the AI branch was decided (the caller's environment had: ` +
+      `${PROVIDER_HYGIENE.present.length > 0 ? PROVIDER_HYGIENE.present.join(',') : 'none of them'}); ` +
+      `no key value was read or printed. The branch is therefore deterministic on every machine: ` +
+      `branch=no-provider-configured. The provider branch is reachable only deliberately, by opt-in ` +
+      `${PROVIDER_BRANCH_ENV}=1`
+  );
+}
 
 function record(name, passed, detail) {
   results.push({ name, passed });
@@ -294,7 +377,11 @@ async function main() {
     process.env.OPENAI_API_KEY || process.env.ANTHROPIC_API_KEY || process.env.GEMINI_API_KEY
   );
   info(
-    `ai-provider configured=${providerConfigured} (only the presence of a key is reported; no value is read or printed)`
+    `ai-provider configured=${providerConfigured} branch=${
+      providerConfigured ? 'provider-configured' : 'no-provider-configured'
+    } (only the presence of a key is reported; no value is read or printed; ` +
+      `hermetic default removes the three key variables — see the provider-key-hygiene line above, ` +
+      `opt-in is ${PROVIDER_BRANCH_ENV}=1)`
   );
 
   // --- 1. landing-th-and-en-render ---------------------------------------
@@ -464,7 +551,9 @@ async function main() {
       record(
         'ai-use-consumes-one-quota-unit',
         ok,
-        `branch=no-provider-configured (no OPENAI/ANTHROPIC/GEMINI key present on this machine) ` +
+        `branch=no-provider-configured (hermetic default: the three provider key variables were removed from ` +
+          `this process's environment at start-up, so no OPENAI/ANTHROPIC/GEMINI key is visible on ANY machine; ` +
+          `the provider branch needs the explicit opt-in ${PROVIDER_BRANCH_ENV}=1) ` +
           `gate_allowed_then_handler_503_observed=${allowedObserved} handler_status=${response.status} ` +
           `handler_error=${JSON.stringify(allowedBody.error)} ` +
           `counter_before=${counterBefore} counter_after=${counterAfter} unit_released=${releaseObserved} ` +

@@ -12,13 +12,29 @@ for it lives. A reviewer can check the sales copy against reality row by row.
 
 Evidence locations used in the table / ที่อ้างอิงหลักฐานที่ใช้ในตาราง:
 
-- **WT** — this worktree: `D:/AI-Workspace/runtime/worktrees/house-swarm-7-wu6`
-- **CG(n)** — controller gate log
-  `D:/AI-Workspace/vault/06-Agent-Logs/WSTERA-House/reports/evidence/house-swarm-7-wu<n>-commander-gates.log`
-- **RPT(n)** — `D:/AI-Workspace/vault/06-Agent-Logs/WSTERA-House/reports/REPORT-HOUSE-SWARM-7-WU<n>-2026-09-28.md`
-- **WU6-RUN** — measured by the author of this document during WU-6, on WT, with the
-  raw output reported in `REPORT-HOUSE-SWARM-7-WU6-2026-09-28.md` / วัดโดยผู้เขียน
-  เอกสารนี้ระหว่าง WU-6 บน WT โดยผลดิบอยู่ในรายงาน WU-6
+The four labels below name the AUTHOR's evidence locations. They are the vendor's
+internal evidence locations and are **not part of the delivered folder**: nothing a
+buyer receives contains these files, and no path here is one a buyer can open. Each
+label names the file so a reviewer can ask the controller for it by name; the
+absolute machine paths are deliberately not written down (the directory prefixes
+were removed in H7-REVIEW-FIX-HYGIENE), because an absolute path on the vendor's
+machine is not evidence a buyer can use.
+
+ที่อ้างอิงทั้งสี่ด้านล่างนี้คือ**ที่อยู่หลักฐานฝั่งผู้คุม (internal)** ไม่ได้อยู่ในโฟลเดอร์ที่ส่งมอบ
+ผู้ซื้อจะไม่ได้รับไฟล์เหล่านี้ และไม่มีพาธใดที่ผู้ซื้อเปิดได้ แต่ละป้ายระบุชื่อไฟล์เพื่อให้ผู้ตรวจ
+เรียกขอจากผู้คุมได้ตามชื่อ ส่วนพาธเครื่องแบบเต็มตั้งใจไม่เขียนไว้ (ตัดคำนำหน้าออกใน
+H7-REVIEW-FIX-HYGIENE) เพราะพาธบนเครื่องของผู้คุมไม่ใช่หลักฐานที่ผู้ซื้อใช้ได้
+
+- **WT** — the worktree this document set was written in
+  (`server/`, `web/`, `modules/`, `docs/` below are all inside it).
+- **CG(n)** — controller gate log, vendor-internal, under the vendor's report tree:
+  `06-Agent-Logs/WSTERA-House/reports/evidence/house-swarm-7-wu<n>-commander-gates.log`
+- **RPT(n)** — controller report, vendor-internal:
+  `06-Agent-Logs/WSTERA-House/reports/REPORT-HOUSE-SWARM-7-WU<n>-2026-09-28.md`
+- **WU6-RUN** — measured by the author of this document during WU-6, on the worktree,
+  with the raw output reported in the vendor-internal
+  `REPORT-HOUSE-SWARM-7-WU6-2026-09-28.md` / วัดโดยผู้เขียนเอกสารนี้ระหว่าง WU-6
+  บน worktree โดยผลดิบอยู่ในรายงาน WU-6 (vendor-internal)
 
 ---
 
@@ -35,7 +51,7 @@ Evidence locations used in the table / ที่อ้างอิงหลั�
 | C7 | It is a reference implementation plus evidence — not a hosted service, not a finished product, not a deployment. / เป็น implementation + หลักฐาน ไม่ใช่บริการ ไม่ใช่สินค้าสำเร็จ ไม่ใช่ deploy | WT contains no `Dockerfile`, no compose file, no reverse-proxy config; `docs/house-swarm-7/WU5-DEPLOY.md` §1 states no deployment was performed; CG(5) `CHECK wu5-no-docker-or-cloud-config-added PASS`. / CG(5) R9 |
 | C8 | It is for a backend engineer or technical founder, judged by running it. / ทำเพื่อวิศวกร/ผู้ก่อตั้งสายเทคนิค ตัดสินด้วยการรัน | Editorial positioning, not a measurable claim: it asserts nothing about the product's behaviour or contents, so it needs no behavioural evidence. It is deliberately kept free of any performance, scale or customer claim. / editorial, no evidence required |
 
-## 2. The repository contents / เนื้อหาในเรดิสทอรี
+## 2. The repository contents / เนื้อหาในที่เก็บโค้ด
 
 | # | Claim in the sales documents / คำกล่าวอ้าง | Evidence / หลักฐาน |
 |---|---|---|
@@ -94,10 +110,10 @@ Evidence locations used in the table / ที่อ้างอิงหลั�
 |---|---|---|
 | C47 | Q1 — Node.js 22 or newer, with npm. / Node.js 22 ขึ้นไป พร้อม npm | Same evidence as C34 (`engines.node = ">=22.0.0"` in the installed dependency). / WT |
 | C48 | Q2 — dependencies must be installed inside `server/`. / ต้องติดตั้ง dependency ข้างใน server/ | `server/package.json` (the manifest and all scripts) and `server/package-lock.json` live in `server/`; every documented command runs `cd server` first. There is no root-level `package.json` in WT. / WT |
-| C49 | Q3 — PostgreSQL 16 or newer, or your own Supabase Postgres connection string. / PostgreSQL 16 ขึ้นไป หรือ connection string ของ Supabase Postgres ของคุณเอง | WT `server/.env.example` documents `DATABASE_URL` as the PostgreSQL connection string; `docs/house-swarm-7/WU5-DEPLOY.md` §4 documents both paths and states there is no default or fallback address. / WT, WU5-DEPLOY.md §4 |
+| C49 | Q3 — a PostgreSQL 16 or newer database; PostgreSQL 16 is what this kit has been tested with, and Supabase is UNTESTED, with testing against a real Supabase project scheduled before the kit goes on sale. / ฐานข้อมูล PostgreSQL 16 ขึ้นไป — คิทนี้ทดสอบกับ PostgreSQL 16 แล้ว ส่วน Supabase ยังไม่ถูกทดสอบ โดยกำหนดทดสอบกับโปรเจกต์ Supabase จริงก่อนเปิดขาย | WT `server/.env.example` documents `DATABASE_URL` as the PostgreSQL connection string; `docs/house-swarm-7/WU5-DEPLOY.md` §4 states there is no default and no fallback address, and the sales document's Q3 says a Supabase Postgres URL speaks the same protocol but is untested here. Enforced mechanically by the rewritten `no-supabase-tested-claim` check in `server/scripts/proofs/wu6/claims-check.mjs` and proven on demand by `server/scripts/proofs/fu/supabase-claims-fixtures.mjs`. / WT, WU5-DEPLOY.md §4 |
 | C50 | Q4 — `modules/` and `web/` must sit beside `server/`: the server imports from `../../../modules/` at runtime and reads pages from `../web/`. / ต้องมี modules/ และ web/ ข้าง server/ | WT `server/src/lib/ai.ts:5,9`, `payments.ts:4,8,9`, `quota.ts:30-32`, `subscriptions.ts:5,9,15`, `web-pages.ts:24`, `middleware/auth.ts:2-3`, `demo-auth.ts:2`, `tenant.ts:2` all import `../../../modules/…`; WT `server/src/lib/web-pages.ts:22` imports `../../../web/assets/i18n.js` and line 27 sets `WEB_ROOT = join(here, '../../../web')`. / WT source |
 | C51 | Q5 — a process supervisor and TLS of your own; the Express process speaks plain HTTP. / supervisor และ TLS ของคุณเอง | WT `server/src/index.ts` calls `app.listen(port, …)` with no TLS options; `docs/house-swarm-7/WU5-DEPLOY.md` §4.3 states the process does not terminate TLS. No supervisor, proxy or compose file exists in WT. / WT, WU5-DEPLOY.md §4.3 |
-| C52 | S1 — your own PostgreSQL database or your own Supabase Postgres connection string; no default, no bundled instance, no fallback address. / ฐานข้อมูลของคุณเอง ไม่มีค่าเริ่มต้น/ที่อยู่สำรอง | WT `server/src/lib/persistence/pg.ts` `getPgPool()` returns nothing when `DATABASE_URL` is unset, and `server/src/index.ts` then reports `persistent=false` instead of falling back. / WT source |
+| C52 | S1 — your own PostgreSQL database, SQL-standard PostgreSQL; there is no default, no bundled instance and no fallback address. A buyer who supplies a Supabase Postgres connection string is running the same PostgreSQL protocol, but Supabase is UNTESTED here, with testing against a real Supabase project scheduled before the kit goes on sale. / ฐานข้อมูล PostgreSQL ของคุณเอง ไม่มีค่าเริ่มต้น/ที่อยู่สำรอง — ส่วน Supabase ยังไม่ถูกทดสอบ โดยกำหนดทดสอบกับโปรเจกต์ Supabase จริงก่อนเปิดขาย | WT `server/src/lib/persistence/pg.ts` `getPgPool()` returns nothing when `DATABASE_URL` is unset, and `server/src/index.ts` then reports `persistent=false` instead of falling back. Enforced mechanically by the rewritten `no-supabase-tested-claim` check in `server/scripts/proofs/wu6/claims-check.mjs` and proven on demand by `server/scripts/proofs/fu/supabase-claims-fixtures.mjs`. / WT source |
 | C53 | S2 — your own AI provider key (`OPENAI_API_KEY`, `ANTHROPIC_API_KEY` or `GEMINI_API_KEY`); without one the paid AI route answers 503. / คีย์ AI ของคุณเอง ไม่มีแล้วได้ 503 | CG(4) `CHECK ai-use-consumes-one-quota-unit PASS branch=no-provider-configured … handler_status=503 handler_error="No AI provider configured on this server instance (set OPENAI_API_KEY, ANTHROPIC_API_KEY, or GEMINI_API_KEY)"`. Source: WT `server/src/routes/ai-demo.ts:45-48`. / CG(4), WT |
 | C54 | S3 — your own Stripe keys for the payment demo (`STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`). / คีย์ Stripe ของคุณเอง | WT `server/.env.example` documents both names; WT `server/src/lib/payments.ts` constructs the Stripe adapter from the environment. / WT |
 | C55 | S4 — TLS, process supervision and secret storage of your own; there is no `.env` file to put secrets in. / TLS/supervisor/ที่เก็บ secret ของคุณเอง ไม่มี .env ให้ใส่ | Same evidence as C33 (no dotenv reader) and C51 (no TLS terminator, no supervisor). / WT |
@@ -112,7 +128,7 @@ observable refusal. Each row below names both, where both exist.
 
 ทุกข้อในส่วนที่ 6 ของเอกสารขายทั้งสองภาษาเป็นคำกล่าวอ้างเชิง **ปฏิเสธ**: ว่าความสามารถหนึ่ง
 ไม่มี ว่าไม่เคยรันการทดสอบ หรือว่าไม่เคยมีการ deploy หลักฐานของคำกล่าวอ้างแบบนี้คือ
-(ก) การไม่มีอยู่ของเส้นทางโค้ด และ (ข) ที่ที่เรดิสทอรีจงใจตอบด้วยรหัส "ยังไม่ได้ทำ" —
+(ก) การไม่มีอยู่ของเส้นทางโค้ด และ (ข) ที่ที่ที่เก็บโค้ดจงใจตอบด้วยรหัส "ยังไม่ได้ทำ" —
 พฤติกรรมการปฏิเสธที่เห็นได้ แต่ละแถวล่างนี้ระบุทั้งสองอย่าง เมื่อมีทั้งสองอย่าง
 
 | # | Claim in the sales documents / คำกล่าวอ้าง | Evidence / หลักฐาน |
@@ -120,7 +136,7 @@ observable refusal. Each row below names both, where both exist.
 | C56 | N1 — no OpenTelemetry exporter; traces are held in process memory only; no OTLP endpoint. / ไม่มี OpenTelemetry exporter เก็บ span ในหน่วยความจำเท่านั้น | WT `modules/enterprise-features/core/tracer.ts` implements `NoopTracer` and `MemoryTracer` only (`MemoryTracer` pushes to `this.completedSpans`; there is no export path). `grep -rn -i otlp server/src server/package.json modules/webhook-receiver` → 0 matches. / WU6-RUN |
 | C57 | N2 — no LINE webhook verifier; it answers `WEBHOOK_UNKNOWN_PROVIDER`. / ไม่มีตัวตรวจสอบ webhook ของ LINE ตอบ WEBHOOK_UNKNOWN_PROVIDER | WT `modules/webhook-receiver/providers/line/index.ts:10` returns the code `'WEBHOOK_UNKNOWN_PROVIDER'` and states it is not implemented. / WT source |
 | C58 | N3 — no GitHub webhook verifier; same behaviour. / ไม่มีของ GitHub พฤติกรรมเดียวกัน | WT `modules/webhook-receiver/providers/github/index.ts:10` returns the same code. / WT source |
-| C59 | N4 — Supabase auth has never been verified against a real project and is untested; a buyer's Supabase Postgres connection string works; the persistence layer is not Supabase-backed and uses the pg driver. / auth Supabase ยังไม่ถูกทดสอบ connection string ของผู้ซื้อใช้ได้ ชั้น persistence ไม่ใช่ Supabase-backed ใช้ pg | The auth path exists in WT (`server/src/lib/supabase.ts`, `server/src/middleware/auth.ts`, `modules/auth-supabase/`) and no Supabase project is reachable from this work. The persistence layer uses `pg`: WT `server/src/lib/persistence/pg.ts` imports and pools from `pg`, and WT `server/src/lib/persistence/pg-repositories.ts` issues SQL through that pool. RPT(2) §7 records the test database as a **local** PostgreSQL instance, not a Supabase project. See the honesty note at the end of this file. / WT source, RPT(2) §7 |
+| C59 | N4 — Supabase is UNTESTED: the kit has been tested with PostgreSQL 16 and has NOT been tested with Supabase, testing against a real Supabase project is scheduled before the kit goes on sale, Supabase auth has never been verified against a real project, and the persistence layer is not Supabase-backed and uses the pg driver. / Supabase ยังไม่ถูกทดสอบ ทดสอบกับ PostgreSQL 16 แล้ว ยังไม่ทดสอบกับ Supabase กำหนดทดสอบกับโปรเจกต์จริงก่อนเปิดขาย auth ยังไม่ถูกตรวจสอบ ชั้น persistence ไม่ใช่ Supabase-backed ใช้ pg | The auth path exists in WT (`server/src/lib/supabase.ts`, `server/src/middleware/auth.ts`, `modules/auth-supabase/`) and no Supabase project is reachable from this work, so no Supabase test result can be stated. The persistence layer uses `pg`: WT `server/src/lib/persistence/pg.ts` imports and pools from `pg`, and WT `server/src/lib/persistence/pg-repositories.ts` issues SQL through that pool. RPT(2) §7 records the test database as a **local** PostgreSQL instance, not a Supabase project. This row is the one that used to say a buyer's Supabase Postgres connection string "works" — that wording is **superseded** by H7-REVIEW-FIX-2; the claim is now the untested position above. Enforced by the rewritten `no-supabase-tested-claim` check in `server/scripts/proofs/wu6/claims-check.mjs` and proven on demand by `server/scripts/proofs/fu/supabase-claims-fixtures.mjs`. See the honesty note at the end of this file. / WT source, RPT(2) §7 |
 | C60 | N5 — the rate limit on `POST /payment/webhook` is in-process only: the route has a limit, but a multi-instance deployment shares no counter and one key covers the endpoint rather than the caller. / rate limit บนเส้นทางนี้เป็นแบบในโปรเซสเดียว | WT `server/src/app.ts` mounts `webhookRateLimitMiddleware` first on `POST /payment/webhook`, ahead of `express.raw()` and the handler; WT `server/src/lib/rate-limit.ts` composes the key (`route:POST /payment/webhook`), reads the two env vars and maps a refusal to 429; WT `modules/rate-limit/` is the vendored Module Hub module with its provenance at `modules/rate-limit/PROVENANCE-RATELIMIT.md`. Observed in this work unit: `npx vitest run tests/webhook-rate-limit.test.ts` → 7 passed (7), and `node scripts/proofs/fu/ratelimit-proof.mjs` → 5 checks, 5 passed, 0 failed, with `HTTP 429 code=RATE_LIMITED` and `Retry-After "12"`. The single-process limit is the module's own documented one (`modules/rate-limit/MODULE.md`, §Known limitation) and is stated in `docs/house-swarm-7/FU-RATELIMIT.md`. / WU6-RUN (this follow-up), FU-RATELIMIT.md |
 | C61 | N6 — no deployment has ever been performed anywhere; the product has been run on a developer machine against a local PostgreSQL only; no multi-instance proof. / ไม่เคย deploy ที่ใดเลย รันบนเครื่องนักพัฒนา กับ local PostgreSQL เท่านั้น ไม่มีหลักฐานหลายอินสแตนซ์ | `docs/house-swarm-7/WU5-DEPLOY.md` §1 states this about itself; RPT(5) §6 item 2 records it in the controller's own words; WT is a worktree and nothing in it records a deployment. The local test database is a machine-local PostgreSQL instance (RPT(2) §7). / WU5-DEPLOY.md §1, RPT(5) §6 |
 | C62 | N7 — payments and AI providers need your own keys; no live charge and no live provider call was made. / ต้องใช้คีย์ของคุณเอง ไม่มีการเรียกเก็บเงินหรือเรียกผู้ให้บริการจริง | CG(3) and CG(4) harnesses stub `globalThis.fetch` to block real egress and count attempts; CG(4) G7 reports `call1_provider_calls=1` against a **stub**, and `branch=no-provider-configured` on this machine. The Stripe adapter is exercised through the mock/webhook path, not a live charge. / CG(3), CG(4) G7 |
@@ -139,7 +155,7 @@ considered and dropped rather than quietly softened.
 | # | Claim considered / คำกล่าวอ้างที่พิจารณา | Why it was removed / เหตุผลที่ตัดออก |
 |---|---|---|
 | X1 | "The migrations have been proven to work" — as an unsupported sentence. / "migration พิสูจน์แล้ว" แบบไม่มีที่มา | Dropped in that bare form. Every sentence about the migration proof in the final documents **names the script** (`server/scripts/proofs/wu2/migrate-runner-proof.mts`) and the observation it prints (`migration_runner_idempotent=true`), per the work unit's rule that the proof must be named. / ต้องระบุวิธีพิสูจน์ทุกครั้ง |
-| X2 | "Works with Supabase" / "Supabase-ready" / "tested with Supabase". / "ใช้กับ Supabase ได้" / "ทดสอบกับ Supabase แล้ว" | Removed entirely. Supabase auth has never been exercised against a real project and the persistence layer is not Supabase-backed, so no such claim can be evidenced. The final documents say the opposite, in both languages (N4 / C59). / ตัดออกทั้งหมด เพราะพิสูจน์ไม่ได้ |
+| X2 | "Works with Supabase" / "Supabase-ready" / "tested with Supabase". / "ใช้กับ Supabase ได้" / "ทดสอบกับ Supabase แล้ว" | Removed entirely, and the removal now has teeth. Supabase auth has never been exercised against a real project and the persistence layer is not Supabase-backed, so no such claim can be evidenced; the final documents say the opposite, in both languages (N4 / C59). **Superseded positive wording, recorded so an older copy cannot mislead:** this ledger's own C49, C52 and C59 rows, and §8 constraint 1, used to describe a buyer's Supabase Postgres connection string as something that "works", and the C59 claim cell said in Thai that the buyer's connection string "ใช้ได้". That positive wording is **superseded** by H7-REVIEW-FIX-2; the position is now: PostgreSQL 16 has been tested, Supabase is untested, testing is scheduled before sale. The check that is supposed to kill these claims was vacuous until that work unit rewrote it — an EN copy reading "…connection string works with Supabase." PASSED the old rule — so treat any older copy of this ledger, or of the check, as stale. Enforced now by the `no-supabase-tested-claim` check and proven by `server/scripts/proofs/fu/supabase-claims-fixtures.mjs`. / ตัดออกทั้งหมด และบันทึกว่าถ้อยคำเชิงบวกเดิม (รวมถึงถ้อยคำในตารางนี้เอง) ถูกล้มเลิกแล้ว |
 | X3 | "Production-ready" / "production-grade" / "hardened". / "พร้อมใช้งาน production" / "แข็งแรง" | Removed. No deployment was ever performed, there was no rate limiting on the payment webhook at the time this claim was assessed, and there is no multi-instance proof. The documents instead carry the explicit limits N5, N6 and the closing "not validated by a different party" statement. (The rate-limit gap named here has since been closed by the follow-up work unit H7-FU-RATELIMIT — see the N5 row C60 — but the claim stays removed, because N5 is now a different limit rather than no limit.) / ตัดออก เพราะยังไม่มีหลักฐานรองรับ |
 | X4 | "Zero-configuration" or "just clone and run". / "ไม่ต้องตั้งค่าอะไร" / "โคลนแล้วรันได้เลย" | Removed. `DATABASE_URL` is required for persistence, an AI provider key is required to reach the paid route, and migrations create the schema on first start. Section 7 and section 8 state these requirements instead. / ตัดออก เพราะต้องตั้งค่าจริง |
 | X5 | "The UI has been visually verified" / any statement about how it looks. / "ตรวจ UI ด้วยตาแล้ว" | Removed. The UI evidence is HTTP-level and saved HTML; there are no screenshots and no headless browser run, so nothing about appearance can be claimed. The documents say exactly that (C63). / ตัดออก เพราะไม่มีภาพหน้าจอ |
@@ -154,14 +170,27 @@ considered and dropped rather than quietly softened.
 ## 8. Standing honesty constraints for this document set / ข้อกำหนดความซื่อสัตย์ถาวรของเอกสารชุดนี้
 
 1. **No claim anywhere states or implies that anything was tested, run, verified or
-   exercised with Supabase.** The permitted statements are exactly: a buyer's own
-   Supabase Postgres connection string works because the connection is plain
-   PostgreSQL through `pg`, and the Supabase auth product is untested. This is
-   enforced mechanically by the `no-supabase-tested-claim` check in
-   `server/scripts/proofs/wu6/claims-check.mjs`.
-   / **ไม่มีข้อใดกล่าวหรือสื่อว่าอะไรถูกทดสอบ/รัน/ตรวจกับ Supabase** สิ่งที่อนุญาตมีเท่านั้น:
-   connection string ของ Supabase Postgres ของผู้ซื้อใช้ได้ เพราะต่อเป็น PostgreSQL ธรรมดา
-   ผ่าน `pg` และตัวผลิตภัณฑ์ auth ของ Supabase ยังไม่ถูกทดสอบ
+   exercised with Supabase.** The position is: PostgreSQL 16 HAS been tested, and
+   Supabase is UNTESTED — testing against a real Supabase project is scheduled
+   before the kit goes on sale, and the Supabase auth product has never been
+   verified against a real project. This is enforced mechanically by the
+   `no-supabase-tested-claim` check in
+   `server/scripts/proofs/wu6/claims-check.mjs`, whose rule was **rewritten in
+   H7-REVIEW-FIX-2**: until then that check REQUIRED the sentence "a buyer's own
+   Supabase Postgres connection string works" and could not flag it, so a copy
+   whose EN N4 read "…connection string works with Supabase." still passed. The
+   check now BANS every affirmative Supabase construction in both languages —
+   including the Thai `ใช้ได้` forms the old list missed — and REQUIRES the
+   untested-Supabase statements in both documents. It is proven on demand by
+   `server/scripts/proofs/fu/supabase-claims-fixtures.mjs` (9 cases; the copy
+   above fails, the delivered documents pass) and written up in
+   `docs/house-swarm-7/FU-REVIEW-FIX-2.md`.
+   / **ไม่มีข้อใดกล่าวหรือสื่อว่าอะไรถูกทดสอบ/รัน/ตรวจกับ Supabase** สถานะคือ
+   ทดสอบกับ PostgreSQL 16 **แล้ว** ส่วน Supabase **ยังไม่ถูกทดสอบ** โดยกำหนดทดสอบกับ
+   โปรเจกต์ Supabase จริงก่อนเปิดขาย และตัวผลิตภัณฑ์ auth ของ Supabase ยังไม่เคยถูกตรวจกับ
+   โปรเจกต์จริง บังคับด้วยกลไกผ่าน check `no-supabase-tested-claim` ใน
+   `server/scripts/proofs/wu6/claims-check.mjs` ซึ่ง**เขียนกฎใหม่ใน H7-REVIEW-FIX-2**
+   และพิสูจน์ได้ตามสั่งด้วย `server/scripts/proofs/fu/supabase-claims-fixtures.mjs`
 2. **No price, licence, currency or purchase link appears in either sales
    document.** Commercial terms are stated to be provided separately. This is
    deliberate: pricing and licensing are the Owner's decision and outside this work
@@ -174,6 +203,37 @@ considered and dropped rather than quietly softened.
    configuration.** Its address does not appear in any buyer-facing document in this
    set; the documents use placeholders and tell the buyer to substitute their own.
    / **ฐานข้อมูลทดสอบในเครื่องไม่ถูกนำเสนอเป็นคอนฟิกของผู้ซื้อ**
+5. **`server/src/index.ts` exports `createApp` and `main`, and deliberately does not
+   export `app`.** The base revision (`6010332`) created the app at module scope
+   (`const app = createApp(); app.listen(port, …); export { app, createApp };`), so
+   importing that module bound the port and `createApp()` — which reads `DEMO_AUTH`
+   and decides which gate to mount — ran at import time. WU-4/WU-6 replaced that with
+   a `main()` that owns creation plus an entry-point guard, and dropping the `app`
+   export is the consequence. It is settled on evidence, not preference: **no code
+   file in this repository imports `server/src/index.ts`** — `git grep -nIE "src/index"`
+   returns only prose and the two `tsx src/index.ts` package scripts, a `git grep`
+   across every revision for a specifier resolving to it returns nothing, and
+   `server/scripts/proofs/fu/index-import-safety.mjs` resolves the import specifiers
+   of 149 code files under `server/src`, `server/tests`, `server/scripts`, `scripts`,
+   `web` and `modules` and finds zero importers. The same harness proves the property
+   the guard exists for: importing the module binds no listening port, starts no
+   database work, and exports exactly `createApp` and `main`. Recorded in
+   `server/src/index.ts` itself, in §2 of `docs/CURRENT_STATUS.md`, and written up in
+   `docs/house-swarm-7/FU-REVIEW-FIX-3.md`. No accessor is invented to replace the
+   removed export, because there is no caller to serve and re-creating a module-scope
+   `app` would restore the defect the guard removed. / **`server/src/index.ts` export
+   `createApp` กับ `main` และตั้งใจไม่ export `app`** เพราะเวอร์ชันฐานสร้างแอปที่ module
+   scope และผูกพอร์ตตอน import · ไม่มีไฟล์ใดในที่เก็บโค้ดนี้ import ไฟล์นี้ พิสูจน์ด้วย
+   `server/scripts/proofs/fu/index-import-safety.mjs`
+6. **No delivered document carries an internal machine path.** Paths of the form
+   a `D:`-rooted vendor path, a `C:`-rooted user path or the vendor's Windows user
+   name have been removed from every document this set delivers,
+   including this ledger's WT / CG(n) / RPT(n) legend, `STAGE3_EVIDENCE_REPORT.md` and
+   the three provenance records under `modules/`. Each location is still identifiable
+   by name (or by a vendor-side relative path such as
+   `06-Agent-Logs/WSTERA-House/reports/…`), so the claim → evidence map stays
+   traceable. **One class of file is deliberately NOT edited** — see the residual in
+   §9. / **ไม่มีเอกสารที่ส่งมอบฉบับใดมีพาธเครื่องภายใน** (ดู §9 สำหรับข้อยกเว้นที่บันทึกไว้)
 
 **One statement about this file itself.** This map has not been reviewed by a
 different party, and it is not an approval of the sales copy. It is a row-by-row
@@ -184,3 +244,97 @@ the authority, not this table.
 **ข้อความหนึ่งเกี่ยวกับไฟล์นี้เอง** แผนที่นี้ยังไม่ถูกตรวจโดยบุคคลอื่น และไม่ใช่การอนุมัติ
 ข้อความขาย มันคือดัชนีจากคำกล่าวอ้างไปยังหลักฐาน ทีละแถว เขียนโดยผู้เขียนคนเดียวกับเอกสาร
 ที่มันจัดทำดัชนี ผู้ตรวจที่ไม่เห็นด้วยกับแถวใด ควรถือที่อยู่หลักฐานเป็นข้อยุติ ไม่ใช่ตารางนี้
+
+---
+
+## 9. Residual — files that still carry an internal path, and why / ส่วนที่เหลือ — ไฟล์ที่ยังมีพาธภายใน และเหตุผล
+
+The internal machine paths were removed from the delivered documents this set
+covers (§8 constraint 6). This section records, by name, every file in the
+repository that a repository-wide sweep still finds carrying one, and what was
+done with each. The sweep is the repository-wide `git grep` the work unit
+specifies, run over the tracked tree for the three vendor-identifying tokens it
+names. Those tokens are not reproduced here, because writing them down would put
+an internal machine path straight back into this delivered ledger — the same
+self-reference §8 constraint 6 avoids by describing its patterns instead of
+quoting them.
+
+**Applied in H7-REVIEW-FIX-THAI-PATHS:** the controller ruled on 2026-09-29 that
+the illustrative examples in §9b were to be replaced with generic placeholders
+rather than kept as residual, and that ruling has been carried out — §9b now
+records the substitution instead of a pending decision. §9a is unchanged: that
+group was not in the ruling.
+
+`git grep` reports tracked files only; every file below is tracked, so this is a
+complete list of tracked hits. No claim row (C1–C64), no X-table row and no other
+part of §8 was touched to add this section.
+
+### 9a. The seven vendored upstream documents — not edited, deliberately
+
+| file | hit line(s) | what the path is |
+|---|---|---|
+| `modules/auth-supabase/DESIGN.md` | 533 | upstream author's own deliverable location |
+| `modules/auth-supabase/.agy-design-prompt.txt` | 4 | path in the upstream agent prompt |
+| `modules/payment/DESIGN.md` | 631 | upstream author's own deliverable location |
+| `modules/payment/.agy-prompt.md` | 6 | path in the upstream agent prompt |
+| `modules/rate-limit/DESIGN.md` | 522 | upstream author's own deliverable location |
+| `modules/tenant-context/agy-prompt.md` | 6, 11, 39 | paths in the upstream agent prompt |
+| `modules/webhook-receiver/DESIGN.md` | 567 | upstream author's own deliverable location |
+
+**Reason each was left alone.** These are copies of `modules-hub` module documents,
+carried into MT01 by the Module Reuse Check together with a provenance record that
+asserts the copy identity. For the module whose provenance is written down —
+`modules/rate-limit/DESIGN.md` — the record (`modules/rate-limit/PROVENANCE-RATELIMIT.md`)
+states the file is a byte-identical copy of the staged upstream file, and that copy
+identity is a claim a reader can check. Editing the copy would make that record
+false, trading a verifiable provenance claim for cosmetic path hygiene. The same
+class of file is left alone for the other six, whose documents are the same kind of
+upstream vendored copy.
+
+Measured honesty about the copy identity, because it is not uniform today:
+`diff -q` against the vendor's own `modules-hub` checkout — the repository these
+records name as `source_repo`, whose location is deliberately not written down here
+— returns SAME for `modules/rate-limit/DESIGN.md` and
+`modules/tenant-context/agy-prompt.md`, and DIFFER for
+`modules/auth-supabase/DESIGN.md`, `modules/payment/DESIGN.md`,
+`modules/tenant-context/DESIGN.md` and `modules/webhook-receiver/DESIGN.md`; the two
+`.agy*.txt`/`*.md` prompt files do not exist at that path in `modules-hub` at all.
+So "byte-identical copy" is exactly true only for the module whose provenance
+record asserts it (the rate-limit module); for the rest it is the copy relationship
+the Module Reuse Check recorded, not a re-verifiable diff against today's hub. That
+is a second reason to leave them: they are the upstream author's own internal
+paths, in upstream-authored text, and rewriting upstream text inside MT01 is not
+this document set's call. The decision on this group belongs to the
+controller/owner, not to this work unit.
+/ **เหตุผลที่ไม่ได้แก้** ไฟล์กลุ่มนี้เป็นสำเนาเอกสารโมดูลของ `modules-hub` และมีบันทึก
+provenance ยืนยันตัวตนของสำเนา การแก้สำเนาจะทำให้บันทึกนั้นไม่จริง จึงบันทึกเป็นส่วนที่เหลือ
+และให้ผู้คุมเป็นผู้ตัดสิน
+
+### 9b. Two files the work unit did not name — illustrative examples, ruled on and substituted
+
+| file | hit line(s) | what the path was |
+|---|---|---|
+| `scripts/house-swarm-7/setup.sh` | 211, 213 | a Windows path trap quoted as an example in a comment |
+| `server/scripts/proofs/fu/setup-dbcheck-proof.mjs` | 28, 30 | the same trap quoted in a file header comment |
+
+Both hits were *inside explanatory comments describing a Windows path-conversion
+trap*: the text shows what a path *looks like* when Git-Bash hands `/d/…` to a
+native program, i.e. the value is an example of a malformed path, not a location
+the code reads. Neither file is a document shipped in the delivery, so the work
+unit that first found them recorded them as residual and left the call to the
+controller/owner. **The controller ruled on 2026-09-29 that the machine-specific
+parts become generic placeholders, and H7-REVIEW-FIX-THAI-PATHS applied it:** in
+both comments the POSIX example's leading segment became `path/to/project`, so
+the shape is now `/d/path/to/project/…` arriving as `D:\d\path\to\project\…`. The
+before/after is not quoted here beyond that generic form, for the same
+self-reference reason given in the introduction to this section — writing the
+vendor's own folder name down would put the machine path straight back into this
+ledger. The comments still explain the trap, because the shape they demonstrate (a
+`/d/…` POSIX path handed to native `node.exe` arriving as `D:\d\…`) is preserved;
+only the machine-specific segments were generalised. No executable line in either
+file changed, and `setup-dbcheck-proof.mjs`'s own seven cases still pass. This is
+no longer a residual: a repository-wide sweep finds no machine path in either
+file.
+/ **สองไฟล์นี้ผู้คุมวินิจฉัยเมื่อ 2026-09-29 ให้แทนส่วนที่เป็นพาธของเครื่องด้วย
+placeholder ทั่วไป และงานนี้ทำแล้ว** — เปลี่ยนเฉพาะคอมเมนต์ ยังคงอธิบายกับดักพาธเดิม
+ไม่มีการแก้โค้ดที่รัน และไม่นับเป็นส่วนที่เหลืออีกต่อไป

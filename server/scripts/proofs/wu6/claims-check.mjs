@@ -212,40 +212,217 @@ const SALES = [
 // ---------------------------------------------------------------------------
 // CHECK 3 — no-supabase-tested-claim
 //
-// Rule enforced, in the work unit's own terms: the sales documents must not assert
-// that anything was tested, run, verified or exercised with Supabase, and must not
-// describe the persistence layer as Supabase-backed, while still being allowed to
-// say that a buyer's Supabase Postgres connection string works and that Supabase
-// auth is untested.
+// Rule enforced — REWRITTEN in H7-REVIEW-FIX-2 (review ISSUE 1). What the old
+// rule did is the defect this rewrite removes: it REQUIRED each sales document
+// to carry the sentence "a buyer's own Supabase Postgres connection string
+// works" and could not flag that sentence, because its affirmative patterns
+// needed a test verb within 60 characters BEFORE `with|against|on|using` and
+// then `supabase`, and its Thai list did not contain `ใช้ได้`. Measured against
+// the old rule: a copy of this document set whose EN N4 read "…connection string
+// works with Supabase." still reported PASS (exit 0). A gate that PASSES the
+// exact claim it exists to kill is worse than no gate, so the rule now runs the
+// other way round.
 //
-// How it is enforced (this matters, because a naive substring ban fails the
-// correct text): the check is evaluated LINE BY LINE. A line that mentions
-// "Supabase" is a VIOLATION only when it is NOT inside a negation or disclaimer
-// context — that is, only when it contains an affirmative
-// tested/verified/exercised/validated/ran/checked/proven/works construction
-// attached to Supabase, or an affirmative "Supabase-backed"/"Supabase-ready"
-// construction, AND carries no negation marker on that same line. The negation
-// markers are recognised in both languages (not / never / no / none / neither /
-// nor / without / untested / unverified / unsupported / ไม่). This is what makes
-// the honest disclosure text pass: "is not Supabase-backed" and "has never been
-// tested with a Supabase project" are denials, and the check exists to REQUIRE
-// them, so it must not flag them. An affirmative line with no marker on it — for
-// example "This kit is tested with Supabase." — still fails. The check ALSO
-// requires each document to carry the two permitted statements — that a buyer's
-// own Supabase Postgres connection string works, and that Supabase auth is
-// untested — so deleting every mention of Supabase cannot make this check pass.
+// BAN — per line, UNLESS that line carries a negation / disclaimer marker (not /
+// never / no / none / neither / nor / without / untested / unverified /
+// unsupported / ไม่): any affirmative construction that attaches a capability or
+// a test result to Supabase. The pattern list is printed in full in the PASS
+// detail below, and with a `BAN_EN` / `BAN_TH` label naming each construction.
+// It covers, in both languages:
+//
+//   * EN `works?` / `working` with `with|against|on|using` and `supabase`, in
+//     either order;
+//   * EN `supabase` with `is|are|was|were|has been` and
+//     `tested|verified|exercised|validated|checked|proven|supported|compatible`
+//     (and the same verb list with `with|against|on|using` and Supabase);
+//   * the EN hedge `should|will|would|expected to` + `work` near `supabase`;
+//   * the EN positive `is|are|was|were` + `supabase[- ]backed`;
+//   * the Thai affirmatives ใช้ได้ / ใช้งานได้ / รองรับ / เข้ากันได้ / ทดสอบ /
+//     ตรวจสอบ / พิสูจน์ attached to Supabase. ใช้ได้ is exactly the gap the old
+//     list had: "ใช้กับ Supabase ได้" and "ใช้งานได้กับ Supabase" both PASSED the
+//     old rule and are caught by this one.
+//
+// REQUIRE — in BOTH documents, so that deleting every Supabase mention cannot
+// make the check pass: the kit has been tested with PostgreSQL 16; it has NOT
+// been tested with Supabase (EN sentence and TH sentence); the pre-sale testing
+// commitment (EN sentence and TH sentence); Supabase auth is untested (EN
+// sentence and TH sentence); and the persistence layer is not Supabase-backed
+// (EN and TH). The 9 required patterns are printed in the PASS detail too.
+//
+// WHY THE NEGATION ESCAPE IS KEPT, and why it is per-line: the honest statements
+// this check REQUIRES are themselves denials, and a denial and an affirmative
+// share a line all the time — "has **not** been tested with Supabase",
+// "ยังไม่ทดสอบกับ Supabase", "is not Supabase-backed". A ban with no escape would
+// fail the correct text it exists to protect. Per-line rather than a character
+// window is deliberate for the same reason: markdown wrapping splits a sentence
+// across lines, so a window can cut a denial off from the word that makes it one,
+// while a line is the smallest unit a reviewer reads. `/ไม่/` covers every Thai
+// negation this document set uses (ไม่เคย, ไม่ใช่, ไม่ถูก, ไม่ได้, ยังไม่).
+//
+// The Thai ใช้ได้ patterns are deliberately tight (the word, an optional
+// preposition and Supabase adjacent — or the split form ใช้ … ได้ with Supabase
+// inside it) rather than a bare "ใช้ได้ within 60 characters of supabase" test.
+// That keeps the rule off the one correct line that carries ใช้ได้ near the
+// string "supabase": R4 lists the seven reusable modules, one of which is
+// `auth-supabase` ("โมดูลนำกลับมาใช้ได้เจ็ดตัว — `ai-provider`, `auth-supabase`,
+// …", 31 characters apart), which is a module listing and not a claim about
+// Supabase. The tight forms catch "ใช้กับ Supabase ได้" without inventing an
+// exemption a real violation could hide behind.
 // ---------------------------------------------------------------------------
 {
-  /** Constructions that assert a positive test result. */
-  const AFFIRMATIVE_RESULT = [
-    /\b(?:tested|verified|exercised|validated|checked|proven|ran|run|works?|working)\b[^.]{0,60}\b(?:with|against|on|using)\b[^.]{0,40}supabase/i,
-    /supabase[^.]{0,60}\b(?:is|are|was|were|has been|have been)\b[^.]{0,40}\b(?:tested|verified|exercised|validated|checked|proven|supported)\b/i,
+  /**
+   * BAN — every affirmative construction that attaches a capability or a test
+   * result to Supabase, in both languages. Each entry is { label, en, pattern }:
+   * `en` marks an English construction (the Thai ones are printed as BAN_TH), and
+   * `label` is what the PASS detail prints, so the printed rule and the executed
+   * rule are built from the same array and cannot drift apart.
+   */
+  const BAN = [
+    {
+      label: 'EN works? + with|against|on|using + supabase',
+      en: true,
+      pattern: /\bworks?\b[^.]{0,60}\b(?:with|against|on|using)\b[^.]{0,40}supabase/i,
+    },
+    {
+      label: 'EN working + with|against|on|using + supabase',
+      en: true,
+      pattern: /\bworking\b[^.]{0,60}\b(?:with|against|on|using)\b[^.]{0,40}supabase/i,
+    },
+    {
+      label: 'EN supabase + works? + with|against|on|using (either order)',
+      en: true,
+      pattern: /supabase[^.]{0,60}\bworks?\b[^.]{0,40}\b(?:with|against|on|using)\b/i,
+    },
+    {
+      label: 'EN supabase + works? + is|are|was|were + compatible',
+      en: true,
+      pattern:
+        /supabase[^.]{0,80}\bworks?\b[^.]{0,80}\b(?:is|are|was|were)\b[^.]{0,40}\bcompatible\b/i,
+    },
+    {
+      label:
+        'EN supabase + is|are|was|were|has been + tested|verified|exercised|validated|checked|proven|supported|compatible',
+      en: true,
+      pattern:
+        /supabase[^.]{0,60}\b(?:is|are|was|were|has been|have been|been)\b[^.]{0,40}\b(?:tested|verified|exercised|validated|checked|proven|supported|compatible)\b/i,
+    },
+    {
+      label:
+        'EN tested|verified|exercised|validated|checked|proven|supported + with|against|on|using + supabase',
+      en: true,
+      pattern:
+        /\b(?:tested|verified|exercised|validated|checked|proven|supported)\b[^.]{0,60}\b(?:with|against|on|using)\b[^.]{0,40}supabase/i,
+    },
+    {
+      label: 'EN hedge should|will|would|expected to + work + near supabase',
+      en: true,
+      pattern:
+        /\b(?:should|will|would|expected to)\b[^.]{0,60}\bwork(?:s|ing)?\b[^.]{0,60}supabase/i,
+    },
+    {
+      label: 'EN supabase ... should|will|would|expected to + work',
+      en: true,
+      pattern:
+        /supabase[^.]{0,60}\b(?:should|will|would|expected to)\b[^.]{0,60}\bwork(?:s|ing)?\b/i,
+    },
+    {
+      label: 'EN is|are|was|were + supabase[- ]backed (positive)',
+      en: true,
+      pattern: /\b(?:is|are|was|were|being)\s+(?:fully\s+|entirely\s+)?supabase[- ]backed/i,
+    },
+    {
+      label: 'EN supabase[- ]backed + persistence|layer|database|storage|repositories',
+      en: true,
+      pattern: /supabase[- ]backed\s+(?:persistence|layer|database|storage|repositories?)/i,
+    },
+    {
+      label: 'TH ใช้ได้ / ใช้งานได้ attached to Supabase',
+      en: false,
+      pattern: /ใช้(?:งาน)?ได้\s*(?:กับ|บน|ใน|จาก)?\s*[`*]*\s*supabase/i,
+    },
+    {
+      label: 'TH ใช้ ... Supabase ... ได้ (split form)',
+      en: false,
+      pattern: /ใช้[^\s]{0,6}\s*supabase\s*[^\s]{0,6}\s*ได้/i,
+    },
+    {
+      label: 'TH รองรับ + Supabase',
+      en: false,
+      pattern: /รองรับ.{0,12}supabase/i,
+    },
+    {
+      label: 'TH เข้ากันได้ + Supabase',
+      en: false,
+      pattern: /เข้ากันได้.{0,12}supabase/i,
+    },
+    {
+      label: 'TH Supabase + รองรับ|เข้ากันได้',
+      en: false,
+      pattern: /supabase.{0,12}(?:รองรับ|เข้ากันได้)/i,
+    },
+    {
+      label: 'TH Supabase + ใช้ได้',
+      en: false,
+      pattern: /supabase.{0,12}ใช้(?:งาน)?ได้/i,
+    },
+    {
+      label: 'TH ทดสอบ + Supabase (affirmative)',
+      en: false,
+      pattern: /ทดสอบ.{0,12}supabase/i,
+    },
+    {
+      label: 'TH Supabase + ทดสอบ',
+      en: false,
+      pattern: /supabase.{0,12}ทดสอบ/i,
+    },
+    {
+      label: 'TH ตรวจสอบ + Supabase',
+      en: false,
+      pattern: /ตรวจสอบ.{0,12}supabase/i,
+    },
+    {
+      label: 'TH พิสูจน์ + Supabase',
+      en: false,
+      pattern: /พิสูจน์.{0,12}supabase/i,
+    },
   ];
 
-  /** Constructions that assert the persistence layer IS Supabase-backed. */
-  const AFFIRMATIVE_BACKED = [
-    /\b(?:is|are|was|were|being)\s+(?:fully\s+|entirely\s+)?supabase[- ]backed/i,
-    /supabase[- ]backed\s+(?:persistence|layer|database|storage|repositories?)/i,
+  /**
+   * REQUIRE — the honest statements BOTH documents must carry, so that deleting
+   * every Supabase mention cannot make this check pass. Each entry is
+   * { id, pattern }; a missing one is named in the failure detail.
+   *
+   * Note on the second entry: the work unit gives it as /not been tested with
+   * Supabase/i, and that literal does NOT match the delivered EN text, which
+   * writes the negation in markdown bold — "has **not** been tested with
+   * Supabase". The pattern below therefore tolerates the emphasis (\** — zero or
+   * more asterisks). That is a formatting tolerance, not a relaxation: it matches
+   * the plain "not been tested with Supabase" as well, so nothing the literal
+   * caught is now allowed through. The delivered sentence and the exact literal
+   * are both recorded in docs/house-swarm-7/FU-REVIEW-FIX-2.md.
+   */
+  const REQUIRED = [
+    { id: 'the kit has been tested with PostgreSQL 16', pattern: /PostgreSQL 16/ },
+    {
+      id: 'it has NOT been tested with Supabase (EN sentence)',
+      pattern: /not\**\s*been tested with Supabase/i,
+    },
+    { id: 'ยังไม่ทดสอบกับ Supabase (TH sentence)', pattern: /ยังไม่ทดสอบกับ Supabase/ },
+    {
+      id: 'the pre-sale testing commitment (EN sentence)',
+      pattern: /scheduled before the kit is offered for sale|before the kit goes on sale/,
+    },
+    {
+      id: 'the pre-sale testing commitment (TH sentence)',
+      pattern: /กำหนด(?:จะ)?ทดสอบกับโปรเจกต์ Supabase จริงก่อนเปิดขาย/,
+    },
+    {
+      id: 'Supabase auth is untested (EN sentence)',
+      pattern: /Supabase auth[^.]{0,80}untested/i,
+    },
+    { id: 'การยืนยันตัวตน Supabase (TH sentence)', pattern: /การยืนยันตัวตน\s*Supabase/ },
+    { id: 'the persistence denial (EN sentence)', pattern: /not\s+supabase[- ]backed/i },
+    { id: 'the persistence denial (TH sentence)', pattern: /ไม่ใช่\s*supabase[- ]backed/i },
   ];
 
   /**
@@ -279,9 +456,6 @@ const SALES = [
     /ไม่/,
   ];
 
-  /** Thai affirmative: a test verb attached to Supabase without a negation. */
-  const THAI_AFFIRMATIVE = /(?:ทดสอบ|ตรวจสอบ|ใช้งานได้|รองรับ|เข้ากันได้|พิสูจน์)/;
-
   const problems = [];
 
   /** Every line of the document, with its 1-based line number. */
@@ -300,17 +474,18 @@ const SALES = [
     for (const { line, number } of numberedLines(doc.text)) {
       if (!/supabase/i.test(line)) continue;
 
-      // The rule: a match only counts as a violation when it is NOT inside a
-      // negation or disclaimer context. The negation markers are looked for on
-      // THIS line, so a denial written on the line the mention sits on protects
-      // it, and an affirmative line with no marker anywhere on it is a hit.
+      // The rule: an affirmative construction counts as a violation unless the
+      // line it sits on carries a negation or disclaimer marker. The markers are
+      // looked for on THIS line, so a denial written on the line the affirmative
+      // sits on protects it, and an affirmative line with no marker anywhere on
+      // it is a hit. LIMITATION, recorded rather than hidden: an affirmative
+      // welded onto a line that ALREADY carries a marker ("…has not been
+      // tested… works with Supabase") is not separated from it and passes.
+      // Fixture case b flags that same sentence on its own line; case h2 records
+      // this limitation. See docs/house-swarm-7/FU-REVIEW-FIX-2.md.
       const negated = NEGATION.some((pattern) => pattern.test(line));
 
-      const affirmative =
-        AFFIRMATIVE_RESULT.some((p) => p.test(line)) ||
-        AFFIRMATIVE_BACKED.some((p) => p.test(line)) ||
-        (THAI_AFFIRMATIVE.test(line) &&
-          /(?:กับ|จาก|บน|โดย)?\s*supabase/i.test(line));
+      const affirmative = BAN.some((entry) => entry.pattern.test(line));
 
       if (affirmative && !negated) {
         hits.push(`line ${number}: ${line.trim().slice(0, 160)}`);
@@ -319,42 +494,35 @@ const SALES = [
 
     if (hits.length > 0) {
       problems.push(
-        `${doc.label} asserts a Supabase test result in ${hits.length} place(s): "${hits[0]}"`
+        `${doc.label} asserts a Supabase capability or test result in ${hits.length} place(s): "${hits[0]}"`
       );
     }
 
-    // The permitted statements must survive, so removing Supabase entirely fails.
+    // The honest statements must survive, in BOTH languages and in BOTH
+    // documents, so that deleting every mention of Supabase — or dropping the
+    // negative half of a disclosure and keeping only the positive half — cannot
+    // make this check pass.
     const text = flat(doc.text);
-    const hasPostgresStringWorks = /supabase postgres/i.test(text);
-    const hasAuthUntested =
-      /supabase auth[^.]{0,80}\buntested\b/i.test(text) ||
-      /supabase\s+is\s+untested/i.test(text) ||
-      /\buntested\b[^.]{0,80}supabase/i.test(text) ||
-      /(?:การยืนยันตัวตน|auth)\s*supabase[^.]{0,80}ยังไม่ถูกทดสอบ/i.test(text) ||
-      /supabase[^.]{0,80}ยังไม่ถูกทดสอบ/i.test(text);
-    const hasPersistenceDenial =
-      /not\s+supabase[- ]backed/i.test(text) || /ไม่ใช่\s*supabase[- ]backed/i.test(text);
-
-    if (!hasPostgresStringWorks) {
-      problems.push(
-        `${doc.label} does not state that a buyer's own Supabase Postgres connection string works (the permitted statement is missing)`
-      );
-    }
-    if (!hasAuthUntested) {
-      problems.push(`${doc.label} does not state that Supabase auth is untested`);
-    }
-    if (!hasPersistenceDenial) {
-      problems.push(
-        `${doc.label} does not state that the persistence layer is not Supabase-backed`
-      );
+    const missing = REQUIRED.filter((entry) => !entry.pattern.test(text)).map(
+      (entry) => entry.id
+    );
+    if (missing.length > 0) {
+      problems.push(`${doc.label} is missing the honest statement(s): ${missing.join('; ')}`);
     }
   }
+
+  /** The executed rule, printed from the arrays it is built from. */
+  const banList = (english) =>
+    BAN.filter((entry) => entry.en === english)
+      .map((entry) => entry.label)
+      .join(' | ');
+  const requireList = REQUIRED.map((entry) => `${entry.id} [${entry.pattern}]`).join(' | ');
 
   record(
     'no-supabase-tested-claim',
     problems.length === 0,
     problems.length === 0
-      ? 'rule: a "Supabase" mention counts as a violation only when it is NOT inside a negation or disclaimer context — the check is per-line, and any line the mention sits on carrying a negation marker in either language (not / never / no / none / neither / nor / without / untested / unverified / unsupported / ไม่) makes that line a denial rather than an assertion, so honest disclosure such as "is not Supabase-backed" and "has never been tested with a Supabase project" passes while an affirmative line such as "tested with Supabase" fails; both documents must still state that a buyer\'s own Supabase Postgres connection string works and that Supabase auth is untested'
+      ? `rule: BAN, per line and unless that line carries a negation or disclaimer marker in either language (not / never / no / none / neither / nor / without / untested / unverified / unsupported / ไม่), any affirmative construction that attaches a capability or a test result to Supabase — EN: ${banList(true)} — TH: ${banList(false)} — and REQUIRE, in BOTH documents, the honest statements: ${requireList}. The earlier rule is superseded: it REQUIRED the sentence "a buyer's own Supabase Postgres connection string works" and could not flag it, so a copy whose EN N4 said "…connection string works with Supabase." still PASSED. This rule fails that copy, fails the Thai ใช้ได้ forms, and still passes the delivered documents, whose required statements are themselves denials. Proven by server/scripts/proofs/fu/supabase-claims-fixtures.mjs (9 cases), and written up in docs/house-swarm-7/FU-REVIEW-FIX-2.md`
       : problems.join('; ')
   );
 }

@@ -42,7 +42,7 @@ for the first path below.
 
 Exact commands, from the repository root:
 
-คำสั่งที่ใช้จริง จาก root ของเรดิสทอรี:
+คำสั่งที่ใช้จริง จาก root ของที่เก็บโค้ด:
 
     cd server
     npm install
@@ -62,7 +62,7 @@ resets when the process stops. This is the fastest way to see the screens.
 
 Exact commands, from the repository root:
 
-คำสั่งที่ใช้จริง จาก root ของเรดิสทอรี:
+คำสั่งที่ใช้จริง จาก root ของที่เก็บโค้ด:
 
     cd server
     npm install
@@ -151,7 +151,7 @@ also kept in `localStorage` for the next page.
 
 - A way to walk the four screens on a clean machine that has no Supabase
   project, because this repository ships no credentials and cannot ship them.
-  / วิธีเดินครบทั้งสี่หน้าบนเครื่องสะอาดที่ไม่มีโปรเจกต์ Supabase เพราะเรดิสทอรีนี้
+  / วิธีเดินครบทั้งสี่หน้าบนเครื่องสะอาดที่ไม่มีโปรเจกต์ Supabase เพราะที่เก็บโค้ดนี้
   ไม่มี credential และไม่สามารถแถมให้ได้
 - Off by default. Only the exact string `DEMO_AUTH=true` turns it on; unset, an
   empty value and `false` all leave the real authentication path exactly as it
@@ -217,11 +217,11 @@ pretend otherwise. They are listed on the landing page in both locales.
 4. **Real Supabase auth verification.** The authentication path exists, but it is
    unverified here because this repository ships no Supabase project and no
    credentials. / **การยืนยันตัวตน Supabase จริง** เส้นทาง auth มีอยู่ แต่ยังพิสูจน์
-   ที่นี่ไม่ได้ เพราะเรดิสทอรีนี้ไม่มีโปรเจกต์ Supabase และไม่มี credential
+   ที่นี่ไม่ได้ เพราะที่เก็บโค้ดนี้ไม่มีโปรเจกต์ Supabase และไม่มี credential
 5. **Production deployment.** There is no container, no reverse proxy, no TLS and
    no process supervisor in this repository. Run it on your own machine only.
    / **การ deploy ขึ้น production** ไม่มี container ไม่มี reverse proxy ไม่มี TLS
-   และไม่มี process supervisor ในเรดิสทอรีนี้ ใช้รันบนเครื่องตัวเองเท่านั้น
+   และไม่มี process supervisor ในที่เก็บโค้ดนี้ ใช้รันบนเครื่องตัวเองเท่านั้น
 6. **Demo identity as authentication.** It is a tenant id typed into a form, with
    no password and no session token. / **ตัวตนสาธิตในฐานะการยืนยันตัวตน** มันคือ
    tenant id ที่พิมพ์ในฟอร์ม ไม่มีรหัสผ่านและไม่มี session token

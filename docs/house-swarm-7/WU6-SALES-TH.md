@@ -63,7 +63,7 @@ starting point to copy from, and it is written to be checked.
 
 ## 3. What you actually receive / สิ่งที่คุณได้รับจริง
 
-เรดิสทอรีตามที่เป็นอยู่จริง ไม่มีข้อใดในรายการนี้เป็นคำมั่นเกี่ยวกับเวอร์ชันในอนาคต
+ที่เก็บโค้ดตามที่เป็นอยู่จริง ไม่มีข้อใดในรายการนี้เป็นคำมั่นเกี่ยวกับเวอร์ชันในอนาคต
 
 The repository as it stands. Nothing in this list is a promise about a future
 version.
@@ -163,7 +163,7 @@ styling or JavaScript behaviour in a real browser.
 ## 5. How to verify every claim yourself / วิธีตรวจทุกคำกล่าวอ้างด้วยตัวคุณเอง
 
 รันเองได้ ทุกบรรทัดระบุคำสั่งและสิ่งที่ต้องเห็นจึงจะถือว่าได้ผล ให้แทนที่ connection string
-ของฐานข้อมูลด้วยของคุณเอง — เอกสารนี้ไม่มีที่อยู่ฐานข้อมูลของใครเลย และไม่มีในเรดิสทอรีให้คัดลอก
+ของฐานข้อมูลด้วยของคุณเอง — เอกสารนี้ไม่มีที่อยู่ฐานข้อมูลของใครเลย และไม่มีในที่เก็บโค้ดนี้ให้คัดลอก
 
 Run these yourself. Each line names the command and the observation that means it
 worked. Substitute your own database connection string for the placeholder — this
@@ -236,15 +236,15 @@ that any of the following exists.
   `WEBHOOK_UNKNOWN_PROVIDER` และระบุตรง ๆ ว่ายังไม่ได้ทำ / **No LINE webhook verifier.**
 - **N3 — ไม่มีตัวตรวจสอบ webhook ของ GitHub** พฤติกรรมเดียวกัน: `WEBHOOK_UNKNOWN_PROVIDER`
   / **No GitHub webhook verifier.** Same behaviour.
-- **N4 — การยืนยันตัวตน Supabase ยังไม่ถูกตรวจกับโปรเจกต์จริง** เส้นทาง auth มีในโค้ด และ
-  การยืนยันตัวตน Supabase ยังไม่ถูกทดสอบ เพราะไม่เคยถูกใช้กับโปรเจกต์ Supabase จริง
-  เรดิสทอรีนี้ไม่มีและผู้เขียนไม่ได้ใช้ connection string ของ Supabase Postgres ของคุณเอง
-  ใช้ได้ เพราะการต่อเป็น PostgreSQL ธรรมดา **ชั้น persistence ไม่ใช่ Supabase-backed**:
-  มันคุยกับ PostgreSQL ผ่านไดรเวอร์ pg ไม่มีส่วนใดของคิทนี้ที่เคยถูกทดสอบกับโปรเจกต์ Supabase
-  และไม่มีข้อใดในเอกสารนี้อ้างเช่นนั้น / **Supabase auth has never been verified against a
-  real project.** Supabase auth is untested; a buyer's own Supabase Postgres connection
-  string works because the connection is plain PostgreSQL; the persistence layer is not
-  Supabase-backed and talks to PostgreSQL through the pg driver.
+- **N4 — Supabase ยังไม่ถูกทดสอบ** คิทนี้ทดสอบกับ PostgreSQL 16 แล้ว
+  แต่ยังไม่ทดสอบกับ Supabase โดยกำหนดจะทดสอบกับโปรเจกต์ Supabase จริงก่อนเปิดขาย
+  การยืนยันตัวตน Supabase ยังไม่เคยถูกตรวจกับโปรเจกต์จริง ชั้น persistence ไม่ใช่
+  Supabase-backed: มันคุยกับ PostgreSQL ผ่านไดรเวอร์ `pg` / **Supabase has not been
+  tested.** This kit has been tested with PostgreSQL 16 and has **not** been tested
+  with Supabase; testing against a real Supabase project is scheduled before the kit
+  goes on sale. Supabase auth is untested: it has never been verified against a real
+  project. The persistence layer is not Supabase-backed: it talks to PostgreSQL
+  through the `pg` driver.
 - **N5 — rate limit บน `POST /payment/webhook` เป็นแบบในโปรเซสเดียว** เส้นทางนั้น
   **มี** rate limit แล้ว: โมดูล `rate-limit` จาก Module Hub ถูก vendor ไว้ที่
   `modules/rate-limit/` และ mount **ก่อน** การตรวจลายเซ็น คำขอที่ทะลักจึงถูกปฏิเสธด้วย **429**
@@ -268,7 +268,7 @@ that any of the following exists.
   เก็บเงินจริงหรือเรียกผู้ให้บริการจริงเลย / **Payments and AI providers need your own keys.**
 
 **ข้อจำกัดอีกข้อ เกี่ยวกับ UI** ไม่มีการทดสอบ UI ในเบราว์เซอร์ **ไม่มีภาพหน้าจอ**
-ในเรดิสทอรีนี้ — ไม่มีส่งมาและไม่ได้ถ่ายไว้ — และไฟล์ HTML ที่บันทึกไว้ใต้
+ในที่เก็บโค้ดนี้ — ไม่มีส่งมาและไม่ได้ถ่ายไว้ — และไฟล์ HTML ที่บันทึกไว้ใต้
 `server/scripts/proofs/wu4/wu4-e2e/` คือหลักฐาน UI ทั้งหมด / **One more limit, about the
 UI.** There is no in-browser UI test and **no screenshots** exist in this repository.
 
@@ -301,11 +301,14 @@ already run against.
   `@supabase/supabase-js` ที่ติดตั้งอยู่ประกาศ `engines.node = ">=22.0.0"` / **Node.js 22 or
   newer, with npm.**
 - **Q2 — ต้องติดตั้ง dependency ข้างใน `server/`** การติดตั้งและทุกคำสั่งหลังจากนั้นรันจาก
-  `server/` ไม่มีการติดตั้งที่ root ของเรดิสทอรี และไม่มีที่โฟลเดอร์บนสุดของโฟลเดอร์ส่งมอบ
+  `server/` ไม่มีการติดตั้งที่ root ของที่เก็บโค้ด และไม่มีที่โฟลเดอร์บนสุดของโฟลเดอร์ส่งมอบ
   / **Dependencies must be installed inside `server/`.**
-- **Q3 — ฐานข้อมูล PostgreSQL 16 ขึ้นไป หรือ connection string ของโปรเจกต์ Supabase
-  Postgres ของคุณเอง** PostgreSQL เป็นบริการภายนอกเดียวของเซิร์ฟเวอร์ / **A PostgreSQL 16 or
-  newer database, or the connection string of your own Supabase Postgres project.**
+- **Q3 — ฐานข้อมูล PostgreSQL 16 ขึ้นไป** PostgreSQL เป็นบริการภายนอกเดียวของเซิร์ฟเวอร์
+  และ PostgreSQL 16 คือเวอร์ชันที่คิทนี้ทดสอบแล้ว
+  — ส่วน URL ของ Supabase Postgres ยังไม่ถูกทดสอบที่นี่ แม้จะพูดโปรโตคอลเดียวกัน (ดู N4)
+  / **A PostgreSQL 16 or newer database.** PostgreSQL is the server's only external
+  service, and PostgreSQL 16 is what this kit has been tested with. A Supabase
+  Postgres URL speaks the same protocol but is untested here (see N4).
 - **Q4 — `modules/` และ `web/` ต้องอยู่ข้าง `server/`** เซิร์ฟเวอร์ import จาก
   `../../../modules/` ตอนรัน และอ่านหน้าเว็บจาก `../web/` การคัดลอกแค่ `server/` จะได้
   เซิร์ฟเวอร์ที่สตาร์ทไม่ขึ้น / **`modules/` and `web/` must sit beside `server/`.**
@@ -317,9 +320,12 @@ already run against.
 
 ## 8. What you must supply / สิ่งที่คุณต้องเตรียมเอง
 
-- **S1 — ฐานข้อมูล PostgreSQL ของคุณเอง หรือ connection string ของ Supabase Postgres
-  ของคุณเอง** ไม่มีค่าเริ่มต้น ไม่มีอินสแตนซ์แถมมา และไม่มีที่อยู่สำรองในโค้ด / **Your own
-  PostgreSQL database or your own Supabase Postgres connection string.**
+- **S1 — ฐานข้อมูล PostgreSQL ของคุณเอง เวอร์ชัน 16 ขึ้นไป** ไม่มีค่าเริ่มต้น
+  ไม่มีอินสแตนซ์แถมมา และไม่มีที่อยู่สำรองในโค้ด
+  — ส่วน URL ของ Supabase Postgres ยังไม่ถูกทดสอบที่นี่ แม้จะพูดโปรโตคอลเดียวกัน (ดู N4)
+  / **Your own PostgreSQL database, PostgreSQL 16 or newer.** There is no default, no
+  bundled instance and no fallback address in the code. A Supabase Postgres URL is the
+  same protocol on the wire, but it is untested here (see N4).
 - **S2 — คีย์ของผู้ให้บริการ AI ของคุณเอง** — หนึ่งใน `OPENAI_API_KEY`,
   `ANTHROPIC_API_KEY`, `GEMINI_API_KEY` ถ้าไม่มี เส้นทาง AI ที่มีค่าจะตอบ 503 ตามการออกแบบ
   / **Your own AI provider key.** Without one, the paid AI route answers 503 by design.

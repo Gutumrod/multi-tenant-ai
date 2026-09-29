@@ -208,9 +208,9 @@ npm run typecheck || die "typecheck failed; the source tree does not compile, so
 #
 #    HOW THE FILE IS HANDED TO `node`. The path is RELATIVE to the repository
 #    root and never absolute. On Windows/Git-Bash the absolute path this script
-#    computes is a POSIX path such as /d/AI-Workspace/... ; `node` is a native
+#    computes is a POSIX path such as /d/path/to/project/... ; `node` is a native
 #    program and does not translate it, so it looked the file up under the
-#    current drive (D:\d\AI-Workspace\...\db-check.mjs) and the step failed with
+#    current drive (D:\d\path\to\project\...\db-check.mjs) and the step failed with
 #    MODULE_NOT_FOUND — and then reported that failure as a pass. A relative
 #    path has no drive letter and no leading slash to mistranslate, so it
 #    resolves identically under Git-Bash on Windows and under POSIX sh on Linux.

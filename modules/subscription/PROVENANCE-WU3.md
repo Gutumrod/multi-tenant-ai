@@ -9,8 +9,8 @@ introduced by HOUSE-SWARM-7 **WU-3** (brief
     upstream_repo:       modules-hub
     upstream_ref:        origin/main @ 84ebb0d9a0734a6b91a2c78e8f66759736393efa
                          ("Merge pull request #14", 2026-09-26)
-    upstream_readonly_copy: D:/AI-Workspace/runtime/hermes-native/workspace/
-                         house-swarm-7/wu2/hub84   (WU-2 staging copy)
+    upstream_readonly_copy: vendor-internal staging copy, not part of the
+                         delivered folder   (WU-2 staging copy)
     local base revision: 601033249d2b1ab005d1ca83dfbe33f66af6e356
     WU-2 provenance:     modules/subscription/PROVENANCE-WU2.md
                          (the six files WU-2 adopted from 84ebb0d, verified

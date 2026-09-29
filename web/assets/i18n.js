@@ -270,9 +270,9 @@ export const DICT = {
     'landing.notimpl.github':
       'GitHub webhook verifier: พฤติกรรมเดียวกัน — WEBHOOK_UNKNOWN_PROVIDER ยังไม่ได้ทำ',
     'landing.notimpl.supabase':
-      'การยืนยันตัวตน Supabase จริง: เส้นทาง auth มีอยู่ แต่ยังพิสูจน์ที่นี่ไม่ได้ เพราะเรดิสทอรีนี้ไม่มีโปรเจกต์ Supabase และไม่มี credential',
+      'การยืนยันตัวตน Supabase จริง: เส้นทาง auth มีอยู่ แต่ยังพิสูจน์ที่นี่ไม่ได้ เพราะที่เก็บโค้ดนี้ไม่มีโปรเจกต์ Supabase และไม่มี credential',
     'landing.notimpl.deploy':
-      'การ deploy ขึ้น production: ไม่มี container ไม่มี reverse proxy ไม่มี TLS และไม่มี process supervisor ในเรดิสทอรีนี้ ใช้รันบนเครื่องตัวเองเท่านั้น',
+      'การ deploy ขึ้น production: ไม่มี container ไม่มี reverse proxy ไม่มี TLS และไม่มี process supervisor ในที่เก็บโค้ดนี้ ใช้รันบนเครื่องตัวเองเท่านั้น',
     'landing.notimpl.demo':
       'ตัวตนสาธิตไม่ใช่การยืนยันตัวตน: มันคือ tenant id ที่พิมพ์ในฟอร์ม ไม่มีรหัสผ่านและไม่มี session token',
 

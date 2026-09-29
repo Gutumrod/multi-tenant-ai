@@ -6,7 +6,7 @@ One deployment path, stated plainly. Everything in this document was checked
 against the source tree of this repository. Read section 1 first, because it
 tells you what this document is not.
 
-เส้นทาง deploy ทางเดียว ระบุตรง ๆ ทุกอย่างในเอกสารนี้ตรวจกับซอร์สของเรดิสทอรีนี้แล้ว
+เส้นทาง deploy ทางเดียว ระบุตรง ๆ ทุกอย่างในเอกสารนี้ตรวจกับซอร์สของที่เก็บโค้ดนี้แล้ว
 อ่านข้อ 1 ก่อน เพราะมันบอกว่าเอกสารนี้ "ไม่ใช่" อะไร
 
 ---
@@ -29,7 +29,7 @@ path is: the operator runs the Node process, the operator supervises it, and the
 operator terminates TLS — or puts it behind their own proxy. Nothing here
 requires a container, and no container is offered.
 
-**ทำไมมีทางเดียว** เพราะในเรดิสทอรีนี้ไม่มีอย่างอื่นให้เลือก **ไม่มี `Dockerfile`
+**ทำไมมีทางเดียว** เพราะในที่เก็บโค้ดนี้ไม่มีอย่างอื่นให้เลือก **ไม่มี `Dockerfile`
 ไม่มีไฟล์ compose ไม่มี reverse proxy ไม่มีตัวจบ TLS และไม่มี process supervisor**
 ในที่ใดเลย ดังนั้นทางเดียวคือ ผู้ปฏิบัติรันโปรเซส Node เอง ดูแลโปรเซสเอง และจบ TLS เอง
 หรือวางไว้หลังพร็อกซีของผู้ปฏิบัติเอง เอกสารนี้ไม่ต้องใช้ container และไม่ได้เสนอ container
@@ -55,7 +55,7 @@ requires a container, and no container is offered.
 - **ไม่มีข้อใดในเอกสารนี้เคยรันกับเซิร์ฟเวอร์ของผู้ซื้อ ฐานข้อมูลของผู้ซื้อ หรือโฮสต์
   production เลย** คำสั่งและผลลัพธ์ด้านล่างผลิตบนเครื่องของผู้เขียนกับฐานข้อมูลทดสอบ
   ในเครื่องเท่านั้น และไม่ได้แตะโฮสต์บนเครือข่ายเลย
-- **เรดิสทอรีนี้ไม่มี credential และไม่มีฐานข้อมูลให้** คุณต้องใส่ที่อยู่ฐานข้อมูลและ
+- **ที่เก็บโค้ดนี้ไม่มี credential และไม่มีฐานข้อมูลให้** คุณต้องใส่ที่อยู่ฐานข้อมูลและ
   credential ของคุณเอง ไม่มีค่าใดในเอกสารนี้ที่ควรเอาไปคัดลอกใช้
 - **ไม่มี container ไม่มีคอนฟิกคลาวด์ และไม่มี infrastructure-as-code** อยู่ในงานส่งมอบนี้
   และไม่อนุญาตให้คิดขึ้นเองเพื่องานนี้
@@ -72,7 +72,7 @@ Exactly three things, and nothing else:
 |---|---|---|
 | 1 | **Node.js 22 or newer** with npm. / **Node.js 22 ขึ้นไป** พร้อม npm | Required by the installed `@supabase/supabase-js`, which declares `engines.node = ">=22.0.0"`. / เป็นข้อกำหนดของ `@supabase/supabase-js` ที่ติดตั้งอยู่ ซึ่งประกาศ `engines.node = ">=22.0.0"` |
 | 2 | **PostgreSQL 16 or newer**, or a **Supabase Postgres connection string**. / **PostgreSQL 16 ขึ้นไป** หรือ **connection string ของ Supabase Postgres** | The server's only external service. The schema uses `jsonb`, `timestamptz` and `ON CONFLICT`, all long-standing, but PostgreSQL 16 is what this build was checked against. / เป็นบริการภายนอกเดียวของเซิร์ฟเวอร์ สคีมาใช้ `jsonb`, `timestamptz` และ `ON CONFLICT` ซึ่งมีมานานแล้ว แต่ PostgreSQL 16 คือเวอร์ชันที่บิลด์นี้ตรวจด้วย |
-| 3 | A process supervisor of your own (systemd, your platform's service manager, or any supervisor you already run). / **process supervisor ของคุณเอง** (systemd, ตัวจัดการ service ของแพลตฟอร์มคุณ หรือ supervisor ใดก็ได้ที่มีอยู่แล้ว) | This repository ships none. The process must survive a crash and restart on boot; that is your layer, not this kit's. / เรดิสทอรีนี้ไม่มีให้ โปรเซสต้องรอดจากการ crash และเริ่มใหม่ตอนบูต นั่นเป็นชั้นของคุณ ไม่ใช่ของคิทนี้ |
+| 3 | A process supervisor of your own (systemd, your platform's service manager, or any supervisor you already run). / **process supervisor ของคุณเอง** (systemd, ตัวจัดการ service ของแพลตฟอร์มคุณ หรือ supervisor ใดก็ได้ที่มีอยู่แล้ว) | This repository ships none. The process must survive a crash and restart on boot; that is your layer, not this kit's. / ที่เก็บโค้ดนี้ไม่มีให้ โปรเซสต้องรอดจากการ crash และเริ่มใหม่ตอนบูต นั่นเป็นชั้นของคุณ ไม่ใช่ของคิทนี้ |
 
 **Read that table as external software, not as install steps.** The three rows
 above are the software you must *have*, and there is nothing else you must have.
@@ -104,7 +104,7 @@ Some older project documentation in this repository states "Node.js 20 or newer"
 newer**. Follow this manual, not that statement. The wrong line has been left in
 place rather than silently edited out of a document this work unit does not own.
 
-เอกสารรุ่นเก่าบางไฟล์ในเรดิสทอรีนี้ระบุว่า "Node.js 20 ขึ้นไป" **ข้อความนั้นผิด**
+เอกสารรุ่นเก่าบางไฟล์ในที่เก็บโค้ดนี้ระบุว่า "Node.js 20 ขึ้นไป" **ข้อความนั้นผิด**
 dependency ที่ติดตั้งอยู่ต้องการ **Node.js 22 ขึ้นไป** ให้ทำตามคู่มือนี้ ไม่ใช่ข้อความนั้น
 บรรทัดที่ผิดนั้นถูกทิ้งไว้ตามเดิม แทนที่จะแก้เงียบ ๆ ในเอกสารที่ใบงานนี้ไม่ได้เป็นเจ้าของ
 
@@ -116,7 +116,7 @@ Every step below gives the exact command and the exact observation that tells yo
 it worked. Run them from the repository root unless a step says otherwise.
 
 ทุกขั้นด้านล่างมีคำสั่งที่ใช้จริงและสิ่งที่คุณต้องเห็นเพื่อยืนยันว่าได้ผล รันจาก root
-ของเรดิสทอรี เว้นแต่ขั้นนั้นระบุไว้เป็นอย่างอื่น
+ของที่เก็บโค้ด เว้นแต่ขั้นนั้นระบุไว้เป็นอย่างอื่น
 
 ### 3.1 Obtain the source / ขั้นที่ 1 รับซอร์ส
 
@@ -147,9 +147,9 @@ Nothing else in this manual needs a git remote either: every other command runs
 inside the folder you just placed, and the rollback in section 7 has a
 no-git-history path for exactly this case.
 
-**ถ้าคุณได้รับ "โฟลเดอร์ส่งมอบ" แทน URL ของเรดิสทอรี อย่าใช้ `git clone`**
+**ถ้าคุณได้รับ "โฟลเดอร์ส่งมอบ" แทน URL ของที่เก็บโค้ด อย่าใช้ `git clone`**
 โฟลเดอร์ส่งมอบปกติ**ไม่มีไดเรกทอรี `.git`** และในกรณีนั้น **`git clone` และ
-`git checkout` ใช้ไม่ได้** — จะล้มเหลวด้วยข้อผิดพลาดของ git ว่าไม่ใช่เรดิสทอรี
+`git checkout` ใช้ไม่ได้** — จะล้มเหลวด้วยข้อผิดพลาดของ git ว่าไม่ใช่รีโป
 โฟลเดอร์ส่งมอบ*คือ*ซอร์ส รับมันโดยไม่ต้องมี git remote ด้วยการคัดลอกเข้ามา หรือ
 แตกไฟล์ archive ที่คุณได้รับ แล้วไปขั้น 3.2 ได้เลย
 
@@ -295,7 +295,7 @@ The file `server/.env.example` in this repository is **documentation only**. It 
 a list of the variable names the code reads, kept so you can see them all in one
 place. Nothing reads it. Do not treat it as a configuration file.
 
-ไฟล์ `server/.env.example` ในเรดิสทอรีนี้เป็น**เอกสารเท่านั้น** มันคือรายการชื่อตัวแปร
+ไฟล์ `server/.env.example` ในที่เก็บโค้ดนี้เป็น**เอกสารเท่านั้น** มันคือรายการชื่อตัวแปร
 ที่โค้ดอ่าน เก็บไว้ให้เห็นครบในที่เดียว ไม่มีอะไรอ่านมัน อย่าถือว่ามันเป็นไฟล์คอนฟิก
 
 **The complete set of variables the server reads — exactly thirteen:**
@@ -383,7 +383,7 @@ nothing in this document, is a database you may use. There is no default, no
 bundled instance and no fallback address in the code: if `DATABASE_URL` is unset
 the server simply runs its in-memory repositories and stores nothing.
 
-**ที่อยู่และ credential เป็นของคุณ** ไม่มีอะไรในเรดิสทอรีนี้ และไม่มีอะไรในเอกสารนี้
+**ที่อยู่และ credential เป็นของคุณ** ไม่มีอะไรในที่เก็บโค้ดนี้ และไม่มีอะไรในเอกสารนี้
 ที่เป็นฐานข้อมูลที่คุณเอาไปใช้ได้ ไม่มีค่าเริ่มต้น ไม่มีอินสแตนซ์แถมมา และไม่มีที่อยู่
 สำรองในโค้ด: ถ้าไม่ตั้ง `DATABASE_URL` เซิร์ฟเวอร์จะใช้ repository ในหน่วยความจำ
 และไม่เก็บอะไรเลย
@@ -426,6 +426,12 @@ fail to connect — that is the expected failure, not a bug.
 **ไม่มีคอนฟิก TLS แยกให้เขียน** และไม่มี path ใบรับรองให้ตั้ง พารามิเตอร์ `sslmode`
 ใน connection string ของคุณคือกลไกทั้งหมด ถ้าเอาออก หรือตั้ง `sslmode=disable`
 กับ Supabase โปรเซสจะต่อไม่ติด นั่นคือความล้มเหลวที่คาดไว้ ไม่ใช่บั๊ก
+
+Using this section does not mean the kit has been tested with Supabase: it has not
+(see `docs/CURRENT_STATUS.md` item 4).
+
+การใช้ข้อนี้ไม่ได้หมายความว่าคิทนี้เคยถูกทดสอบกับ Supabase — ยังไม่เคย
+(ดู `docs/CURRENT_STATUS.md` ข้อ 4)
 
 ### 4.3 TLS for the HTTP listener / TLS ของตัว HTTP listener
 
@@ -751,7 +757,7 @@ code and restart:
 in the environment, a plain `npm ci` omits the devDependencies that `npm run
 start` needs.)
 
-**ย้อนโค้ด ไม่ใช่ย้อนข้อมูล** checkout เรดิสทอรีเวอร์ชันก่อนหน้าแล้วสตาร์ทใหม่
+**ย้อนโค้ด ไม่ใช่ย้อนข้อมูล** checkout รีโปเวอร์ชันก่อนหน้าแล้วสตาร์ทใหม่
 
 **If your delivery is a folder and not a repository, `git checkout` is
 unavailable — restore the previous folder copy instead.** As stated in section
@@ -800,13 +806,13 @@ tree plus the database, whose schema is untouched by a code rollback (step 3).
 The database is untouched by all of this, and step 3 of the rollback below still
 applies: do not reverse the migrations by dropping tables.
 
-**ถ้าโฟลเดอร์ส่งมอบไม่ใช่เรดิสทอรี `git checkout` ใช้ไม่ได้ — ให้กู้จากสำเนาโฟลเดอร์
+**ถ้าโฟลเดอร์ส่งมอบไม่ใช่รีโป `git checkout` ใช้ไม่ได้ — ให้กู้จากสำเนาโฟลเดอร์
 ก่อนหน้าแทน** ตามที่ระบุในข้อ 3.1 โฟลเดอร์ส่งมอบปกติไม่มีไดเรกทอรี `.git` ดังนั้น
 **`git clone` และ `git checkout` ใช้ไม่ได้** และสามคำสั่งข้างบนจะล้มเหลวด้วยข้อผิดพลาดของ
 git — ตรวจแล้ว: ในงานส่งมอบนี้ `git log` และ `git checkout` พิมพ์
 `fatal: not a git repository (or any of the parent directories): .git` และ **ออกด้วยรหัส
 128** การย้อนกลับที่ไม่ต้องใช้ประวัติ git คือการสลับโฟลเดอร์ และเป็นวิธีที่แนะนำเมื่อคุณไม่แน่ใจ
-ว่าโฟลเดอร์นั้นเป็นเรดิสทอรี
+ว่าโฟลเดอร์นั้นเป็นรีโป
 
 **สำเนาที่จะสลับกลับต้องทำตอนรับงาน ก่อนแก้สิ่งใด** สำเนาโฟลเดอร์ชื่อ
 `multi-tenant-ai.previous` **ไม่ได้แถมมากับงานส่งมอบนี้** โฟลเดอร์ส่งมอบไม่มีโฟลเดอร์นั้น
@@ -930,7 +936,7 @@ deployment ปลอดภัยสำหรับ production: คุณยั�
   secret เดินทางใน process environment หรือ secret store ของแพลตฟอร์มคุณ
 - **The repository contains no real credential.** It contains placeholder prefixes
   in documentation and test fixtures only, and those are not usable values.
-  / **เรดิสทอรีนี้ไม่มี credential จริง** มีแต่คำนำหน้าแบบตัวอย่างในเอกสารและไฟล์เทสต์
+  / **ที่เก็บโค้ดนี้ไม่มี credential จริง** มีแต่คำนำหน้าแบบตัวอย่างในเอกสารและไฟล์เทสต์
   ซึ่งไม่ใช่ค่าที่ใช้ได้
 - **Keep `NODE_ENV=production` set on a real deployment.** It is not only for the
   demo refusal; it is the signal the process uses to know it is not a demo.
@@ -963,7 +969,7 @@ an internet-facing multi-instance deployment.
    project, because this repository ships none and the authors used none. You are
    the first to point it at a real project, and that is untested. / **ไม่มีการ
    ยืนยันตัวตน Supabase จริงกับโปรเจกต์ของคุณ** เส้นทาง auth มีในโค้ด แต่ไม่เคยถูกใช้
-   กับโปรเจกต์ Supabase จริง เพราะเรดิสทอรีนี้ไม่มีและผู้เขียนไม่ได้ใช้ คุณจะเป็น
+   กับโปรเจกต์ Supabase จริง เพราะที่เก็บโค้ดนี้ไม่มีและผู้เขียนไม่ได้ใช้ คุณจะเป็น
    คนแรกที่ชี้มันไปที่โปรเจกต์จริง และส่วนนั้นยังไม่ถูกทดสอบ
 5. **Rate limiting on `POST /payment/webhook` is in-process only.** The route
    **is** rate limited. `server/src/app.ts` mounts `webhookRateLimitMiddleware`

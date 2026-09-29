@@ -11,9 +11,10 @@ work unit `H7-FU-RATELIMIT` (correlation id
     source_commit:  cd88c570ab57f6976d15f85d09973d0cfbf0cd63
     source_path:    rate-limit            (repo-relative: the module folder)
     staged read-only reference:
-                    D:/AI-Workspace/runtime/hermes-native/workspace/house-swarm-7/fu-ratelimit/hub-ratelimit/rate-limit/
-                    (the commit SHA above is recorded in
-                    .../hub-ratelimit/SOURCE_COMMIT.txt)
+                    vendor-internal staging copy, not part of the delivered folder
+                    — a vendor-local READ-ONLY copy of `source_repo` at the
+                    `source_commit` above (the commit SHA above is recorded in the
+                    staging copy's SOURCE_COMMIT.txt)
     copied_at:      2026-09-28 (UTC)
     base revision:  601033249d2b1ab005d1ca83dfbe33f66af6e356
 

@@ -66,7 +66,7 @@ starting point to copy from, and it is written to be checked.
 The repository as it stands. Nothing in this list is a promise about a future
 version.
 
-เรดิสทอรีตามที่เป็นอยู่จริง ไม่มีข้อใดในรายการนี้เป็นคำมั่นเกี่ยวกับเวอร์ชันในอนาคต
+ที่เก็บโค้ดตามที่เป็นอยู่จริง ไม่มีข้อใดในรายการนี้เป็นคำมั่นเกี่ยวกับเวอร์ชันในอนาคต
 
 - **R1 — `server/src`**: 17 TypeScript source files — the Express app, the route
   handlers, the middleware, and the library code for persistence, quota and the
@@ -205,7 +205,7 @@ document contains no address of anyone's database, and there is none in the
 repository to copy.
 
 รันเองได้ ทุกบรรทัดระบุคำสั่งและสิ่งที่ต้องเห็นจึงจะถือว่าได้ผล ให้แทนที่ connection string
-ของฐานข้อมูลด้วยของคุณเอง — เอกสารนี้ไม่มีที่อยู่ฐานข้อมูลของใครเลย และไม่มีในเรดิสทอรีให้คัดลอก
+ของฐานข้อมูลด้วยของคุณเอง — เอกสารนี้ไม่มีที่อยู่ฐานข้อมูลของใครเลย และไม่มีในที่เก็บโค้ดนี้ให้คัดลอก
 
 - **V1** — `node --version` → `v22.` or higher. / **V1** — `node --version` → `v22.` ขึ้นไป
 - **V2** — `cd server && npm ci` → exits 0 and installs the three runtime
@@ -284,19 +284,15 @@ claim that any of the following exists.
 - **N3 — No GitHub webhook verifier.** Same behaviour:
   `WEBHOOK_UNKNOWN_PROVIDER`. / **N3 — ไม่มีตัวตรวจสอบ webhook ของ GitHub** พฤติกรรม
   เดียวกัน: `WEBHOOK_UNKNOWN_PROVIDER`
-- **N4 — Supabase auth has never been verified against a real project.** The auth
-  path exists in code, and Supabase auth is untested: it has never been exercised
-  against a real Supabase project, because this repository ships none and the
-  authors used none. A buyer's own Supabase Postgres connection string works,
-  because the connection is plain PostgreSQL. **The persistence layer is not
-  Supabase-backed**: it talks to PostgreSQL through the pg driver. No part of this
-  kit has ever been tested with a Supabase project, and no claim here says
-  otherwise. / **N4 — การยืนยันตัวตน Supabase ยังไม่ถูกตรวจกับโปรเจกต์จริง**
-  เส้นทาง auth มีในโค้ด และการยืนยันตัวตน Supabase ยังไม่ถูกทดสอบ เพราะไม่เคยถูกใช้กับ
-  โปรเจกต์ Supabase จริง เรดิสทอรีนี้ไม่มีและผู้เขียนไม่ได้ใช้ connection string ของ
-  Supabase Postgres ของคุณเองใช้ได้ เพราะการต่อเป็น PostgreSQL ธรรมดา
-  **ชั้น persistence ไม่ใช่ Supabase-backed**: มันคุยกับ PostgreSQL ผ่านไดรเวอร์ pg
-  ไม่มีส่วนใดของคิทนี้ที่เคยถูกทดสอบกับโปรเจกต์ Supabase และไม่มีข้อใดในเอกสารนี้อ้างเช่นนั้น
+- **N4 — Supabase has not been tested.** This kit has been tested with PostgreSQL
+  16 and has **not** been tested with Supabase; testing against a real Supabase
+  project is scheduled before the kit goes on sale. Supabase auth is untested: it
+  has never been verified against a real project. The persistence layer is not
+  Supabase-backed: it talks to PostgreSQL through the `pg` driver.
+  / **N4 — Supabase ยังไม่ถูกทดสอบ** คิทนี้ทดสอบกับ PostgreSQL 16 แล้ว
+  แต่ยังไม่ทดสอบกับ Supabase โดยกำหนดทดสอบกับโปรเจกต์ Supabase จริงก่อนเปิดขาย
+  การยืนยันตัวตน Supabase ยังไม่เคยถูกตรวจกับโปรเจกต์จริง ชั้น persistence
+  ไม่ใช่ Supabase-backed: มันคุยกับ PostgreSQL ผ่านไดรเวอร์ `pg`
 - **N5 — The rate limit on `POST /payment/webhook` is in-process only.** That
   route now HAS a rate limit: the Module Hub `rate-limit` module is vendored at
   `modules/rate-limit/` and mounted ahead of the signature check, so a flood is
@@ -338,7 +334,7 @@ claim that any of the following exists.
 screenshots** exist in this repository — none are shipped and none were taken —
 and the saved HTML files under `server/scripts/proofs/wu4/wu4-e2e/` are the whole
 UI evidence. / **ข้อจำกัดอีกข้อ เกี่ยวกับ UI** ไม่มีการทดสอบ UI ในเบราว์เซอร์
-**ไม่มีภาพหน้าจอ** ในเรดิสทอรีนี้ — ไม่มีส่งมาและไม่ได้ถ่ายไว้ — และไฟล์ HTML ที่บันทึกไว้ใต้
+**ไม่มีภาพหน้าจอ** ในที่เก็บโค้ดนี้ — ไม่มีส่งมาและไม่ได้ถ่ายไว้ — และไฟล์ HTML ที่บันทึกไว้ใต้
 `server/scripts/proofs/wu4/wu4-e2e/` คือหลักฐาน UI ทั้งหมด
 
 **And two warnings you must not skip, about running the test suite.**
@@ -382,11 +378,13 @@ pointed at a fresh database, or at a database used only for testing.
   command after it run from `server/`; there is no install at the repository root
   and none at the top of a delivered folder. / **Q2 — ต้องติดตั้ง dependency
   ข้างใน `server/`** การติดตั้งและทุกคำสั่งหลังจากนั้นรันจาก `server/` ไม่มีการติดตั้งที่
-  root ของเรดิสทอรี และไม่มีที่โฟลเดอร์บนสุดของโฟลเดอร์ส่งมอบ
-- **Q3 — A PostgreSQL 16 or newer database, or the connection string of your own
-  Supabase Postgres project.** PostgreSQL is the server's only external service.
-  / **Q3 — ฐานข้อมูล PostgreSQL 16 ขึ้นไป หรือ connection string ของโปรเจกต์ Supabase
-  Postgres ของคุณเอง** PostgreSQL เป็นบริการภายนอกเดียวของเซิร์ฟเวอร์
+  root ของที่เก็บโค้ด และไม่มีที่โฟลเดอร์บนสุดของโฟลเดอร์ส่งมอบ
+- **Q3 — A PostgreSQL 16 or newer database.** PostgreSQL is the server's only
+  external service, and PostgreSQL 16 is what this kit has been tested with. A
+  Supabase Postgres URL speaks the same protocol on the wire, but it is untested
+  here (see N4). / **Q3 — ฐานข้อมูล PostgreSQL 16 ขึ้นไป** PostgreSQL เป็นบริการ
+  ภายนอกเดียวของเซิร์ฟเวอร์ และ PostgreSQL 16 คือเวอร์ชันที่คิทนี้ทดสอบแล้ว
+  — ส่วน URL ของ Supabase Postgres ยังไม่ถูกทดสอบที่นี่ แม้จะพูดโปรโตคอลเดียวกัน (ดู N4)
 - **Q4 — `modules/` and `web/` must sit beside `server/`.** The server imports
   from `../../../modules/` at runtime and reads the pages from `../web/`. Copying
   only `server/` produces a server that cannot start. / **Q4 — `modules/` และ `web/`
@@ -401,11 +399,12 @@ pointed at a fresh database, or at a database used only for testing.
 
 ## 8. What you must supply / สิ่งที่คุณต้องเตรียมเอง
 
-- **S1 — Your own PostgreSQL database or your own Supabase Postgres connection
-  string.** There is no default, no bundled instance and no fallback address in
-  the code. / **S1 — ฐานข้อมูล PostgreSQL ของคุณเอง หรือ connection string ของ
-  Supabase Postgres ของคุณเอง** ไม่มีค่าเริ่มต้น ไม่มีอินสแตนซ์แถมมา และไม่มีที่อยู่สำรอง
-  ในโค้ด
+- **S1 — Your own PostgreSQL database, PostgreSQL 16 or newer.** There is no
+  default, no bundled instance and no fallback address in the code. A Supabase
+  Postgres URL is the same protocol on the wire, but it is untested here (see N4).
+  / **S1 — ฐานข้อมูล PostgreSQL ของคุณเอง เวอร์ชัน 16 ขึ้นไป** ไม่มีค่าเริ่มต้น
+  ไม่มีอินสแตนซ์แถมมา และไม่มีที่อยู่สำรองในโค้ด
+  — ส่วน URL ของ Supabase Postgres ยังไม่ถูกทดสอบที่นี่ แม้จะพูดโปรโตคอลเดียวกัน (ดู N4)
 - **S2 — Your own AI provider key** — one of `OPENAI_API_KEY`,
   `ANTHROPIC_API_KEY`, `GEMINI_API_KEY`. Without one, the paid AI route answers
   503 by design. / **S2 — คีย์ของผู้ให้บริการ AI ของคุณเอง** — หนึ่งใน
