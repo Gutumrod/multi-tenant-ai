@@ -7,12 +7,28 @@ import type { RateLimitStore } from '../../modules/rate-limit/index.js';
 import { createMemoryStore } from '../../modules/rate-limit/index.js';
 
 /**
- * H7-FU-RATELIMIT — the rate limit on `POST /payment/webhook`.
+ * H7-FU-RATELIMIT / MT01-PRESALE-P3A — the rate limit on `POST /payment/webhook`.
  *
  * Every scenario below boots the REAL express app (`server/src/app.ts`) on an
  * ephemeral port and drives it with REAL `fetch` calls, so the limiter is
  * observed through express's real middleware chain in the real order rather
  * than by calling a middleware function with a hand-built request.
+ *
+ * ORDERING, WHICH THIS FILE'S SCENARIOS NOW ENCODE (P3A, review finding LOW-2).
+ * The limiter no longer counts a request before it knows what the request is.
+ * The production order is
+ *
+ *     express.raw()  ->  webhookRateLimitMiddleware  ->  paymentWebhookHandler
+ *
+ * and inside the limiter: a coarse route-level BACKSTOP runs first, counting
+ * every request so that total work stays bounded; then the request's
+ * `stripe-signature` is verified against the real webhook secret; and ONLY a
+ * request whose signature FAILS is charged to that request's own per-source
+ * bucket. A correctly-signed delivery is therefore never counted into a bucket
+ * an attacker can fill, and can never be refused because of one. Those two
+ * properties are what `webhook-forged-flood-does-not-refuse-a-signed-delivery`
+ * observes over real HTTP, and `webhook-per-source-allowance-is-independent`
+ * observes the third (one source's flood does not spend another's allowance).
  *
  * Hermetic by construction: `DATABASE_URL` is deleted before the first dynamic
  * import, so the process resolves the in-memory repositories and this suite
@@ -27,10 +43,36 @@ import { createMemoryStore } from '../../modules/rate-limit/index.js';
  * Doing that through `createApp()` is not possible, because the app mounts a
  * limiter whose clock is `Date.now`; the scenario therefore composes the SAME
  * production middleware factory (`createWebhookRateLimitMiddleware`) with the
- * SAME production handler in the SAME mount order as `server/src/app.ts`
- * (limiter, then `express.raw`, then the handler) and drives it over real HTTP.
- * That is stated plainly rather than presented as a `createApp()` observation.
+ * SAME production handler in the SAME production mount order as
+ * `server/src/app.ts` (`express.raw`, then the limiter, then the handler) and
+ * drives it over real HTTP. That is stated plainly rather than presented as a
+ * `createApp()` observation.
+ *
+ * The ONE scenario that cannot use an injected clock is the acceptance
+ * scenario, because it must drive the app that the app really mounts. It
+ * handles the wall clock honestly instead of pretending it is absent: it waits
+ * for a window boundary, opens a fresh window, and checks after its flood that
+ * the window has not moved (a moved window is reported, never hidden). A
+ * correctly-signed delivery is refused neither within a window nor across a
+ * boundary, because it is never counted at all.
  */
+
+/** The key prefix the per-source buckets use. Asserted, so a rename is caught. */
+const SOURCE_KEY_PREFIX = 'source:';
+
+/** The IPv4 loopback literal, so a per-source key can be asserted exactly. */
+const SOURCE_IPV4 = '127.0.0.1';
+/** The IPv6 loopback literal: a SECOND, genuinely distinct source address. */
+const SOURCE_IPV6 = '::1';
+
+/** A signature that is well-formed and wrong: the shape an attacker can forge. */
+function forgedSignature(body: string, timestamp: number): string {
+  const sig = crypto
+    .createHmac('sha256', `${SIGNATURE_SECRET}-not-the-real-secret`)
+    .update(`${timestamp}.${body}`)
+    .digest('hex');
+  return `t=${timestamp},v1=${sig}`;
+}
 
 const SIGNATURE_SECRET = 'whsec_h7_fu_rate_limit_test_secret';
 const STRIPE_SECRET_PLACEHOLDER = 'sk_test_fake_placeholder';
@@ -46,6 +88,7 @@ const MANAGED_KEYS = [
   'STRIPE_WEBHOOK_SECRET',
   'WEBHOOK_RATE_LIMIT_MAX',
   'WEBHOOK_RATE_LIMIT_WINDOW_MS',
+  'WEBHOOK_RATE_LIMIT_BACKSTOP_MAX',
 ];
 const savedEnv = new Map<string, string | undefined>();
 for (const key of MANAGED_KEYS) savedEnv.set(key, process.env[key]);
@@ -53,7 +96,7 @@ for (const key of MANAGED_KEYS) savedEnv.set(key, process.env[key]);
 // Cleared before the first dynamic import so no scenario can pick up a database.
 delete process.env.DATABASE_URL;
 
-type Booted = { server: Server; baseUrl: string };
+type Booted = { server: Server; baseUrl: string; app: express.Express };
 
 let booted: Booted | null = null;
 
@@ -73,17 +116,64 @@ async function bootApp(env: Record<string, string | undefined>): Promise<Booted>
   const app = createApp();
 
   const server = await new Promise<Server>((resolve) => {
-    const listener = app.listen(0, () => resolve(listener));
+    // Bound to the IPv4 loopback ADDRESS rather than to every interface: the
+    // suite must not listen on anything but loopback. It also makes the source
+    // address the middleware sees a literal (`127.0.0.1`) instead of the
+    // IPv4-mapped form (`::ffff:127.0.0.1`) a dual-stack `::` socket reports,
+    // so `bindSecondSource` below can assert the two source keys exactly.
+    const listener = app.listen(0, '127.0.0.1', () => resolve(listener));
   });
   const address = server.address() as AddressInfo;
-  return { server, baseUrl: `http://127.0.0.1:${address.port}` };
+  return { server, baseUrl: `http://127.0.0.1:${address.port}`, app };
+}
+
+/**
+ * Additional listeners this test has bound, beyond `booted.server`. They are
+ * tracked separately so `shutdown` can close every one of them: a listener left
+ * bound would keep a port open after the suite.
+ */
+const extraListeners: Server[] = [];
+
+/**
+ * Makes the SAME express app reachable at a SECOND source address: the very
+ * same port, bound on `::1` (IPv6 loopback) in addition to the `127.0.0.1`
+ * (IPv4 loopback) listener `bootApp` created.
+ *
+ * Why this is the second source, and why it is a real one. The whole point of a
+ * per-source rule is that two callers are counted separately, and a test that
+ * merely hands a different key to a factory has not shown that. Two loopback
+ * ADDRESSES are genuinely distinct TCP sources: the kernel reports
+ * `req.socket.remoteAddress` as `127.0.0.1` for the first and `::1` for the
+ * second, so a limiter keyed on the socket address produces two independent
+ * buckets from two real network paths into ONE app instance. The app instance is
+ * shared deliberately — that is the harder case, because the flood and the later
+ * traffic meet in one process's memory, which is exactly the case the old
+ * constant key failed.
+ */
+async function bindSecondSource(target: Booted): Promise<string> {
+  const { port } = new URL(target.baseUrl);
+  const second = await new Promise<Server>((resolve, reject) => {
+    const listener = target.app.listen(Number(port), '::1', () => resolve(listener));
+    listener.on('error', reject);
+  });
+  extraListeners.push(second);
+  // The `::1` listener is bound and listening before the returned URL is used;
+  // the callback above is the `listening` event, so the first request cannot
+  // race the bind.
+  if (!second.listening) {
+    throw new Error('the second-source listener did not reach the listening state');
+  }
+  return `http://[::1]:${port}`;
 }
 
 async function shutdown(target: Booted | null): Promise<void> {
-  if (!target) return;
-  await new Promise<void>((resolve, reject) => {
-    target.server.close((error) => (error ? reject(error) : resolve()));
-  });
+  const listeners = [...extraListeners.splice(0, extraListeners.length)];
+  if (target) listeners.push(target.server);
+  for (const listener of listeners) {
+    await new Promise<void>((resolve, reject) => {
+      listener.close((error) => (error ? reject(error) : resolve()));
+    });
+  }
 }
 
 afterEach(async () => {
@@ -135,13 +225,21 @@ type ObservedResponse = {
   body: unknown;
 };
 
+/**
+ * One real HTTP POST to `/payment/webhook`.
+ *
+ * `signature` is passed through verbatim when supplied, which is how the flood
+ * scenarios send a WRONG signature; `signed` computes a correct one.
+ */
 async function postWebhook(
   baseUrl: string,
-  options: { signed?: boolean; body?: string } = {}
+  options: { signed?: boolean; signature?: string; body?: string } = {}
 ): Promise<ObservedResponse> {
   const body = options.body ?? makeEvent();
   const headers: Record<string, string> = { 'content-type': 'application/json' };
-  if (options.signed) {
+  if (options.signature !== undefined) {
+    headers['stripe-signature'] = options.signature;
+  } else if (options.signed) {
     headers['stripe-signature'] = stripeSignature(body, Math.floor(Date.now() / 1000));
   }
   const response = await fetch(`${baseUrl}/payment/webhook`, { method: 'POST', headers, body });
@@ -157,6 +255,68 @@ async function postWebhook(
     retryAfter: response.headers.get('retry-after'),
     body: parsed,
   };
+}
+
+/** The module's own `details.key` on a refusal, or null when there is none. */
+function refusalKey(body: unknown): string | null {
+  const details = (body as { details?: { key?: unknown } } | null)?.details;
+  return details && typeof details.key === 'string' ? details.key : null;
+}
+
+/**
+ * Waits until the current rate-limit window has at least `needMs` left in it, so
+ * a burst of requests fits inside ONE window instead of straddling a boundary.
+ * If the room is already there it returns immediately.
+ *
+ * The production limiter's clock is `Date.now` and this scenario deliberately
+ * drives the production app rather than a hand-composed one, so the window
+ * cannot be injected away. Making room first is what makes the counting
+ * deterministic without pretending the clock is absent; the window index is
+ * compared again after the burst, so a window that still moved is reported by an
+ * assertion rather than hidden. At most one wait is ever taken, and it is always
+ * a positive one, so this cannot spin.
+ */
+async function ensureWindowRoom(windowMs: number, needMs: number): Promise<number> {
+  const sinceBoundary = Date.now() % windowMs;
+  const remaining = windowMs - sinceBoundary;
+  if (remaining < needMs) {
+    await new Promise((resolve) => setTimeout(resolve, remaining + 5));
+  }
+  return Math.floor(Date.now() / windowMs);
+}
+
+/** How much of a window must be left before a burst may start in it. */
+const MIN_WINDOW_REMAINING_MS = 5_000;
+
+/**
+ * Aligns to the START of the current fixed window and returns it, so that a
+ * burst launched straight afterwards cannot straddle a window rollover.
+ *
+ * WHY THE ALIGNMENT EXISTS. `modules/rate-limit/adapters/memory-store.ts` gives
+ * each bucket the window `Math.floor(now / windowMs) * windowMs`. The window is
+ * therefore NOT a rolling timer that starts with the first request: it is a
+ * multiple of `windowMs` on the wall clock, so it rolls over whenever the clock
+ * crosses that multiple — including in the middle of the burst below. A
+ * rollover resets the counter, and the scenario this helper serves would then
+ * fail for the wrong reason: `expect(elapsedMs).toBeLessThan(WINDOW_MS)` would
+ * fail because the window MOVED, which is a different failure from the one that
+ * scenario is about (the backstop failing to bound total work). Aligning first
+ * takes the rollover out of the burst's path.
+ *
+ * HOW. If less than `MIN_WINDOW_REMAINING_MS` of the current window is left,
+ * the tail is waited out with one `setTimeout` and the window is recomputed;
+ * otherwise it returns immediately. The wait is bounded by
+ * `MIN_WINDOW_REMAINING_MS`, so it is never a whole window and the scenario
+ * stays fast. The caller measures its elapsed time against the returned start.
+ */
+async function alignToWindowBoundary(windowMs: number): Promise<number> {
+  let windowStart = Math.floor(Date.now() / windowMs) * windowMs;
+  const remainingMs = windowStart + windowMs - Date.now();
+  if (remainingMs < MIN_WINDOW_REMAINING_MS) {
+    await new Promise((resolve) => setTimeout(resolve, remainingMs + 5));
+    windowStart = Math.floor(Date.now() / windowMs) * windowMs;
+  }
+  return windowStart;
 }
 
 /** The environment a scenario needs for the handler to run past its 503 gates. */
@@ -189,13 +349,33 @@ describe('webhook rate limit — allowed requests', () => {
   // REQUIRED: webhook-refuses-over-the-limit-with-429-rate-limited
   // -------------------------------------------------------------------------
   it('webhook-refuses-over-the-limit-with-429-rate-limited', async () => {
+    // The bucket under test is the PER-SOURCE one, so every request here must
+    // be charged to it: they all carry a FORGED signature. (Under the new rule a
+    // correctly-signed request is charged to no per-source bucket at all, so a
+    // signed flood could never demonstrate this refusal.)
     booted = await bootApp({ ...CONFIGURED, WEBHOOK_RATE_LIMIT_MAX: '2' });
 
-    const first = await postWebhook(booted.baseUrl, { signed: true });
-    const second = await postWebhook(booted.baseUrl, { signed: true });
-    const third = await postWebhook(booted.baseUrl, { signed: true });
+    const body1 = makeEvent();
+    const body2 = makeEvent();
+    const body3 = makeEvent();
+    const nowSeconds = Math.floor(Date.now() / 1000);
 
-    expect([first.status, second.status]).toEqual([200, 200]);
+    const first = await postWebhook(booted.baseUrl, {
+      body: body1,
+      signature: forgedSignature(body1, nowSeconds),
+    });
+    const second = await postWebhook(booted.baseUrl, {
+      body: body2,
+      signature: forgedSignature(body2, nowSeconds),
+    });
+    const third = await postWebhook(booted.baseUrl, {
+      body: body3,
+      signature: forgedSignature(body3, nowSeconds),
+    });
+
+    // The two inside the limit reach the handler, which answers 401 for the
+    // forged signature; the point of this check is that neither was a 429.
+    expect([first.status, second.status]).toEqual([401, 401]);
     expect(third.status).toBe(429);
     expect(third.body).toMatchObject({
       code: 'RATE_LIMITED',
@@ -204,6 +384,8 @@ describe('webhook rate limit — allowed requests', () => {
       remaining: 0,
     });
     expect((third.body as { retryAfterMs: number }).retryAfterMs).toBeGreaterThan(0);
+    // The refusal names the bucket that was exhausted: this source's.
+    expect(refusalKey(third.body)).toBe(`${SOURCE_KEY_PREFIX}${SOURCE_IPV4}`);
   });
 
   // -------------------------------------------------------------------------
@@ -216,8 +398,21 @@ describe('webhook rate limit — allowed requests', () => {
       WEBHOOK_RATE_LIMIT_WINDOW_MS: '2000',
     });
 
-    await postWebhook(booted.baseUrl, { signed: true });
-    const refused = await postWebhook(booted.baseUrl, { signed: true });
+    const nowSeconds = Math.floor(Date.now() / 1000);
+    // Two FORGED requests from one source: the first spends the source's single
+    // unit, the second is the refusal whose contract this scenario asserts.
+    const firstBody = makeEvent();
+    const first = await postWebhook(booted.baseUrl, {
+      body: firstBody,
+      signature: forgedSignature(firstBody, nowSeconds),
+    });
+    expect(first.status).toBe(401);
+
+    const secondBody = makeEvent();
+    const refused = await postWebhook(booted.baseUrl, {
+      body: secondBody,
+      signature: forgedSignature(secondBody, nowSeconds),
+    });
 
     expect(refused.status).toBe(429);
 
@@ -246,7 +441,12 @@ describe('webhook rate limit — allowed requests', () => {
     expect(body.resetAt).toBeGreaterThan(0);
     expect(body.retryAfterMs).toBeGreaterThan(0);
     expect(body.details).toMatchObject({
-      key: 'route:POST /payment/webhook',
+      // REWORDED (P3A). Old form, which asserted the route-wide constant:
+      //     details: { key: 'route:POST /payment/webhook', limit: 1, … }
+      // New form: the exhausted bucket is the SOURCE's, because that is the
+      // bucket a forged flood fills; the constant route key is now the
+      // backstop's, and it is not what this refusal reports.
+      key: `${SOURCE_KEY_PREFIX}${SOURCE_IPV4}`,
       limit: 1,
       windowMs: 2000,
       remaining: 0,
@@ -256,33 +456,63 @@ describe('webhook rate limit — allowed requests', () => {
   });
 
   // -------------------------------------------------------------------------
-  // REQUIRED: webhook-refusal-happens-before-signature-verification
+  // REWORDED for P3A:
+  //   old name: webhook-refusal-happens-before-signature-verification
+  //   new name: webhook-refusal-is-per-source-and-only-for-wrong-signatures
+  //
+  // The old scenario asserted the ORDER the review found defective — that the
+  // refusal happened BEFORE signature verification, so an UNSIGNED flood could
+  // exhaust one route-wide bucket. The new rule inverts that, so the assertion
+  // had to change with it. This scenario asserts the same observable contract
+  // from the other side: every request's answer (401, 200, 429) and the bucket
+  // each was charged to.
   // -------------------------------------------------------------------------
-  it('webhook-refusal-happens-before-signature-verification', async () => {
-    // Proof of ORDER, not an assertion about order. The three requests below
-    // walk the SAME bucket, so the only thing that differs between the 401 and
-    // the 429 is the bucket's state:
+  it('webhook-refusal-is-per-source-and-only-for-wrong-signatures', async () => {
+    // Three requests walk ONE bucket — the 429 is only reachable when that
+    // bucket is exhausted — and the bucket is this source's wrong-signature
+    // bucket:
     //
-    //   request 1 — no signature, within the limit  -> 401 WEBHOOK_MISSING_SIGNATURE
-    //   request 2 — valid signature, within limit   -> 200
-    //   request 3 — no signature, OVER the limit    -> 429 RATE_LIMITED
+    //   request 1 — WRONG signature, within the limit -> 401 (and is counted)
+    //   request 2 — VALID signature, within the limit -> 200 (and is NOT counted)
+    //   request 3 — WRONG signature, OVER the limit   -> 429 RATE_LIMITED
     //
-    // Request 3 carries the same missing signature as request 1. If signature
-    // verification ran first, request 3 would answer 401 exactly like request 1.
-    // It answers 429, which is only reachable when the limiter ran first.
-    // Request 1 is what makes this a proof rather than a coincidence: it shows
-    // the 401 path is live on this route in this very scenario.
+    // Request 3 carries a request-1-shaped forged signature. If the limiter
+    // counted every request, or counted the correctly-signed one, request 3
+    // would answer 401/200 instead of 429. It answers 429, which is only
+    // reachable when the forged requests were counted and the good one was not.
     booted = await bootApp({ ...CONFIGURED, WEBHOOK_RATE_LIMIT_MAX: '2' });
 
-    const unsignedWithinLimit = await postWebhook(booted.baseUrl, { signed: false });
-    expect(unsignedWithinLimit.status).toBe(401);
+    const nowSeconds = Math.floor(Date.now() / 1000);
+
+    const forgedBody1 = makeEvent();
+    const forgedWithinLimit = await postWebhook(booted.baseUrl, {
+      body: forgedBody1,
+      signature: forgedSignature(forgedBody1, nowSeconds),
+    });
+    expect(forgedWithinLimit.status).toBe(401);
 
     const signedWithinLimit = await postWebhook(booted.baseUrl, { signed: true });
     expect(signedWithinLimit.status).toBe(200);
 
-    const unsignedOverLimit = await postWebhook(booted.baseUrl, { signed: false });
-    expect(unsignedOverLimit.status).toBe(429);
-    expect(unsignedOverLimit.body).toMatchObject({ code: 'RATE_LIMITED' });
+    // A valid signature between the two forgeries, and one more forgery to
+    // spend the second and last unit of the source's allowance. If the signed
+    // request (or either refused one) had been charged, this next forgery would
+    // already be over the limit.
+    const forgedBody2 = makeEvent();
+    const forgedAtTheLimit = await postWebhook(booted.baseUrl, {
+      body: forgedBody2,
+      signature: forgedSignature(forgedBody2, nowSeconds),
+    });
+    expect(forgedAtTheLimit.status).toBe(401);
+
+    const forgedBody3 = makeEvent();
+    const forgedOverLimit = await postWebhook(booted.baseUrl, {
+      body: forgedBody3,
+      signature: forgedSignature(forgedBody3, nowSeconds),
+    });
+    expect(forgedOverLimit.status).toBe(429);
+    expect(forgedOverLimit.body).toMatchObject({ code: 'RATE_LIMITED', limit: 2 });
+    expect(refusalKey(forgedOverLimit.body)).toBe(`${SOURCE_KEY_PREFIX}${SOURCE_IPV4}`);
   });
 });
 
@@ -308,43 +538,54 @@ describe('webhook rate limit — window reset (injected clock)', () => {
 
     const store: RateLimitStore = createMemoryStore();
     const limiter = createWebhookRateLimitMiddleware({
-      settings: { limit: LIMIT, windowMs: WINDOW_MS, rejected: [] },
+      // A generous backstop, so this scenario measures the PER-SOURCE window and
+      // not the backstop: the bucket this walks is the forged-signature bucket.
+      settings: { limit: LIMIT, windowMs: WINDOW_MS, backstopLimit: 1000, rejected: [] },
       store,
       now: () => clock,
     });
 
-    // The SAME mount order as server/src/app.ts: limiter, raw body, handler.
+    // The SAME production mount order as server/src/app.ts: raw body, limiter,
+    // handler.
     const app = express();
-    app.post('/payment/webhook', limiter, express.raw({ type: 'application/json' }), paymentWebhookHandler);
+    app.post('/payment/webhook', express.raw({ type: 'application/json' }), limiter, paymentWebhookHandler);
 
     const server = await new Promise<Server>((resolve) => {
-      const listener = app.listen(0, () => resolve(listener));
+      const listener = app.listen(0, '127.0.0.1', () => resolve(listener));
     });
-    booted = { server, baseUrl: `http://127.0.0.1:${(server.address() as AddressInfo).port}` };
+    booted = { server, baseUrl: `http://127.0.0.1:${(server.address() as AddressInfo).port}`, app };
+
+    // Every request below carries a FORGED signature, because only those are
+    // charged to the per-source bucket whose window this scenario resets.
+    const nowSeconds = Math.floor(Date.now() / 1000);
+    const forge = (): { body: string; signature: string } => {
+      const body = makeEvent();
+      return { body, signature: forgedSignature(body, nowSeconds) };
+    };
 
     clock = base;
-    const first = await postWebhook(booted.baseUrl, { signed: true });
+    const first = await postWebhook(booted.baseUrl, forge());
     clock = base + 100;
-    const second = await postWebhook(booted.baseUrl, { signed: true });
+    const second = await postWebhook(booted.baseUrl, forge());
     clock = base + 200;
-    const third = await postWebhook(booted.baseUrl, { signed: true });
+    const third = await postWebhook(booted.baseUrl, forge());
 
-    expect([first.status, second.status]).toEqual([200, 200]);
+    expect([first.status, second.status]).toEqual([401, 401]);
     expect(third.status).toBe(429);
 
     // Advance the injected clock into the NEXT window. The counter resets, so
     // the full quota is available again — with no sleep anywhere in this test.
     clock = base + WINDOW_MS;
-    const afterReset = await postWebhook(booted.baseUrl, { signed: true });
-    expect(afterReset.status).toBe(200);
+    const afterReset = await postWebhook(booted.baseUrl, forge());
+    expect(afterReset.status).toBe(401);
     expect(afterReset.retryAfter).toBeNull();
 
     clock = base + WINDOW_MS + 100;
-    const secondAfterReset = await postWebhook(booted.baseUrl, { signed: true });
+    const secondAfterReset = await postWebhook(booted.baseUrl, forge());
     clock = base + WINDOW_MS + 200;
-    const overAgain = await postWebhook(booted.baseUrl, { signed: true });
+    const overAgain = await postWebhook(booted.baseUrl, forge());
 
-    expect(secondAfterReset.status).toBe(200);
+    expect(secondAfterReset.status).toBe(401);
     expect(overAgain.status).toBe(429);
   });
 });
@@ -424,36 +665,55 @@ describe('webhook rate limit — misconfiguration', () => {
       .map((call) => String(call[0]))
       .join('\n');
 
-    // The SAME mount order as server/src/app.ts: limiter, raw body, handler.
+    // The SAME production mount order as server/src/app.ts: raw body, limiter,
+    // handler.
     const app = express();
     app.post(
       '/payment/webhook',
-      limiter,
       express.raw({ type: 'application/json' }),
+      limiter,
       paymentWebhookHandler
     );
 
     const server = await new Promise<Server>((resolve) => {
-      const listener = app.listen(0, () => resolve(listener));
+      const listener = app.listen(0, '127.0.0.1', () => resolve(listener));
     });
     booted = {
       server,
       baseUrl: `http://127.0.0.1:${(server.address() as AddressInfo).port}`,
+      app,
     };
 
     // The burst. `clock` does not move, so every request below lands in the SAME
-    // window and the counter cannot reset underneath the assertions.
+    // window and the counter cannot reset underneath the assertions. Every
+    // request carries a FORGED signature, because the bucket being driven is the
+    // per-source one — the bucket the clamped limit arms.
+    const nowSeconds = Math.floor(Date.now() / 1000);
+    const forge = async (): Promise<number> => {
+      const body = makeEvent();
+      const observed = await postWebhook(booted!.baseUrl, {
+        body,
+        signature: forgedSignature(body, nowSeconds),
+      });
+      return observed.status;
+    };
+
     clock = base;
     const accepted: number[] = [];
     for (let i = 0; i < resolved.limit; i += 1) {
-      accepted.push((await postWebhook(booted.baseUrl, { signed: true })).status);
+      accepted.push(await forge());
     }
-    const overTheLimit = await postWebhook(booted.baseUrl, { signed: true });
+    const overTheLimit = await postWebhook(booted.baseUrl, (() => {
+      const body = makeEvent();
+      return { body, signature: forgedSignature(body, nowSeconds) };
+    })());
 
     expect(accepted).toHaveLength(60);
     expect(accepted).not.toContain(429);
+    expect(accepted.every((status) => status === 401)).toBe(true);
     expect(overTheLimit.status).toBe(429);
     expect(overTheLimit.body).toMatchObject({ code: 'RATE_LIMITED', limit: 60 });
+    expect(refusalKey(overTheLimit.body)).toBe(`${SOURCE_KEY_PREFIX}${SOURCE_IPV4}`);
     expect(warn).toHaveBeenCalled();
 
     // The substitution that ARMED this limiter is the substitution that was
@@ -464,29 +724,61 @@ describe('webhook rate limit — misconfiguration', () => {
     }
 
     // -----------------------------------------------------------------------
+    // The BACKSTOP is a SEPARATE bucket from the per-source limit, and it did not
+    // refuse at 60 requests: the refusal below still names the SOURCE key, while
+    // every request in this scenario has been charged to the backstop too. The
+    // backstop's own ceiling being the (much larger) documented default is what
+    // `webhook-backstop-bounds-total-work-even-for-valid-signatures` drives
+    // directly.
+    // -----------------------------------------------------------------------
+    const backstopBody = makeEvent();
+    const backstopObserved = await postWebhook(booted.baseUrl, {
+      body: backstopBody,
+      signature: forgedSignature(backstopBody, nowSeconds),
+    });
+    expect(backstopObserved.status).toBe(429);
+    expect(refusalKey(backstopObserved.body)).toBe(`${SOURCE_KEY_PREFIX}${SOURCE_IPV4}`);
+
+    // -----------------------------------------------------------------------
     // Boundary proof — the part the wall clock made impossible to assert. The
     // refusal above is pinned to the WINDOW, not to the process: one
     // millisecond before the window ends the counter is still exhausted, and at
     // the window end it resets and the whole quota is available again.
     // -----------------------------------------------------------------------
     clock = base + WINDOW_MS - 1;
-    const oneMillisecondBeforeRollover = await postWebhook(booted.baseUrl, { signed: true });
-    expect(oneMillisecondBeforeRollover.status).toBe(429);
-    expect(oneMillisecondBeforeRollover.body).toMatchObject({ code: 'RATE_LIMITED', limit: 60 });
+    const oneMillisecondBeforeRollover = await forge();
+    expect(oneMillisecondBeforeRollover).toBe(429);
 
     clock = base + WINDOW_MS;
-    const afterRollover = await postWebhook(booted.baseUrl, { signed: true });
-    expect(afterRollover.status).toBe(200);
+    // At the window end the per-source counter resets, so this forged request is
+    // back inside the limit and reaches the handler (401) — and, because a
+    // correctly-signed delivery is never counted, the same window also serves it
+    // (200) with the source's whole allowance still spent by no one.
+    const forgedAfterRolloverBody = makeEvent();
+    const afterRollover = await postWebhook(booted.baseUrl, {
+      body: forgedAfterRolloverBody,
+      signature: forgedSignature(forgedAfterRolloverBody, nowSeconds),
+    });
+    expect(afterRollover.status).toBe(401);
     expect(afterRollover.retryAfter).toBeNull();
+
+    const signedInTheSameWindow = await postWebhook(booted.baseUrl, { signed: true });
+    expect(signedInTheSameWindow.status).toBe(200);
+    expect(signedInTheSameWindow.retryAfter).toBeNull();
 
     // The rollover restored the FULL quota, not a single exempt request: the
     // rest of the new window is accepted and the request after it is refused.
     for (let i = 1; i < resolved.limit; i += 1) {
-      expect((await postWebhook(booted.baseUrl, { signed: true })).status).toBe(200);
+      expect(await forge()).toBe(401);
     }
-    const overTheLimitAgain = await postWebhook(booted.baseUrl, { signed: true });
+    const overTheLimitAgainBody = makeEvent();
+    const overTheLimitAgain = await postWebhook(booted.baseUrl, {
+      body: overTheLimitAgainBody,
+      signature: forgedSignature(overTheLimitAgainBody, nowSeconds),
+    });
     expect(overTheLimitAgain.status).toBe(429);
     expect(overTheLimitAgain.body).toMatchObject({ code: 'RATE_LIMITED', limit: 60 });
+    expect(refusalKey(overTheLimitAgain.body)).toBe(`${SOURCE_KEY_PREFIX}${SOURCE_IPV4}`);
   });
 });
 
@@ -498,7 +790,10 @@ describe('webhook rate limit — unconfigured provider is unchanged', () => {
     // No STRIPE_SECRET_KEY: the handler's first gate answers 503, exactly as it
     // did before the limiter was mounted. The limiter is in front of it and must
     // not change the answer.
-    booted = await bootApp({ STRIPE_WEBHOOK_SECRET: SIGNATURE_SECRET });
+    booted = await bootApp({
+      STRIPE_WEBHOOK_SECRET: SIGNATURE_SECRET,
+      WEBHOOK_RATE_LIMIT_MAX: '2',
+    });
 
     const noAdapter = await postWebhook(booted.baseUrl, { signed: true });
     expect(noAdapter.status).toBe(503);
@@ -508,7 +803,10 @@ describe('webhook rate limit — unconfigured provider is unchanged', () => {
 
     // And the second gate: adapter configured, webhook secret absent.
     await shutdown(booted);
-    booted = await bootApp({ STRIPE_SECRET_KEY: STRIPE_SECRET_PLACEHOLDER });
+    booted = await bootApp({
+      STRIPE_SECRET_KEY: STRIPE_SECRET_PLACEHOLDER,
+      WEBHOOK_RATE_LIMIT_MAX: '2',
+    });
 
     const noSecret = await postWebhook(booted.baseUrl, { signed: true });
     expect(noSecret.status).toBe(503);
@@ -516,5 +814,300 @@ describe('webhook rate limit — unconfigured provider is unchanged', () => {
       error:
         'Stripe webhook secret not configured on this server instance (set STRIPE_WEBHOOK_SECRET)',
     });
+
+    // A forged FLOOD in this state is still answered 503, never 429: with no
+    // secret there is no way to tell a forged delivery from a real one, the
+    // endpoint already refuses every request, so nothing is charged to a
+    // per-source bucket. The backstop stays armed (that is what bounds work);
+    // the answer the route gives is unchanged.
+    const nowSeconds = Math.floor(Date.now() / 1000);
+    const forgedStatuses: number[] = [];
+    for (let i = 0; i < 5; i += 1) {
+      const body = makeEvent();
+      forgedStatuses.push(
+        (await postWebhook(booted.baseUrl, { body, signature: forgedSignature(body, nowSeconds) }))
+          .status
+      );
+    }
+    expect(forgedStatuses).toEqual([503, 503, 503, 503, 503]);
+    expect(forgedStatuses).not.toContain(429);
   });
+});
+
+// ---------------------------------------------------------------------------
+// REQUIRED (P3A acceptance): webhook-forged-flood-does-not-refuse-a-signed-delivery
+//
+// THE OWNER'S ACCEPTANCE TEST, as a test:
+//
+//   ยิง flood ลายเซ็นผิด แล้ว webhook ลายเซ็นถูกยังผ่าน
+//   (flood the endpoint with WRONG signatures, then a correctly-signed webhook
+//    must still pass)
+//
+// Driven over real HTTP against the REAL app (`createApp()`), one process, no
+// database: a short flood of forged signatures from one source is fired until
+// refusals are observed, and then a correctly-signed delivery is sent. Under the
+// OLD design — one constant key charged with every request — that delivery was
+// refused 429, which is the defect this scenario exists to keep out.
+// ---------------------------------------------------------------------------
+describe("webhook rate limit — the Owner's flood acceptance test", () => {
+  it('webhook-forged-flood-does-not-refuse-a-signed-delivery', async () => {
+    const WINDOW_MS = 10_000;
+    // Small, so a short flood is enough to have exhausted the bucket under the
+    // old design (which is what the base-revision run showed).
+    const LIMIT = 3;
+    // The backstop is set well above the flood, so this scenario measures the
+    // per-source rule and not the backstop.
+    const BACKSTOP = 500;
+    // The flood plus the signed deliveries must fit inside the window whose
+    // index is asserted at the end, so room is made for this much work first.
+    const NEED_MS = 2_000;
+
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    booted = await bootApp({
+      ...CONFIGURED,
+      WEBHOOK_RATE_LIMIT_MAX: String(LIMIT),
+      WEBHOOK_RATE_LIMIT_BACKSTOP_MAX: String(BACKSTOP),
+      WEBHOOK_RATE_LIMIT_WINDOW_MS: String(WINDOW_MS),
+    });
+    warn.mockRestore();
+
+    // Make room inside one window before anything is sent.
+    const windowIndex = await ensureWindowRoom(WINDOW_MS, NEED_MS);
+    const nowSeconds = Math.floor(Date.now() / 1000);
+
+    // --- 1. the flood: WRONG signatures, from one source -------------------
+    let accepted = 0;
+    let refused = 0;
+    let sent = 0;
+    let firstRefusalBody: unknown = null;
+    const MAX_FLOOD = LIMIT * 5;
+    for (let i = 0; i < MAX_FLOOD; i += 1) {
+      const body = makeEvent();
+      const observed = await postWebhook(booted.baseUrl, {
+        body,
+        signature: forgedSignature(body, nowSeconds),
+      });
+      sent += 1;
+      if (observed.status === 429) {
+        refused += 1;
+        firstRefusalBody ??= observed.body;
+        // A few refusals are enough to show the flood is over its allowance.
+        if (refused >= 3) break;
+      } else {
+        accepted += 1;
+      }
+    }
+
+    // --- 2. the flood was itself refused: the limiter is armed -------------
+    // (The bucket the refusal names is asserted below, after the acceptance
+    // assertion, so that a failure on the OLD design lands on the acceptance
+    // property rather than on a key-shape detail.)
+    expect(accepted).toBeGreaterThanOrEqual(LIMIT);
+    expect(refused).toBeGreaterThanOrEqual(1);
+
+    // The flood stayed inside one window, so "accepted then refused" is a
+    // statement about the allowance and not about the window rolling over. If
+    // the window had moved, this scenario would be measuring the wrong thing, so
+    // it is asserted rather than assumed.
+    const floodElapsedMs = Date.now() % WINDOW_MS;
+    expect(Math.floor(Date.now() / WINDOW_MS)).toBe(windowIndex);
+
+    // --- 3. THE ACCEPTANCE: a correctly-signed delivery is NOT refused -----
+    const signedDelivery = await postWebhook(booted.baseUrl, { signed: true });
+    expect(signedDelivery.status).not.toBe(429);
+    expect(signedDelivery.status).toBe(200);
+    expect(signedDelivery.retryAfter).toBeNull();
+
+    // Not a one-shot exemption: the handler's answer keeps coming, because a
+    // valid signature is never charged to any bucket the flood filled.
+    const secondSignedDelivery = await postWebhook(booted.baseUrl, { signed: true });
+    expect(secondSignedDelivery.status).toBe(200);
+    expect(secondSignedDelivery.retryAfter).toBeNull();
+
+    // Neither of the two deliveries crossed a window boundary either, so they
+    // were answered in the very window the flood exhausted.
+    expect(Math.floor(Date.now() / WINDOW_MS)).toBe(windowIndex);
+
+    // The flood's refusals named the SOURCE's bucket — the bucket the forged
+    // requests filled, and the only bucket they filled.
+    expect(refusalKey(firstRefusalBody)).toBe(`${SOURCE_KEY_PREFIX}${SOURCE_IPV4}`);
+
+    // ... and the flood is STILL refused afterwards, so the two assertions above
+    // were not bought by turning the limiter off.
+    const forgedAfterTheGoodDeliveryBody = makeEvent();
+    const forgedAfterTheGoodDelivery = await postWebhook(booted.baseUrl, {
+      body: forgedAfterTheGoodDeliveryBody,
+      signature: forgedSignature(forgedAfterTheGoodDeliveryBody, nowSeconds),
+    });
+    expect(forgedAfterTheGoodDelivery.status).toBe(429);
+    expect(refusalKey(forgedAfterTheGoodDelivery.body)).toBe(`${SOURCE_KEY_PREFIX}${SOURCE_IPV4}`);
+
+    // The numbers, so the observation is quotable from the test log.
+    // eslint-disable-next-line no-console
+    console.log(
+      `[P3A acceptance] flood: requests_sent=${sent} accepted=${accepted} refused=${refused} ` +
+        `limit=${LIMIT} backstop=${BACKSTOP} windowMs=${WINDOW_MS} elapsedMs=${floodElapsedMs} ` +
+        `signed_delivery_status=${signedDelivery.status} ` +
+        `second_signed_delivery_status=${secondSignedDelivery.status} ` +
+        `forged_after_good_status=${forgedAfterTheGoodDelivery.status}`
+    );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// REQUIRED (P3A): webhook-per-source-allowance-is-independent
+//
+// One source's flood must not consume another source's allowance. The second
+// source is a REAL one: the same app reached on the same port at `[::1]`, so
+// the kernel reports a different `req.socket.remoteAddress` and the limiter
+// derives a different key. A test that merely passed a different key to the
+// factory would not have shown this.
+// ---------------------------------------------------------------------------
+describe('webhook rate limit — per-source allowance is independent', () => {
+  it('webhook-per-source-allowance-is-independent', async () => {
+    const WINDOW_MS = 10_000;
+    const LIMIT = 2;
+    const NEED_MS = 2_000;
+
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    booted = await bootApp({
+      ...CONFIGURED,
+      WEBHOOK_RATE_LIMIT_MAX: String(LIMIT),
+      WEBHOOK_RATE_LIMIT_BACKSTOP_MAX: '500',
+      WEBHOOK_RATE_LIMIT_WINDOW_MS: String(WINDOW_MS),
+    });
+    warn.mockRestore();
+
+    const secondSourceBaseUrl = await bindSecondSource(booted);
+    const windowIndex = await ensureWindowRoom(WINDOW_MS, NEED_MS);
+    const nowSeconds = Math.floor(Date.now() / 1000);
+
+    const forgeAt = async (baseUrl: string): Promise<ObservedResponse> => {
+      const body = makeEvent();
+      return postWebhook(baseUrl, { body, signature: forgedSignature(body, nowSeconds) });
+    };
+
+    // --- source A (127.0.0.1) floods until it is refused --------------------
+    const sourceAStatuses: number[] = [];
+    let sourceARefusal: ObservedResponse | null = null;
+    for (let i = 0; i < LIMIT * 4 && sourceARefusal === null; i += 1) {
+      const observed = await forgeAt(booted.baseUrl);
+      sourceAStatuses.push(observed.status);
+      if (observed.status === 429) sourceARefusal = observed;
+    }
+    expect(sourceARefusal).not.toBeNull();
+    expect(refusalKey(sourceARefusal!.body)).toBe(`${SOURCE_KEY_PREFIX}${SOURCE_IPV4}`);
+
+    // --- source B ([::1]) has spent nothing ---------------------------------
+    const sourceBForgedStatuses: number[] = [];
+    for (let i = 0; i < LIMIT; i += 1) {
+      sourceBForgedStatuses.push((await forgeAt(secondSourceBaseUrl)).status);
+    }
+    expect(sourceBForgedStatuses).toEqual([401, 401]);
+    expect(sourceBForgedStatuses).not.toContain(429);
+
+    // A correctly-signed delivery is served from EITHER source, including the
+    // one whose forged-signature bucket is exhausted.
+    const signedFromB = await postWebhook(secondSourceBaseUrl, { signed: true });
+    expect(signedFromB.status).toBe(200);
+    const signedFromA = await postWebhook(booted.baseUrl, { signed: true });
+    expect(signedFromA.status).toBe(200);
+
+    // --- B is refused only when ITS OWN allowance is gone -------------------
+    const sourceBRefusal = await forgeAt(secondSourceBaseUrl);
+    expect(sourceBRefusal.status).toBe(429);
+    expect(refusalKey(sourceBRefusal.body)).toBe(`${SOURCE_KEY_PREFIX}${SOURCE_IPV6}`);
+
+    // ... and A does not come back to life because B was spent: the two buckets
+    // are independent in both directions.
+    const sourceAStillRefused = await forgeAt(booted.baseUrl);
+    expect(sourceAStillRefused.status).toBe(429);
+    expect(refusalKey(sourceAStillRefused.body)).toBe(`${SOURCE_KEY_PREFIX}${SOURCE_IPV4}`);
+
+    // Every observation above belongs to ONE window, so the independence shown
+    // is the buckets' and not an artefact of a window rolling over mid-scenario.
+    expect(Math.floor(Date.now() / WINDOW_MS)).toBe(windowIndex);
+
+    // eslint-disable-next-line no-console
+    console.log(
+      `[P3A per-source] source_a=127.0.0.1 statuses=[${sourceAStatuses.join(',')}] ` +
+        `source_b=::1 forged_statuses=[${sourceBForgedStatuses.join(',')}] ` +
+        `source_b_refusal_key=${refusalKey(sourceBRefusal.body)} ` +
+        `signed_from_a=${signedFromA.status} signed_from_b=${signedFromB.status} ` +
+        `limit=${LIMIT} windowMs=${WINDOW_MS}`
+    );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// REQUIRED (P3A): webhook-backstop-bounds-total-work-even-for-valid-signatures
+//
+// Point 3 of the work unit: verification now happens BEFORE the tight
+// per-source limit, so a flood costs HMAC work. The coarse backstop is what
+// bounds that work, and this scenario drives it with a flood that a per-source
+// limit could never stop — CORRECTLY-SIGNED requests, each from a source with
+// no allowance spent — proving the bound comes from the backstop and that its
+// refusal covers the whole route, not one source.
+//
+// The cost, and the reason this scenario spends real time: with no secret there
+// is no allowance to separate, so the backstop must be the binding limit. That
+// needs a window longer than the flood, because the fixed-window store resets at
+// a boundary, and a flood cannot be spread across a boundary and still bound
+// anything.
+// ---------------------------------------------------------------------------
+describe('webhook rate limit — the coarse backstop bounds total work', () => {
+  it('webhook-backstop-bounds-total-work-even-for-valid-signatures', async () => {
+    const WINDOW_MS = 120_000;
+    const BACKSTOP = 40;
+
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    // Deliberately NO webhook secret: no signature verdict is possible, so the
+    // per-source stage is skipped and the backstop is the only limiter left.
+    booted = await bootApp({
+      STRIPE_SECRET_KEY: STRIPE_SECRET_PLACEHOLDER,
+      WEBHOOK_RATE_LIMIT_BACKSTOP_MAX: String(BACKSTOP),
+      WEBHOOK_RATE_LIMIT_WINDOW_MS: String(WINDOW_MS),
+    });
+    warn.mockRestore();
+
+    const windowStart = await alignToWindowBoundary(WINDOW_MS);
+
+    const statuses: number[] = [];
+    const codes: unknown[] = [];
+    for (let i = 0; i < BACKSTOP + 2; i += 1) {
+      const observed = await postWebhook(booted.baseUrl, { signed: true });
+      statuses.push(observed.status);
+      codes.push((observed.body as { code?: unknown }).code);
+    }
+
+    const refused = statuses.filter((status) => status === 429);
+    const served = statuses.filter((status) => status === 503);
+
+    // Exactly the backstop's worth got through, and everything after it was
+    // refused — with the 503 the handler answers when no secret is configured,
+    // which is what proves the requests that got through reached the handler.
+    expect(served).toHaveLength(BACKSTOP);
+    expect(refused).toHaveLength(2);
+    expect(statuses[BACKSTOP]).toBe(429);
+    expect(statuses[BACKSTOP + 1]).toBe(429);
+
+    // The refusal is the ROUTE's bucket, not a source's: the backstop protects
+    // the process, whichever caller is responsible.
+    const refusalBody = (await postWebhook(booted.baseUrl, { signed: true })).body;
+    expect(refusalBody).toMatchObject({ code: 'RATE_LIMITED', limit: BACKSTOP });
+    expect(refusalKey(refusalBody)).toBe('route:POST /payment/webhook');
+
+    // The clock check: the bound above is the backstop's own allowance, not the
+    // window rolling over mid-flood.
+    const elapsedMs = Date.now() - windowStart;
+    expect(elapsedMs).toBeLessThan(WINDOW_MS);
+
+    // eslint-disable-next-line no-console
+    console.log(
+      `[P3A backstop] requests=${statuses.length} served=${served.length} refused=${refused.length} ` +
+        `backstop=${BACKSTOP} windowMs=${WINDOW_MS} elapsedMs=${elapsedMs} ` +
+        `first_refusal_status=${statuses[BACKSTOP]} refusal_code=${codes[BACKSTOP]} ` +
+        `refusal_key=${refusalKey(refusalBody)}`
+    );
+  }, 180_000);
 });

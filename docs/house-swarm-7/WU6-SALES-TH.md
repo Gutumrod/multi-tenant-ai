@@ -176,18 +176,20 @@ repository to copy.
   dependencies.
 - **V3** — `cd server && npm run typecheck` → ออกด้วย 0 และไม่พิมพ์ type error / exits 0
   and prints no type error.
-- **V4** — `cd server && npm test` ในสามกรณี ซึ่งเห็นจริงทั้งสาม: ไม่ตั้ง
-  `DATABASE_URL` → ออกด้วย 0 ด้วย `Test Files 4 passed | 1 skipped (5)` และ
-  `Tests 46 passed | 5 skipped (51)` (วัดในใบงานนี้); ตั้ง `DATABASE_URL` ชี้ไปที่ฐานข้อมูลใหม่
-  → ออกด้วย 0 ด้วย `Test Files 5 passed (5)` และ `Tests 51 passed (51)` (ผลที่บันทึกไว้ใน
-  รายงาน WU-5 และในคู่มือ deploy); ตั้ง `DATABASE_URL` ชี้ไปที่ฐานข้อมูลที่ชุดเทสต์นี้เคยรันแล้ว
-  → ออกด้วย **1** และ `1 failed | 50 passed (51)` (วัดในใบงานนี้) สรุป: ไฟล์เทสต์ที่ใช้ฐานข้อมูล
-  จะรันก็ต่อเมื่อตั้ง `DATABASE_URL` และการผ่านครบชุดต้องใช้ฐานข้อมูลที่ยังไม่เคยใช้
-  คำเตือนทั้งสองข้ออยู่ในข้อ 6 อีกครั้ง / `cd server && npm test` in three cases, all three
-  observed: with `DATABASE_URL` unset → exit 0, `4 passed | 1 skipped (5)` files and
-  `46 passed | 5 skipped (51)` tests; with `DATABASE_URL` set against a **fresh** database →
-  exit 0, `5 passed (5)` and `51 passed (51)`; with `DATABASE_URL` set against a database the
-  suite has **already run against** → exit **1**, `1 failed | 50 passed (51)`.
+- **V4** — `cd server && npm test` ในสองกรณี ซึ่งเห็นจริงทั้งสอง: ไม่ตั้ง
+  `DATABASE_URL` → ออกด้วย 0 ด้วย `Test Files 5 passed | 1 skipped (6)` และ
+  `Tests 53 passed | 5 skipped (58)` (วัดในใบงานนี้) โดยห้าเทสต์ที่ข้ามคือของ
+  `tests/postgres-persistence.test.ts` ซึ่งข้ามตัวเองเมื่อไม่มีฐานข้อมูล; ตั้ง `DATABASE_URL`
+  → ออกด้วย 0 ด้วย `Test Files 6 passed (6)` และ `Tests 58 passed (58)` (วัดในใบงานนี้)
+  สรุป: ไฟล์เทสต์ที่ใช้ฐานข้อมูลจะรันก็ต่อเมื่อตั้ง `DATABASE_URL` และตัวเลขครบชุดเกิด**เฉพาะ**
+  เมื่อมีเงื่อนไขนั้น และชุดเทสต์นี้**รันซ้ำได้** — มันลบแถวที่ตัวเองสร้างทิ้ง ใช้ฐานข้อมูลเดิม
+  ซ้ำได้ทุกรอบ นี่คือการสังเกตสองข้อเดียวกับที่ระบุในข้อ 6 และใน
+  `docs/house-swarm-7/WU5-DEPLOY.md` §6.1 / `cd server && npm test` in two cases, both
+  observed: with `DATABASE_URL` unset → exit 0, `Test Files 5 passed | 1 skipped (6)`
+  and `Tests 53 passed | 5 skipped (58)`; with `DATABASE_URL` set → exit 0,
+  `Test Files 6 passed (6)` and `Tests 58 passed (58)`. The full-suite figures hold only
+  when `DATABASE_URL` is set, and the suite is repeatable: it deletes the rows it
+  created, so the same database can be used run after run.
 - **V5** — `cd server && DATABASE_URL='<connection string ของคุณเอง>' npm run start`
   แล้ว `curl -s http://127.0.0.1:3003/health` → `{"ok":true}` และ
   `curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:3003/` → `200`
@@ -209,8 +211,11 @@ repository to copy.
   `CHECK ... PASS` เจ็ดบรรทัดเกี่ยวกับชิ้นงาน deploy / seven `CHECK ... PASS` lines about
   the deployment artifact.
 - **V10** — `node server/scripts/proofs/wu6/claims-check.mjs` → ได้ `CHECK ... PASS`
-  แปดบรรทัด หนึ่งบรรทัดต่อหนึ่งชื่อ check ซึ่งตรวจคำกล่าวอ้างในชุดเอกสารนี้อีกครั้ง / eight
-  `CHECK ... PASS` lines, one per check name, re-checking the claims in this document set.
+  เก้าบรรทัด หนึ่งบรรทัดต่อหนึ่งชื่อ check ซึ่งตรวจคำกล่าวอ้างในชุดเอกสารนี้อีกครั้ง
+  โดยบรรทัดที่เก้า `sales-numbers-agree-with-ledger` เทียบตัวเลขชุดเทสต์ที่ระบุในเอกสารนี้
+  กับ ledger / nine
+  `CHECK ... PASS` lines, one per check name, re-checking the claims in this document
+  set; the ninth compares this document set's test-count figures with the ledger's.
 
 รันไฟล์เดียวกันกับชุดเอกสารภาษาอังกฤษได้: `WU6-SALES-EN.md` ถูกตรวจโดย harness ตัวเดียวกัน
 และ harness จะล้มเหลวถ้าเอกสารสองภาษาไม่ตรงกันเรื่องหัวข้อ หรือรายการสิ่งที่ยังไม่ได้ทำ
@@ -247,14 +252,21 @@ that any of the following exists.
   through the `pg` driver.
 - **N5 — rate limit บน `POST /payment/webhook` เป็นแบบในโปรเซสเดียว** เส้นทางนั้น
   **มี** rate limit แล้ว: โมดูล `rate-limit` จาก Module Hub ถูก vendor ไว้ที่
-  `modules/rate-limit/` และ mount **ก่อน** การตรวจลายเซ็น คำขอที่ทะลักจึงถูกปฏิเสธด้วย **429**
-  `RATE_LIMITED` พร้อม header `Retry-After` โดยไม่เสีย CPU ไปกับการตรวจ HMAC สิ่งที่มันยัง**ไม่**ทำ:
-  ตัวนับอยู่ในหน่วยความจำของโปรเซสเดียว การ deploy **หลายอินสแตนซ์จึงไม่แชร์ตัวนับกัน** เพดาน
-  ที่แท้จริงจึงคูณตามจำนวนอินสแตนซ์ และใช้คีย์เดียวครอบทั้งเส้นทางไม่ใช่ต่อผู้เรียก การทะลักของ
-  Stripe ที่ถูกต้องจึงถูกหน่วงไปพร้อมกับของ attacker มันยังแทน TLS, supervisor หรือ shared store
-  ไม่ได้ อย่าถือว่ามันแข็งแรงแล้ว / **The rate limit on `POST /payment/webhook` is in-process
-  only.** That route now HAS a rate limit, mounted ahead of the signature check, so a flood is
-  refused with 429 `RATE_LIMITED` and a `Retry-After` header. It is still single-process: a
+  `modules/rate-limit/` การนับเป็น **แยกตาม source** และมีการตรวจลายเซ็นของคำขอก่อนการนับ
+  แบบเข้มงวด คำขอที่ลายเซ็น**ผิด**เท่านั้นจึงถูกคิดเข้า bucket ของ source นั้น คำขอที่ลายเซ็น
+  ถูกต้องจึงไม่ถูกปฏิเสธเพราะการยิงถล่มของคนอื่น ใต้ลงมามี**แบ็กสต็อปหยาบระดับทุกคำขอ** งาน
+  ทั้งหมดจึงไม่ไร้ขอบเขต คำขอที่เกินแบ็กสต็อปถูกปฏิเสธด้วย **429** `RATE_LIMITED` พร้อม header
+  `Retry-After` สิ่งที่มันยัง**ไม่**ทำ: ตัวนับอยู่ในหน่วยความจำของโปรเซสเดียว การ deploy
+  **หลายอินสแตนซ์จึงไม่แชร์ตัวนับกัน** เพดานที่แท้จริงจึงคูณตามจำนวนอินสแตนซ์ source คือที่อยู่
+  ซ็อกเก็ตซึ่งเป็นตัวตนแบบหยาบ ผู้โจมตีที่กระจายหลายที่อยู่จึงยังไปถึงแบ็กสต็อปได้ และเพราะ
+  ตรวจลายเซ็นก่อนนับ การยิงถล่มจึง**กินงาน HMAC** จริง ถูกจำกัดขอบเขตแค่แบบหยาบด้วยแบ็กสต็อป
+  มันยังแทน TLS, supervisor หรือ shared store ไม่ได้ และ rate limit ที่ชั้น reverse proxy
+  ยังเป็นคำตอบจริงเมื่อถูกโจมตี อย่าถือว่ามันแข็งแรงแล้ว / **The rate limit on
+  `POST /payment/webhook` is in-process only.** That route now HAS a rate limit: counting is
+  per source, the delivery's signature is verified before the tight count so only
+  wrong-signature requests are charged to a source's bucket, and a coarse every-request
+  backstop sits under it, so a correctly-signed delivery is never refused because of a flood.
+  It is still single-process: a
   multi-instance deployment shares no counter, and one key covers the endpoint rather than the
   caller.
 - **N6 — ไม่มีหลักฐาน deploy หลายอินสแตนซ์ และไม่มีการ deploy เลย** ไม่เคยมีการ deploy
@@ -272,26 +284,40 @@ that any of the following exists.
 `server/scripts/proofs/wu4/wu4-e2e/` คือหลักฐาน UI ทั้งหมด / **One more limit, about the
 UI.** There is no in-browser UI test and **no screenshots** exist in this repository.
 
-**คำเตือนสองข้อที่ห้ามข้าม เกี่ยวกับการรันชุดเทสต์**
+**คำเตือนข้อเดียวที่ห้ามข้าม เกี่ยวกับการรันชุดเทสต์ — แถวถูกลบให้เรียบร้อย และชุดเทสต์รันซ้ำได้**
 
-`npm test` เขียนแถว subscription และแถว ledger ลงในฐานข้อมูลที่ตั้งไว้ และ**ไม่**ลบให้
-หลังรันของผมเอง จำนวนแถวเปลี่ยนจาก subscription 5 แถว และ ledger 3 แถว เป็น 7 แถว และ
-3 แถว (เทสต์ webhook สองตัวทิ้งแถว `subscriptions` ไว้ตัวละหนึ่งแถว) อย่าชี้ชุดเทสต์ไปที่
-ฐานข้อมูลที่คุณห่วง
+`npm test` เขียนแถว subscription และแถว ledger ลงในฐานข้อมูลที่ตั้งไว้ และ**มันลบแถวที่
+ตัวเองสร้างทิ้งก่อนจบ** การรันซ้ำบนฐานข้อมูลเดิมจึงไม่ทิ้งอะไรไว้ วัดบนฐานข้อมูลทดสอบในเครื่อง
+ผู้เขียน: สามรอบรันติดกันรายงาน `Test Files 6 passed (6)` และ `Tests 58 passed (58)` ทุกรอบ
+และจำนวนแถวหลังทั้งสามรอบคือ `subscriptions` 0 และ `billing_event_ledger` 0 การชี้ชุดเทสต์
+ไปที่ฐานข้อมูลทดสอบแทน production ยังเป็นนิสัยที่ถูก แต่ชุดเทสต์นี้**รันซ้ำได้**: ใช้ฐานข้อมูล
+เดิมซ้ำได้ทุกรอบ `docs/house-swarm-7/WU5-DEPLOY.md` §6.1 ระบุสถานะเดียวกันด้วยตัวเลขเดียวกัน
 
-**และมันรันซ้ำกับฐานข้อมูลเดิมไม่ได้** เทสต์ webhook ใช้ event id คงที่ และ ledger กันซ้ำ
-จึงข้ามการส่งครั้งที่สอง ดังนั้นบนฐานข้อมูลที่ชุดเทสต์เคยรันแล้ว `npm test` จะล้มเหลว:
-`1 failed | 50 passed (51)` และความล้มเหลวคือ ledger ปฏิเสธที่จะ apply เหตุการณ์ที่เคยเห็นแล้ว
-**นี่คือข้อสังเกตที่ตั้งใจวัด และเป็นเหตุผลที่ V4 ข้างบนระบุเงื่อนไขฐานข้อมูลใหม่** และเป็น
-เหตุผลที่คิทนี้ควรชี้ไปที่ฐานข้อมูลใหม่ หรือฐานข้อมูลที่ใช้ทดสอบเท่านั้น
+**ประวัติ เพื่อไม่ให้สำเนาเก่าทำให้คุณเข้าใจผิด** `server/tests/webhook.test.ts` เวอร์ชันก่อน
+**ไม่**ลบอะไรเลย การรันหนึ่งครั้งจึงทิ้งแถวจริงไว้ใน `subscriptions` และ
+`billing_event_ledger` และการรันซ้ำบนฐานข้อมูลเดิม**เคยล้มเหลว** รอบที่สองรายงาน
+`tests/webhook.test.ts:101 AssertionError: expected 'active' to be 'cancelled'` เพราะ id ของ
+billing event สองตัวของไฟล์นี้คงที่ (`evt_apply_1`, `evt_replay_1`) และ `event_id` ของ ledger
+เป็น primary key — แถวที่ค้างจากรอบก่อนทำให้การส่งซ้ำถูก dedupe subscription จึงไม่ถึงสถานะ
+`cancelled` นั่นเป็น defect ของชุดเทสต์ และ**แก้แล้ว** รอบที่เคยล้มเหลวตอนนี้ผ่านด้วย
+`Test Files 6 passed (6)` และ `Tests 58 passed (58)` คำเตือนที่ล้าสมัยระบุว่าจำนวนแถวเปลี่ยนจาก
+subscription 5 แถว และ ledger 3 แถว เป็น 7 แถว และ 3 แถว และระบุว่าชุดเทสต์รันซ้ำกับฐานข้อมูล
+เดิมไม่ได้ **ทั้งสองข้อความถูกล้มเลิกและไม่จริงอีกต่อไป** ถ้าคุณพบคำเตือนเรื่องแถวค้างนั้น
+ในสำเนาอื่นของเอกสารชุดนี้ หรือในเอกสารใดที่เขียนก่อนหน้านี้ **คำเตือนนั้นล้าสมัยแล้ว**
 
-**Two warnings you must not skip, about running the test suite.** `npm test` writes
-subscription and billing-ledger rows into whatever database is configured and does
-**not** clean them up (after my own run the counts went from 5 subscriptions and 3
-ledger rows to 7 and 3). **It is also not repeatable against the same database**: the
-webhook test reuses a fixed event id and the ledger's idempotency skips the second
-delivery, so `npm test` fails with `1 failed | 50 passed (51)` on a database it has
-already run against.
+**One warning you must not skip, about running the test suite — the rows are cleaned
+up, and the suite is repeatable.** `npm test` writes subscription and billing-ledger
+rows into whatever database is configured and **deletes exactly the rows it created
+again before it exits**, so repeated runs against one database leave nothing behind
+(three consecutive full-suite runs each reported `6 passed (6)` / `58 passed (58)`, with
+`subscriptions` 0 and `billing_event_ledger` 0 afterwards). **History, so that an older
+copy does not mislead you:** an earlier version of `server/tests/webhook.test.ts`
+deleted nothing, so a run left rows behind and re-running against the same database
+used to **fail** (`AssertionError: expected 'active' to be 'cancelled'`, because the
+fixed event ids `evt_apply_1` / `evt_replay_1` collided with the ledger's primary key);
+that defect is fixed, and the run that used to fail now passes with `58 passed (58)`.
+The obsolete warning's figures (5 subscriptions and 3 ledger rows to 7 and 3) and its
+claim that the suite was not repeatable are **superseded and no longer true**.
 
 ---
 

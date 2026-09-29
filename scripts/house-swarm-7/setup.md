@@ -41,22 +41,41 @@ Five things, in this order, and then it stops:
    `npm run typecheck` ซึ่งเป็น gate ที่โปรเจกต์มีอยู่แล้ว
 5. **Verifies the database.** Runs `scripts/house-swarm-7/db-check.mjs`, which
    connects using `DATABASE_URL` and reports whether the six migration tables and
-   the two seed plans exist. / **ตรวจฐานข้อมูล** รัน
+   the two seed plans exist. Every check is named after the step that ran it —
+   `connection`, `migration-tables`, `seed-plans` — so a failing check tells you
+   what actually failed. Only a connection that could not be opened at all is
+   reported as `CHECK connection FAIL`; the seed-plan query is **not** run before
+   the tables it reads exist. / **ตรวจฐานข้อมูล** รัน
    `scripts/house-swarm-7/db-check.mjs` ซึ่งต่อโดยใช้ `DATABASE_URL` แล้วรายงานว่า
-   ตารางจาก migration ทั้งหกและแพ็กเกจ seed สองตัวมีอยู่หรือไม่
+   ตารางจาก migration ทั้งหกและแพ็กเกจ seed สองตัวมีอยู่หรือไม่ ทุกข้อตรวจตั้งชื่อตาม
+   ขั้นที่รันจริง — `connection`, `migration-tables`, `seed-plans` — ข้อที่ล้มเหลวจึงบอกได้ว่า
+   อะไรล้มเหลวจริง มีแต่การต่อที่เปิดไม่ขึ้นเลยเท่านั้นที่ถูกรายงานเป็น `CHECK connection FAIL`
+   ส่วนคำสั่งอ่าน seed plans จะ**ไม่**ถูกรันก่อนที่ตารางที่มันอ่านจะถูกสร้าง
 
 ### The two outcomes of the database step / ผลลัพธ์สองแบบของขั้นตรวจฐานข้อมูล
 
-- **Reachable database, schema not created yet → PENDING.** The script says
+- **Reachable database, schema not created yet → PENDING.** The output is
+  `CHECK connection PASS ...`, then `CHECK migration-tables FAIL missing: ...`,
+  then `CHECK seed-plans FAIL not run: the schema is not created yet, so there is
+  no plans table to read; start the server once so the migrations run`. There is
+  **no** `CHECK connection FAIL` line: the connection succeeded, and the two
+  failing checks name the schema rather than the connection. The script then says
   `PENDING` and tells you to start the server once, because the server applies
   its migrations at boot (`server/src/index.ts` runs them before `app.listen`).
-  This is not an error. / **ต่อฐานข้อมูลได้ แต่ยังไม่มีสคีมา → PENDING** สคริปต์จะบอก
-  `PENDING` และให้คุณสตาร์ทเซิร์ฟเวอร์หนึ่งครั้ง เพราะเซิร์ฟเวอร์รัน migration ตอนบูต
-  (`server/src/index.ts` รันก่อน `app.listen`) ไม่ใช่ข้อผิดพลาด
+  This is not an error. / **ต่อฐานข้อมูลได้ แต่ยังไม่มีสคีมา → PENDING** ผลที่เห็นคือ
+  `CHECK connection PASS ...` แล้วตามด้วย `CHECK migration-tables FAIL missing: ...`
+  และ `CHECK seed-plans FAIL not run: the schema is not created yet, ...` — **ไม่มี**
+  บรรทัด `CHECK connection FAIL` เพราะการต่อสำเร็จ และข้อที่ล้มเหลวสองข้อชื่อสคีมา ไม่ใช่การต่อ
+  จากนั้นสคริปต์จะบอก `PENDING` และให้คุณสตาร์ทเซิร์ฟเวอร์หนึ่งครั้ง เพราะเซิร์ฟเวอร์รัน
+  migration ตอนบูต (`server/src/index.ts` รันก่อน `app.listen`) ไม่ใช่ข้อผิดพลาด
 - **Cannot reach the database → failure, exit non-zero.** A wrong host, port,
-  database name or credential is a real failure and the script stops. / **ต่อ
-  ฐานข้อมูลไม่ได้ → ล้มเหลว exit ไม่เป็นศูนย์** host พอร์ต ชื่อฐานข้อมูล หรือ
-  credential ที่ผิดคือความล้มเหลวจริง และสคริปต์จะหยุด
+  database name or credential is a real failure and the script stops. `db-check`
+  prints `CHECK connection FAIL <reason>` — the only line that may ever carry
+  that verdict — and no schema check runs, because nothing could be observed. /
+  **ต่อฐานข้อมูลไม่ได้ → ล้มเหลว exit ไม่เป็นศูนย์** host พอร์ต ชื่อฐานข้อมูล หรือ
+  credential ที่ผิดคือความล้มเหลวจริง และสคริปต์จะหยุด `db-check` จะพิมพ์
+  `CHECK connection FAIL <เหตุผล>` ซึ่งเป็นบรรทัดเดียวที่อาจมีผลตัดสินนี้ และจะไม่มีข้อตรวจ
+  สคีมารันเลย เพราะไม่สามารถสังเกตอะไรได้
 
 ---
 

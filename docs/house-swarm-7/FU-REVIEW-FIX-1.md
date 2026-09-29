@@ -1,5 +1,12 @@
 # FU-REVIEW-FIX-1 — the unproven Supabase capability claim, removed from the buyer-facing documents
 
+> INTERNAL — NOT DELIVERED.
+> This is the vendor's own working record (repair log / lane report). It is kept in the
+> repository because the delivered documents cite it as evidence, but it is **not part of
+> what a buyer receives**. The delivered set is declared in `DELIVERY-MANIFEST.md` at the
+> repository root, and the gate `server/scripts/proofs/wu5/delivery-manifest-check.mjs`
+> enforces that classification.
+
 **Work unit:** H7-REVIEW-FIX-DOCS · **Correlation id:** `house-swarm-7-review-fix-docs-20260929`
 **Date:** 2026-09-29 · **Branch:** `codex/house-swarm-7-followup-ratelimit-20260928` · **Base:** `d37173f`
 

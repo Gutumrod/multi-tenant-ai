@@ -213,24 +213,26 @@ repository to copy.
   dependency สามตัวนั้น และออกด้วย 0
 - **V3** — `cd server && npm run typecheck` → exits 0 and prints no type error.
   / **V3** — ออกด้วย 0 และไม่พิมพ์ type error
-- **V4** — `cd server && npm test`, in three cases, all three observed:
-  with `DATABASE_URL` **unset** → exits 0 with `Test Files 4 passed | 1 skipped (5)`
-  and `Tests 46 passed | 5 skipped (51)` (measured in this work unit);
-  with `DATABASE_URL` **set and pointed at a fresh database** → exits 0 with
-  `Test Files 5 passed (5)` and `Tests 51 passed (51)` (the observation recorded in
-  the WU-5 report and in the deployment manual);
-  with `DATABASE_URL` **set and pointed at a database this suite has already run
-  against** → exits **1** with `1 failed | 50 passed (51)` (measured in this work
-  unit). So: the database-backed test file only runs when `DATABASE_URL` is set, and
-  the full-suite pass needs a database that has not been used before. Both warnings
-  are repeated in section 6. / **V4** — `cd server && npm test` ในสามกรณี ซึ่งเห็นจริง
-  ทั้งสาม: ไม่ตั้ง `DATABASE_URL` → ออกด้วย 0 ด้วย `Test Files 4 passed | 1 skipped (5)`
-  และ `Tests 46 passed | 5 skipped (51)` (วัดในใบงานนี้); ตั้ง `DATABASE_URL` ชี้ไปที่
-  ฐานข้อมูลใหม่ → ออกด้วย 0 ด้วย `Test Files 5 passed (5)` และ `Tests 51 passed (51)`
-  (ผลที่บันทึกไว้ในรายงาน WU-5 และในคู่มือ deploy); ตั้ง `DATABASE_URL` ชี้ไปที่ฐานข้อมูล
-  ที่ชุดเทสต์นี้เคยรันแล้ว → ออกด้วย **1** และ `1 failed | 50 passed (51)` (วัดในใบงานนี้)
-  สรุป: ไฟล์เทสต์ที่ใช้ฐานข้อมูลจะรันก็ต่อเมื่อตั้ง `DATABASE_URL` และการผ่านครบชุดต้องใช้
-  ฐานข้อมูลที่ยังไม่เคยใช้ คำเตือนทั้งสองข้ออยู่ในข้อ 6 อีกครั้ง
+- **V4** — `cd server && npm test`, in two cases, both observed:
+  with `DATABASE_URL` **unset** → exits 0 with `Test Files 5 passed | 1 skipped (6)`
+  and `Tests 53 passed | 5 skipped (58)` (measured in this work unit); the five
+  skipped tests are `tests/postgres-persistence.test.ts`'s, which skips itself when
+  no database is configured;
+  with `DATABASE_URL` **set** → exits 0 with `Test Files 6 passed (6)` and
+  `Tests 58 passed (58)` (measured in this work unit). So: the database-backed test
+  file only runs when `DATABASE_URL` is set, and the full-suite figures hold **only**
+  under that condition; and the suite is **repeatable** — it deletes the rows it
+  created, so the same database can be used run after run. These are the same two
+  observations stated in section 6 and in `docs/house-swarm-7/WU5-DEPLOY.md` §6.1.
+  / **V4** — `cd server && npm test` ในสองกรณี ซึ่งเห็นจริงทั้งสอง: ไม่ตั้ง
+  `DATABASE_URL` → ออกด้วย 0 ด้วย `Test Files 5 passed | 1 skipped (6)` และ
+  `Tests 53 passed | 5 skipped (58)` (วัดในใบงานนี้) โดยห้าเทสต์ที่ข้ามคือของ
+  `tests/postgres-persistence.test.ts` ซึ่งข้ามตัวเองเมื่อไม่มีฐานข้อมูล;
+  ตั้ง `DATABASE_URL` → ออกด้วย 0 ด้วย `Test Files 6 passed (6)` และ
+  `Tests 58 passed (58)` (วัดในใบงานนี้) สรุป: ไฟล์เทสต์ที่ใช้ฐานข้อมูลจะรันก็ต่อเมื่อ
+  ตั้ง `DATABASE_URL` และตัวเลขครบชุดเกิด**เฉพาะ**เมื่อมีเงื่อนไขนั้น และชุดเทสต์นี้
+  **รันซ้ำได้** — มันลบแถวที่ตัวเองสร้างทิ้ง ใช้ฐานข้อมูลเดิมซ้ำได้ทุกรอบ
+  นี่คือการสังเกตสองข้อเดียวกับที่ระบุในข้อ 6 และใน `docs/house-swarm-7/WU5-DEPLOY.md` §6.1
 - **V5** — `cd server && DATABASE_URL='<your own connection string>' npm run start`,
   then `curl -s http://127.0.0.1:3003/health` → `{"ok":true}`, and
   `curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:3003/` → `200` (the
@@ -252,10 +254,13 @@ repository to copy.
 - **V9** — `node server/scripts/proofs/wu5/deploy-preflight.mjs` → seven
   `CHECK ... PASS` lines about the deployment artifact. / **V9** — ได้
   `CHECK ... PASS` เจ็ดบรรทัดเกี่ยวกับชิ้นงาน deploy
-- **V10** — `node server/scripts/proofs/wu6/claims-check.mjs` → eight
+- **V10** — `node server/scripts/proofs/wu6/claims-check.mjs` → nine
   `CHECK ... PASS` lines, one per check name, re-checking the claims in this
-  document set. / **V10** — ได้ `CHECK ... PASS` แปดบรรทัด หนึ่งบรรทัดต่อหนึ่งชื่อ check
-  ซึ่งตรวจคำกล่าวอ้างในชุดเอกสารนี้อีกครั้ง
+  document set; the ninth, `sales-numbers-agree-with-ledger`, compares the
+  test-count figures stated here with the ledger's.
+  / **V10** — ได้ `CHECK ... PASS` เก้าบรรทัด หนึ่งบรรทัดต่อหนึ่งชื่อ check
+  ซึ่งตรวจคำกล่าวอ้างในชุดเอกสารนี้อีกครั้ง โดยบรรทัดที่เก้า
+  `sales-numbers-agree-with-ledger` เทียบตัวเลขชุดเทสต์ที่ระบุในเอกสารนี้กับ ledger
 
 Run the same file on the Thai document set: `WU6-SALES-TH.md` is checked by the
 same harness, and the harness fails if the two documents disagree on section
@@ -295,22 +300,31 @@ claim that any of the following exists.
   ไม่ใช่ Supabase-backed: มันคุยกับ PostgreSQL ผ่านไดรเวอร์ `pg`
 - **N5 — The rate limit on `POST /payment/webhook` is in-process only.** That
   route now HAS a rate limit: the Module Hub `rate-limit` module is vendored at
-  `modules/rate-limit/` and mounted ahead of the signature check, so a flood is
-  refused with **429** `RATE_LIMITED` and a `Retry-After` header without
-  spending CPU on HMAC verification. What it still does **not** do: its counter
+  `modules/rate-limit/`. Counting is **per source**, and the delivery's signature is
+  verified before the tight count, so **only requests whose signature is wrong** are
+  charged to a source's bucket — a correctly-signed delivery is never refused because of
+  someone else's flood. A **coarse every-request backstop** sits under that, so total work
+  cannot be unbounded; a request over the backstop is refused with **429** `RATE_LIMITED`
+  and a `Retry-After` header. What it still does **not** do: its counter
   lives in one process's memory, so a **multi-instance deployment shares no
-  counter** and the effective ceiling multiplies by the number of instances, and
-  one key covers the endpoint rather than the caller, so a burst of legitimate
-  Stripe deliveries is throttled together with an attacker's flood. It remains
-  no substitute for TLS, a supervisor or a shared store. Do not treat it as
+  counter** and the effective ceiling multiplies by the number of instances; a source is
+  a socket address, which is a coarse identity, so an attacker spread over many addresses
+  still reaches the backstop; and verifying the signature before counting means a flood
+  **does** cost HMAC work, bounded only coarsely by the backstop. It remains
+  no substitute for TLS, a supervisor or a shared store, and an edge/proxy rate limit
+  remains the real answer under attack. Do not treat it as
   hardened. / **N5 — rate limit บน `POST /payment/webhook` เป็นแบบในโปรเซสเดียว**
   เส้นทางนั้น**มี** rate limit แล้ว: โมดูล `rate-limit` จาก Module Hub ถูก vendor
-  ไว้ที่ `modules/rate-limit/` และ mount **ก่อน** การตรวจลายเซ็น คำขอที่ทะลักจึงถูกปฏิเสธ
-  ด้วย **429** `RATE_LIMITED` พร้อม header `Retry-After` โดยไม่เสีย CPU ไปกับการตรวจ HMAC
-  สิ่งที่มันยัง**ไม่**ทำ: ตัวนับอยู่ในหน่วยความจำของโปรเซสเดียว การ deploy **หลายอินสแตนซ์
-  จึงไม่แชร์ตัวนับกัน** เพดานที่แท้จริงจึงคูณตามจำนวนอินสแตนซ์ และใช้คีย์เดียวครอบทั้ง
-  เส้นทางไม่ใช่ต่อผู้เรียก การทะลักของ Stripe ที่ถูกต้องจึงถูกหน่วงไปพร้อมกับของ attacker
-  มันยังแทน TLS, supervisor หรือ shared store ไม่ได้ อย่าถือว่ามันแข็งแรงแล้ว
+  ไว้ที่ `modules/rate-limit/` การนับเป็น **แยกตาม source** และมีการตรวจลายเซ็นของคำขอก่อน
+  การนับแบบเข้มงวด คำขอที่ลายเซ็น**ผิด**เท่านั้นจึงถูกคิดเข้า bucket ของ source นั้น
+  คำขอที่ลายเซ็นถูกต้องจึงไม่ถูกปฏิเสธเพราะการยิงถล่มของคนอื่น ใต้ลงมามี**แบ็กสต็อปหยาบ
+  ระดับทุกคำขอ** งานทั้งหมดจึงไม่ไร้ขอบเขต คำขอที่เกินแบ็กสต็อปถูกปฏิเสธด้วย **429**
+  `RATE_LIMITED` พร้อม header `Retry-After` สิ่งที่มันยัง**ไม่**ทำ: ตัวนับอยู่ในหน่วยความจำ
+  ของโปรเซสเดียว การ deploy **หลายอินสแตนซ์จึงไม่แชร์ตัวนับกัน** เพดานที่แท้จริงจึงคูณตาม
+  จำนวนอินสแตนซ์ source คือที่อยู่ซ็อกเก็ตซึ่งเป็นตัวตนแบบหยาบ ผู้โจมตีที่กระจายหลายที่อยู่
+  จึงยังไปถึงแบ็กสต็อปได้ และเพราะตรวจลายเซ็นก่อนนับ การยิงถล่มจึง**กินงาน HMAC** จริง
+  ถูกจำกัดขอบเขตแค่แบบหยาบด้วยแบ็กสต็อป มันยังแทน TLS, supervisor หรือ shared store ไม่ได้
+  และ rate limit ที่ชั้น reverse proxy ยังเป็นคำตอบจริงเมื่อถูกโจมตี อย่าถือว่ามันแข็งแรงแล้ว
 - **N6 — No multi-instance deployment proof, and no deployment at all.** No
   deployment has ever been performed anywhere by the authors: the product has been
   run and exercised on a developer machine against a local PostgreSQL only.
@@ -337,34 +351,54 @@ UI evidence. / **ข้อจำกัดอีกข้อ เกี่ยว�
 **ไม่มีภาพหน้าจอ** ในที่เก็บโค้ดนี้ — ไม่มีส่งมาและไม่ได้ถ่ายไว้ — และไฟล์ HTML ที่บันทึกไว้ใต้
 `server/scripts/proofs/wu4/wu4-e2e/` คือหลักฐาน UI ทั้งหมด
 
-**And two warnings you must not skip, about running the test suite.**
+**And one warning you must not skip, about running the test suite — the rows are
+cleaned up, and the suite is repeatable.**
 
 `npm test` writes subscription and billing-ledger rows into whatever database is
-configured, and it does **not** clean them up: after my own run the row counts went
-from 5 subscriptions and 3 ledger rows to 7 and 3 (the two webhook tests each leave
-a `subscriptions` row behind). Do not point the test suite at a database you care
-about.
+configured, and **it deletes exactly the rows it created again before it exits**, so
+repeated runs against one database leave nothing behind. Measured on the author's local
+test database: three consecutive full-suite runs each reported `Test Files 6 passed (6)`
+and `Tests 58 passed (58)`, and the row counts after all three runs were `subscriptions`
+0 and `billing_event_ledger` 0. Pointing a test suite at a scratch database rather than a
+production one is still the right habit, but this suite is **repeatable**: the same
+database can be used run after run. `docs/house-swarm-7/WU5-DEPLOY.md` §6.1 states the
+same position with the same figures.
 
-**It is also not repeatable against the same database.** The webhook test reuses a
-fixed event id, and the ledger's idempotency means a second delivery of that event
-is skipped — so on a database the suite has already run against, `npm test` fails:
-`1 failed | 50 passed (51)`, and the failure is the ledger refusing to re-apply an
-event it has already seen. **This is a deliberate observation and it is the reason
-V4 above names the fresh-database condition.** It is also why this kit should be
-pointed at a fresh database, or at a database used only for testing.
+**History, so that an older copy does not mislead you.** An earlier version of
+`server/tests/webhook.test.ts` deleted nothing, so a run left real rows in
+`subscriptions` and `billing_event_ledger`, and re-running the suite against the same
+database used to **fail**: the second run reported
+`tests/webhook.test.ts:101 AssertionError: expected 'active' to be 'cancelled'`, because
+the file's two billing-event ids are fixed (`evt_apply_1`, `evt_replay_1`) and the
+ledger's `event_id` is its primary key — a row left from an earlier run made the
+redelivery dedupe, so the subscription never reached `cancelled`. That was a defect in
+the suite; **it is fixed**, and the run that used to fail now passes with
+`Test Files 6 passed (6)` and `Tests 58 passed (58)`. The obsolete warning said the row
+counts went from 5 subscriptions and 3 ledger rows to 7 and 3, and that the suite was
+not repeatable against the same database; **both statements are superseded and no longer
+true.** If you find that row-leak warning in another copy of this document set, or in any
+document written before this one, **that warning is obsolete.**
 
-**คำเตือนสองข้อที่ห้ามข้าม เกี่ยวกับการรันชุดเทสต์**
+**คำเตือนข้อเดียวที่ห้ามข้าม เกี่ยวกับการรันชุดเทสต์ — แถวถูกลบให้เรียบร้อย และชุดเทสต์รันซ้ำได้**
 
-`npm test` เขียนแถว subscription และแถว ledger ลงในฐานข้อมูลที่ตั้งไว้ และ**ไม่**ลบให้
-หลังรันของผมเอง จำนวนแถวเปลี่ยนจาก subscription 5 แถว และ ledger 3 แถว เป็น 7 แถว และ
-3 แถว (เทสต์ webhook สองตัวทิ้งแถว `subscriptions` ไว้ตัวละหนึ่งแถว) อย่าชี้ชุดเทสต์ไปที่
-ฐานข้อมูลที่คุณห่วง
+`npm test` เขียนแถว subscription และแถว ledger ลงในฐานข้อมูลที่ตั้งไว้ และ**มันลบแถวที่
+ตัวเองสร้างทิ้งก่อนจบ** การรันซ้ำบนฐานข้อมูลเดิมจึงไม่ทิ้งอะไรไว้ วัดบนฐานข้อมูลทดสอบในเครื่อง
+ผู้เขียน: สามรอบรันติดกันรายงาน `Test Files 6 passed (6)` และ `Tests 58 passed (58)` ทุกรอบ
+และจำนวนแถวหลังทั้งสามรอบคือ `subscriptions` 0 และ `billing_event_ledger` 0 การชี้ชุดเทสต์
+ไปที่ฐานข้อมูลทดสอบแทน production ยังเป็นนิสัยที่ถูก แต่ชุดเทสต์นี้**รันซ้ำได้**: ใช้ฐานข้อมูล
+เดิมซ้ำได้ทุกรอบ `docs/house-swarm-7/WU5-DEPLOY.md` §6.1 ระบุสถานะเดียวกันด้วยตัวเลขเดียวกัน
 
-**และมันรันซ้ำกับฐานข้อมูลเดิมไม่ได้** เทสต์ webhook ใช้ event id คงที่ และ ledger กันซ้ำ
-จึงข้ามการส่งครั้งที่สอง ดังนั้นบนฐานข้อมูลที่ชุดเทสต์เคยรันแล้ว `npm test` จะล้มเหลว:
-`1 failed | 50 passed (51)` และความล้มเหลวคือ ledger ปฏิเสธที่จะ apply เหตุการณ์ที่เคยเห็นแล้ว
-**นี่คือข้อสังเกตที่ตั้งใจวัด และเป็นเหตุผลที่ V4 ข้างบนระบุเงื่อนไขฐานข้อมูลใหม่** และเป็น
-เหตุผลที่คิทนี้ควรชี้ไปที่ฐานข้อมูลใหม่ หรือฐานข้อมูลที่ใช้ทดสอบเท่านั้น
+**ประวัติ เพื่อไม่ให้สำเนาเก่าทำให้คุณเข้าใจผิด** `server/tests/webhook.test.ts` เวอร์ชันก่อน
+**ไม่**ลบอะไรเลย การรันหนึ่งครั้งจึงทิ้งแถวจริงไว้ใน `subscriptions` และ
+`billing_event_ledger` และการรันซ้ำบนฐานข้อมูลเดิม**เคยล้มเหลว** รอบที่สองรายงาน
+`tests/webhook.test.ts:101 AssertionError: expected 'active' to be 'cancelled'` เพราะ id ของ
+billing event สองตัวของไฟล์นี้คงที่ (`evt_apply_1`, `evt_replay_1`) และ `event_id` ของ ledger
+เป็น primary key — แถวที่ค้างจากรอบก่อนทำให้การส่งซ้ำถูก dedupe subscription จึงไม่ถึงสถานะ
+`cancelled` นั่นเป็น defect ของชุดเทสต์ และ**แก้แล้ว** รอบที่เคยล้มเหลวตอนนี้ผ่านด้วย
+`Test Files 6 passed (6)` และ `Tests 58 passed (58)` คำเตือนที่ล้าสมัยระบุว่าจำนวนแถวเปลี่ยนจาก
+subscription 5 แถว และ ledger 3 แถว เป็น 7 แถว และ 3 แถว และระบุว่าชุดเทสต์รันซ้ำกับฐานข้อมูล
+เดิมไม่ได้ **ทั้งสองข้อความถูกล้มเลิกและไม่จริงอีกต่อไป** ถ้าคุณพบคำเตือนเรื่องแถวค้างนั้น
+ในสำเนาอื่นของเอกสารชุดนี้ หรือในเอกสารใดที่เขียนก่อนหน้านี้ **คำเตือนนั้นล้าสมัยแล้ว**
 
 ---
 

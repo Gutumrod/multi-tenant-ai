@@ -93,7 +93,9 @@ router paths). That host code is:
   the key, builds the limiter from `createMemoryStore()`, and maps a refusal to
   the HTTP response.
 - `server/src/app.ts` — mounts that middleware on `POST /payment/webhook` only,
-  ahead of `express.raw()` and the handler.
+  **after** `express.raw()` and before the handler (re-ordered in the MT01 pre-sale
+  cleanup, lane P3b; the limiter needs the raw body because it verifies the signature
+  itself).
 - `docs/house-swarm-7/FU-RATELIMIT.md` — the wiring, key choice, environment
   variables, failure mode and limitation, in writing.
 

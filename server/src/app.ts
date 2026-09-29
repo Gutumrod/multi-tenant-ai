@@ -34,20 +34,28 @@ export function createApp(): express.Express {
   // verification. If json() runs first it consumes/parses the body and rawBody
   // is empty, breaking HMAC verification.
   //
-  // ORDERING (H7-FU-RATELIMIT): webhookRateLimitMiddleware runs FIRST, ahead of
-  // express.raw() and the handler, so a flood of requests is refused without
-  // spending CPU on HMAC verification, and without any provider or database
-  // work. The limiter is deliberately not mounted on any other route — the paid
-  // routes are quota-gated elsewhere and keep their existing behaviour.
+  // ORDERING (H7-FU-RATELIMIT; re-ordered by MT01-PRESALE-P3A for review finding
+  // LOW-2): webhookRateLimitMiddleware runs AFTER express.raw() and BEFORE the
+  // handler. It needs the raw body, because it verifies the delivery's signature
+  // itself in order to charge only the requests whose signature is WRONG to a
+  // per-source bucket — a correctly-signed delivery is therefore never counted
+  // into a bucket an attacker can fill, and cannot be refused because of one.
+  // The limiter neither alters nor re-parses the body, so the raw buffer the
+  // handler's own verification needs is exactly the one express.raw() produced.
   //
-  // The limiter neither reads nor alters the body: express.raw() below is still
-  // the first thing that touches it, so the raw buffer HMAC needs is unchanged.
-  // See server/src/lib/rate-limit.ts for the key choice, the environment
-  // variables and the failure mode.
+  // What the reorder costs, stated plainly: the previous order refused a flood
+  // before spending HMAC work, and this one spends HMAC work on whatever reaches
+  // the middleware. That is bounded by a coarse every-request backstop inside the
+  // middleware, and it is the deliberate trade — bounded real work in exchange
+  // for never refusing a real payment delivery. See server/src/lib/rate-limit.ts
+  // for the keys, the variables, the residual and the failure modes.
+  //
+  // The limiter is deliberately not mounted on any other route — the paid routes
+  // are quota-gated elsewhere and keep their existing behaviour.
   app.post(
     '/payment/webhook',
-    webhookRateLimitMiddleware,
     express.raw({ type: 'application/json' }),
+    webhookRateLimitMiddleware,
     paymentWebhookHandler
   );
 

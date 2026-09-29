@@ -40,14 +40,29 @@
  *     assertion is exempt only when the SAME block also says it is dead
  *     (previously / no longer true / obsolete / corrected / ล้าสมัย / แก้แล้ว).
  *   * the two documents must carry the TRUE statement in its place: the route IS
- *     rate limited, by the middleware mounted ahead of `express.raw()`, refused
- *     BEFORE signature verification so a flood costs no HMAC; the mechanism named
+ *     rate limited, by the middleware mounted AFTER `express.raw()` and BEFORE
+ *     the handler, verifying the signature itself so that ONLY wrong-signature
+ *     requests are counted per source — which is why a correctly-signed delivery
+ *     is never refused, and a flood is bounded by a coarse every-request backstop
+ *     rather than being free; the mechanism named
  *     (the vendored Module Hub module and its provenance file); the refusal shape
- *     (429 / `RATE_LIMITED` / `Retry-After`); the limits named with their defaults;
- *     and the honest per-instance caveat (in-process, resets on restart, not a
- *     substitute for an edge/proxy limit). The default NUMBERS are read out of
- *     `server/src/lib/rate-limit.ts`, not trusted: if the code default changes and
- *     the documents do not, this check fails.
+ *     (429 / `RATE_LIMITED` / `Retry-After`); the limits named with their defaults
+ *     (including the backstop); the honest per-instance caveat (in-process, resets
+ *     on restart, not a substitute for an edge/proxy limit) and the residual risk
+ *     (a flood large enough to exhaust the backstop is still refused). The default
+ *     NUMBERS are read out of `server/src/lib/rate-limit.ts`, not trusted: if a
+ *     code default changes and the documents do not, this check fails.
+ *
+ *     NOTE ON THE ORDERING RULE (MT01-PRESALE-P3B). An earlier revision of this
+ *     check REQUIRED the documents to say the limiter was mounted "ahead of
+ *     `express.raw()`" and refused a request "before signature verification", so
+ *     that "a flood costs no HMAC". Lane P3A reversed that ordering on purpose
+ *     (review finding LOW-2, per-instance flood DoS), which made those two
+ *     requirements encode a property the code no longer has. The rule was
+ *     rewritten to the true property rather than the documents being left to
+ *     disagree with the tree; the defaults are still read from the code, and the
+ *     429 / `RATE_LIMITED` / `Retry-After` shape, the per-instance caveat and the
+ *     residual risk are still required.
  *   * `WU6-CLAIMS-EVIDENCE.md` must AGREE with `WU5-DEPLOY.md` §6.1: the test
  *     counts it states must match the manual's, the superseded figures must not
  *     stand as live claims in a claim cell, and the C40 row must state that the
@@ -92,6 +107,7 @@ const MANUAL_PATH = join(DOCS_DIR, 'WU5-DEPLOY.md');
 const STATUS_PATH = join(ROOT_DOCS_DIR, 'CURRENT_STATUS.md');
 const LEDGER_PATH = join(DOCS_DIR, 'WU6-CLAIMS-EVIDENCE.md');
 const RATE_LIMIT_SOURCE_PATH = join(SERVER_DIR, 'src/lib/rate-limit.ts');
+const APP_SOURCE_PATH = join(SERVER_DIR, 'src/app.ts');
 const TESTS_DIR = join(SERVER_DIR, 'tests');
 
 const results = [];
@@ -148,10 +164,14 @@ const RATE_LIMIT_DEFAULTS = (() => {
   if (source === null) return null;
   const max = source.match(/WEBHOOK_RATE_LIMIT_DEFAULT_MAX\s*=\s*([0-9_]+)/);
   const windowMs = source.match(/WEBHOOK_RATE_LIMIT_DEFAULT_WINDOW_MS\s*=\s*([0-9_]+)/);
-  if (max === null || windowMs === null) return null;
+  // The coarse every-request backstop (lane P3A). Read the same way as the other
+  // two: if its code default moves and the documents do not, CHECK 11 fails.
+  const backstopMax = source.match(/WEBHOOK_RATE_LIMIT_DEFAULT_BACKSTOP_MAX\s*=\s*([0-9_]+)/);
+  if (max === null || windowMs === null || backstopMax === null) return null;
   return {
     max: Number(max[1].replace(/_/g, '')),
     windowMs: Number(windowMs[1].replace(/_/g, '')),
+    backstopMax: Number(backstopMax[1].replace(/_/g, '')),
   };
 })();
 
@@ -159,7 +179,28 @@ const RATE_LIMIT_DEFAULTS = (() => {
 const RATE_LIMIT_ENV_NAMES = {
   max: 'WEBHOOK_RATE_LIMIT_MAX',
   windowMs: 'WEBHOOK_RATE_LIMIT_WINDOW_MS',
+  backstopMax: 'WEBHOOK_RATE_LIMIT_BACKSTOP_MAX',
 };
+
+/**
+ * The mount order the CODE has today, read from `server/src/app.ts` rather than
+ * assumed: the position of `webhookRateLimitMiddleware` relative to
+ * `express.raw()` in the `POST /payment/webhook` chain. CHECK 11 uses this to
+ * decide which ordering the documents are required to state, so a future
+ * reordering makes this check demand the new order instead of silently agreeing
+ * with stale prose. Returns 'after-express-raw' | 'before-express-raw' | null.
+ */
+const RATE_LIMIT_MOUNT_ORDER = (() => {
+  const source = readOrNull(APP_SOURCE_PATH);
+  if (source === null) return null;
+  const mount = source.match(/app\.post\(\s*'\/payment\/webhook',([\s\S]*?)\);/);
+  if (mount === null) return null;
+  const chain = mount[1];
+  const rawAt = chain.indexOf('express.raw(');
+  const limiterAt = chain.indexOf('webhookRateLimitMiddleware');
+  if (rawAt === -1 || limiterAt === -1) return null;
+  return rawAt < limiterAt ? 'after-express-raw' : 'before-express-raw';
+})();
 
 /** The first manual line matching `pattern`, or null. Used to quote a failure. */
 function firstLine(pattern) {
@@ -790,21 +831,37 @@ record(
 //
 // CHECK 10 removes the false claim; this one REQUIRES the true statement in its
 // place, in BOTH documents and BOTH languages, so deleting the item to make
-// CHECK 10 pass cannot work. Six facts, each anchored on wording only a correct
+// CHECK 10 pass cannot work. The facts, each anchored on wording only a correct
 // paragraph carries:
 //
-//   * the route IS rate limited, by the middleware, mounted AHEAD OF
-//     `express.raw()` — i.e. before the body is parsed and before HMAC work;
+//   * the route IS rate limited, by the middleware, mounted in the order the CODE
+//     has today — read out of `server/src/app.ts` (`RATE_LIMIT_MOUNT_ORDER`), not
+//     hardcoded, so an ordering change makes this check demand the new order
+//     rather than agree with stale prose;
+//   * the property that order buys: the limiter verifies the signature itself, so
+//     ONLY wrong-signature requests are counted per source, a **correctly-signed
+//     delivery is never refused**, and a flood **DOES cost HMAC work** (the old
+//     "a flood costs no HMAC" claim is reversed) bounded by a coarse
+//     every-request backstop — a flood is not free;
+//   * the residual risk, stated honestly: a flood large enough to exhaust the
+//     backstop is still refused;
 //   * the mechanism and its provenance are named (the vendored Module Hub
 //     `rate-limit` module at `modules/rate-limit/`, wired by
 //     `server/src/lib/rate-limit.ts`);
 //   * the refusal shape (429 / `RATE_LIMITED` / `Retry-After`);
-//   * the two limit names AND their default numbers, compared against the
-//     defaults READ OUT OF `server/src/lib/rate-limit.ts` — never trusted, so a
-//     code default that moves without the documents moving fails here;
+//   * the limit names AND their default numbers — including the backstop —
+//     compared against the defaults READ OUT OF `server/src/lib/rate-limit.ts`,
+//     never trusted, so a code default that moves without the documents moving
+//     fails here;
 //   * the honest caveat: in-process, per-instance, resets on restart, and not a
 //     substitute for an edge/proxy limit;
 //   * the item is not merely deleted — the correction is visible.
+//
+// REWRITTEN BY MT01-PRESALE-P3B. The previous rule required the documents to say
+// the limiter was mounted "ahead of `express.raw()`" and refused "before
+// signature verification" so that "a flood costs no HMAC". Lane P3A reversed that
+// ordering (review finding LOW-2), so those requirements encoded a property the
+// code no longer has; the rule now demands the true property instead.
 // ---------------------------------------------------------------------------
 {
   const problems = [];
@@ -840,18 +897,54 @@ record(
       ],
     },
     {
-      id: 'mounts the limiter ahead of express.raw()',
+      // The wording this requires is chosen from the ORDER READ OUT OF
+      // `server/src/app.ts` (RATE_LIMIT_MOUNT_ORDER), never hardcoded: if a future
+      // lane moves the limiter again, this check demands the new order instead of
+      // letting the documents agree with a stale one. The old rule hardcoded
+      // "ahead of express.raw()", which is the property lane P3A reversed.
+      id: `states the mount order the code has today (${RATE_LIMIT_MOUNT_ORDER ?? 'order unreadable'})`,
+      patterns:
+        RATE_LIMIT_MOUNT_ORDER === 'before-express-raw'
+          ? [
+              /\*{0,2}ahead of\*{0,2}\s*`?express\.raw\(\)`?/i,
+              /ก่อน\*{0,2}\s*`?express\.raw\(\)`?/,
+            ]
+          : [
+              /\*{0,2}after\*{0,2}\s*`?express\.raw\(\)`?/i,
+              /หลัง\*{0,2}\s*`?express\.raw\(\)`?/,
+            ],
+    },
+    {
+      id: 'states that a correctly-signed delivery is NOT refused by the limiter (a forged flood cannot refuse a real delivery)',
       patterns: [
-        /\*{0,2}ahead of\*{0,2}\s*`?express\.raw\(\)`?/i,
-        /ก่อน\*{0,2}\s*`?express\.raw\(\)`?/,
+        /correctly[- ]signed[^.]{0,160}never\s+(?:be\s+)?(?:refused|charged)/i,
+        /correctly[- ]signed[^.]{0,160}cannot\s+be\s+refused/i,
+        /correctly[- ]signed[^.]{0,160}is not\s+refused/i,
+        /ลายเซ็น\*{0,2}ถูกต้อง[^.]{0,80}ไม่ถูก(?:นับ|ปฏิเสธ)/,
       ],
     },
     {
-      id: 'states that the refusal happens before signature verification / before HMAC work',
+      id: 'states that a flood DOES cost HMAC work (the "a flood costs no HMAC" claim is reversed)',
       patterns: [
-        /before\s+\*{0,2}(?:signature verification|the signature)/i,
-        /before\s+\*{0,2}any HMAC/i,
-        /ก่อน\*{0,2}(?:การตรวจลายเซ็น|งาน HMAC|งาน HMAC)/,
+        /flood\s+DOES\s+cost\s+HMAC/i,
+        /a flood\s+\*{0,2}DOES\*{0,2}\s+cost/i,
+        /การยิงถล่ม\*{0,4}จึง\*{0,2}กิน\*{0,2}งาน HMAC/,
+      ],
+    },
+    {
+      id: 'states that the flood\'s work is bounded by a coarse every-request backstop (a flood is NOT free)',
+      patterns: [
+        /coarse[^.]{0,80}backstop/i,
+        /backstop[^.]{0,80}charged with every request/i,
+        /backstop[^.]{0,60}(?:bounds|bounded|จำกัดขอบเขต)/i,
+      ],
+    },
+    {
+      id: 'states the residual risk honestly (a flood large enough to exhaust the backstop is still refused)',
+      patterns: [
+        /residual risk/i,
+        /ความเสี่ยงที่เหลืออยู่/,
+        /exhaust the backstop/i,
       ],
     },
     {
@@ -871,11 +964,16 @@ record(
       patterns: [/HTTP 429/, /`?RATE_LIMITED`?/, /`?Retry-After`?/],
     },
     {
-      id: 'names both limit variables',
-      patterns: [
-        new RegExp(RATE_LIMIT_ENV_NAMES.max),
-        new RegExp(RATE_LIMIT_ENV_NAMES.windowMs),
-      ],
+      id: `names the per-source limit variable (${RATE_LIMIT_ENV_NAMES.max})`,
+      patterns: [new RegExp(RATE_LIMIT_ENV_NAMES.max)],
+    },
+    {
+      id: `names the window variable (${RATE_LIMIT_ENV_NAMES.windowMs})`,
+      patterns: [new RegExp(RATE_LIMIT_ENV_NAMES.windowMs)],
+    },
+    {
+      id: `names the coarse backstop variable (${RATE_LIMIT_ENV_NAMES.backstopMax})`,
+      patterns: [new RegExp(RATE_LIMIT_ENV_NAMES.backstopMax)],
     },
     {
       id: 'states the honest per-instance caveat (in-process, resets on restart, not a substitute for an edge/proxy limit)',
@@ -921,6 +1019,9 @@ record(
       const windowOk = new RegExp(
         `${RATE_LIMIT_ENV_NAMES.windowMs}[^.]{0,120}\`?${RATE_LIMIT_DEFAULTS.windowMs}\`?`
       ).test(text);
+      const backstopOk = new RegExp(
+        `${RATE_LIMIT_ENV_NAMES.backstopMax}[^.]{0,120}\`?${RATE_LIMIT_DEFAULTS.backstopMax}\`?`
+      ).test(text);
       if (!maxOk) {
         problems.push(
           `${label} does not quote the default ${RATE_LIMIT_DEFAULTS.max} for ${RATE_LIMIT_ENV_NAMES.max} (read from ${RATE_LIMIT_SOURCE_PATH})`
@@ -929,6 +1030,11 @@ record(
       if (!windowOk) {
         problems.push(
           `${label} does not quote the default ${RATE_LIMIT_DEFAULTS.windowMs} for ${RATE_LIMIT_ENV_NAMES.windowMs} (read from ${RATE_LIMIT_SOURCE_PATH})`
+        );
+      }
+      if (!backstopOk) {
+        problems.push(
+          `${label} does not quote the default ${RATE_LIMIT_DEFAULTS.backstopMax} for ${RATE_LIMIT_ENV_NAMES.backstopMax} (read from ${RATE_LIMIT_SOURCE_PATH})`
         );
       }
     }
@@ -944,16 +1050,29 @@ record(
     problems.push('docs/CURRENT_STATUS.md does not keep the correction visible (no note that the old item was corrected)');
   }
 
+  // The ordering requirement is grounded in the tree, not assumed: if app.ts
+  // cannot be read, the check cannot decide which order to require and fails
+  // rather than passing on prose alone.
+  if (RATE_LIMIT_MOUNT_ORDER === null) {
+    problems.push(
+      `the mount order of webhookRateLimitMiddleware relative to express.raw() could not be read from ${APP_SOURCE_PATH}, so the ordering the documents must state cannot be grounded`
+    );
+  }
+
   const defaultsText =
     RATE_LIMIT_DEFAULTS === null
       ? '(defaults unreadable)'
-      : `${RATE_LIMIT_DEFAULTS.max} requests / ${RATE_LIMIT_DEFAULTS.windowMs} ms read from ${RATE_LIMIT_SOURCE_PATH}`;
+      : `${RATE_LIMIT_DEFAULTS.max} wrong-signature requests per source / ${RATE_LIMIT_DEFAULTS.windowMs} ms window / ${RATE_LIMIT_DEFAULTS.backstopMax} every-request backstop, read from ${RATE_LIMIT_SOURCE_PATH}`;
+  const orderText =
+    RATE_LIMIT_MOUNT_ORDER === null
+      ? '(mount order unreadable)'
+      : `${RATE_LIMIT_MOUNT_ORDER} (read from ${APP_SOURCE_PATH})`;
 
   record(
     'rate-limit-truth-stated',
     problems.length === 0,
     problems.length === 0
-      ? `rule: BOTH WU5-DEPLOY.md and docs/CURRENT_STATUS.md must state the true position in both languages — the route IS rate limited by webhookRateLimitMiddleware mounted ahead of express.raw() and refused before signature verification (no HMAC spent), the mechanism (the vendored Module Hub rate-limit module, provenance named) and its wiring file, the refusal shape (429 / RATE_LIMITED / Retry-After), both limit variable names with their code defaults (${defaultsText}), the per-instance caveat (in-process, resets on restart, not a substitute for an edge/proxy limit), and the visible correction — so deleting the item does not pass`
+      ? `rule: BOTH WU5-DEPLOY.md and docs/CURRENT_STATUS.md must state the true position in both languages — the route IS rate limited by webhookRateLimitMiddleware mounted ${orderText}, verifying the signature itself so that ONLY wrong-signature requests are counted per source, so a correctly-signed delivery is never refused and a flood DOES cost HMAC work bounded by a coarse every-request backstop (a flood is not free); the mechanism (the vendored Module Hub rate-limit module, provenance named) and its wiring file, the refusal shape (429 / RATE_LIMITED / Retry-After), the three limit variable names with their code defaults (${defaultsText}), the per-instance caveat (in-process, resets on restart, not a substitute for an edge/proxy limit), the residual risk (a flood large enough to exhaust the backstop is still refused), and the visible correction — so deleting the item does not pass`
       : `${problems.length} gap(s): ${problems.slice(0, 4).join(' | ')}`
   );
   if (problems.length > 0) for (const problem of problems.slice(0, 8)) console.log(`  ${problem}`);

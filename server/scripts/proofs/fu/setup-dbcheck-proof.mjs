@@ -34,8 +34,26 @@
  * combination of those variables. The script's own header claims it runs in
  * Git-Bash on Windows, so this was inside its stated support surface.
  *
- * WHAT IT ASSERTS. Seven cases, each an independent check, each reporting the
- * exit code it actually observed:
+ * THE THIRD DEFECT THIS NOW ALSO CATCHES — a duplicated, misnamed diagnostic.
+ * On a reachable but entirely un-migrated database `db-check.mjs` printed
+ * `CHECK connection PASS ...` and then, one line later, `CHECK connection FAIL
+ * relation "plans" does not exist`: it ran its seed-plan query against a table
+ * the migrations had not created yet, and its single catch block reported the
+ * resulting query error under the name `connection`. The connection had
+ * succeeded; the reader was told it had not, and the same word appeared twice
+ * in contradictory senses. Cases 8 and 9 below assert the repaired behaviour
+ * from the setup.sh side — on the real un-migrated output there is no line
+ * claiming a connection failure, the step still says PENDING, and it still
+ * exits 0 — and the `unmigrated` stub carries db-check's real post-repair
+ * output shape, so this keeps holding when that shape changes. `db-check.mjs`
+ * itself now names every check after the step that ran it, and does not run the
+ * seed-plan query before the tables it reads exist.
+ *
+ * WHAT IT ASSERTS. Nine cases, each an independent check, each reporting the
+ * exit code it actually observed. Cases 1–7 are the two repairs above; case 8
+ * is the Owner's requirement on the diagnostic wording itself, and case 9
+ * pins the real post-repair output shape of a reachable-but-unmigrated database
+ * so the PENDING recognition cannot regress when that shape changes:
  *
  *   1. `setup-really-executes-db-check` — a normal run against a real database
  *      really runs db-check (a `CHECK ` line is printed) and does not die with
@@ -56,6 +74,16 @@
  *      intentional and documented (`scripts/house-swarm-7/setup.md` §3.3).
  *   7. `demo-auth-refusal-and-database-url-refusal-intact` — the two environment
  *      refusals still behave.
+ *   8. `unmigrated-output-names-no-connection-failure` — THE OWNER'S REQUIREMENT.
+ *      On the real un-migrated output (stub mode `unmigrated`), setup.sh must
+ *      print `PENDING` and its whole output must contain NO line claiming a
+ *      connection failure, and it must exit 0. This is the case that fails if
+ *      db-check ever again reports a post-connect query failure under the name
+ *      "connection", because setup.sh would then say the database could not be
+ *      reached.
+ *   9. `real-unmigrated-output-is-pending-not-unreachable` — the same run, from
+ *      the other side: db-check's real post-repair output shape still lands in
+ *      the PENDING arm rather than in the unrecognised-failure arm.
  *
  * HOW IT DRIVES A FAILING db-check WITHOUT TOUCHING IT. The database step is
  * exercised by a stand-in `node` placed EARLIER ON PATH inside the temp copy: it
@@ -125,23 +153,27 @@ const STUB_MODES = {
       'CHECK database-url-present PASS set, value not printed\n' +
       'CHECK connection PASS connected to the database in DATABASE_URL\n' +
       'CHECK migration-tables FAIL missing: tenants, plans; start the server once so the migrations run\n',
-    what: 'the recognised reachable-but-unmigrated outcome, exit 1',
+    what: 'a reachable-but-unmigrated run in its MINIMAL shape — only the migration failure is present, with no seed-plan line at all',
   },
   unmigrated: {
     exitCode: 1,
     // Byte-for-byte what scripts/house-swarm-7/db-check.mjs really prints
-    // against a REACHABLE but UNMIGRATED database (observed on a real one).
-    // The second failure line is db-check's own error handler reporting the
-    // seed-plan query under the name "connection", even though the connection
-    // itself succeeded — that line is what used to make setup.sh call a merely
-    // un-migrated database unreachable.
+    // against a REACHABLE but UNMIGRATED database AFTER the diagnostic repair
+    // (observed on a real empty database — `mt01_presale_empty`).
+    //
+    // `CHECK connection PASS` is the load-bearing line: the connection really
+    // succeeded. The two failing checks name the schema and the seed query, and
+    // NEITHER of them is called "connection". The seed-plan check says plainly
+    // that it was not run because there is no plans table yet, instead of
+    // running its query anyway and reporting the resulting
+    // `relation "plans" does not exist` error as a connection failure.
     body:
       'CHECK database-url-present PASS DATABASE_URL is set in the process environment, value not printed\n' +
       'CHECK connection PASS connected to the database in DATABASE_URL\n' +
       'CHECK migration-tables FAIL missing: billing_event_ledger, plans, schema_migrations, subscriptions, tenants, usage_counters; start the server once so the migrations run\n' +
-      'CHECK connection FAIL relation "plans" does not exist\n' +
+      'CHECK seed-plans FAIL not run: the schema is not created yet, so there is no plans table to read; start the server once so the migrations run\n' +
       'db-check: 2 of 4 checks FAILED\n',
-    what: 'the real shape of a reachable-but-unmigrated run: migration FAIL plus a second, misattributed connection FAIL, exit 1',
+    what: 'the real post-repair shape of a reachable-but-unmigrated run: connection PASS, migration FAIL, seed-plans FAIL as not-run — no check named "connection" fails, exit 1',
   },
 };
 
@@ -187,6 +219,18 @@ function moduleNotFound(text) {
 /** True when the database step claimed the checks passed, however worded. */
 function claimedDatabasePass(text) {
   return /database checks passed|database checks PASSED/i.test(text);
+}
+
+/**
+ * True when the run contains a line claiming a CONNECTION failure, whatever
+ * produced it: db-check's own `CHECK connection FAIL` line, or setup.sh's
+ * explanation for it. The Owner's requirement is that an un-migrated database
+ * produces neither. This looks for an actual `CHECK connection FAIL ` line
+ * (with a value after the verdict) so it cannot be satisfied by the harmless
+ * phrase appearing inside a comment.
+ */
+function claimsConnectionFailure(text) {
+  return /CHECK connection FAIL\s+\S/.test(text) || /could not connect to the database/.test(text);
 }
 
 let tempRoot = null;
@@ -359,6 +403,9 @@ try {
   );
 
   // --- case 5: the recognised connection failure keeps its message ----------
+  // The GENUINE connection failure: db-check could not open the connection at
+  // all, so `CHECK connection FAIL` is the correct line and setup.sh must name
+  // it and stop.
   observation(`case connection: ${STUB_MODES.connection.what}`);
   const connection = runSetup(tree, { shimDir, stubMode: 'connection', env: { DATABASE_URL } });
   observation(
@@ -366,12 +413,14 @@ try {
   );
   observation(`connection run, database step: ${JSON.stringify(databaseStepLines(connection.output))}`);
 
+  const connectionFailLine = /CHECK connection FAIL\s+\S/.test(connection.output);
+  const connectionNamed = /could not connect to the database/.test(connection.output);
+
   record(
     'recognised-connection-failure-still-named',
-    connection.exitCode !== 0 && /could not connect to the database/.test(connection.output),
-    `observed_exit_code=${connection.exitCode} named_the_connection_case=${/could not connect to the database/.test(
-      connection.output
-    )}`
+    connection.exitCode !== 0 && connectionFailLine && connectionNamed,
+    `observed_exit_code=${connection.exitCode} check_connection_FAIL_line=${connectionFailLine} ` +
+      `named_the_connection_case=${connectionNamed} (an unreachable database must still be reported as one)`
   );
 
   // --- case 6: the intentional PENDING outcome is preserved -----------------
@@ -390,11 +439,14 @@ try {
     )} (intentional: the server creates the schema at boot)`
   );
 
-  // --- case 6b: the REAL shape of an un-migrated run is not called unreachable -
-  // db-check emits a second, misattributed "connection FAIL" line in this case;
-  // matching the connection arm first made setup.sh call a reachable database
-  // unreachable. This asserts the migration arm wins, using db-check's real
-  // output verbatim, so the ordering cannot silently regress without a database.
+  // --- case 6b / 8: THE OWNER'S REQUIREMENT on the real un-migrated output --
+  // Run against the real, post-repair shape of a reachable-but-un-migrated
+  // database: `CHECK connection PASS`, a migration failure, and the seed-plan
+  // query reported as NOT RUN rather than attempted. The step must call it
+  // PENDING, exit 0, and its whole output must contain NO line claiming a
+  // connection failure — the duplicated `CHECK connection FAIL` this repair
+  // removed. The stub is kept, rather than deleted, precisely so this holds
+  // when the real shape changes underneath it.
   observation(`case unmigrated: ${STUB_MODES.unmigrated.what}`);
   const unmigrated = runSetup(tree, { shimDir, stubMode: 'unmigrated', env: { DATABASE_URL } });
   observation(
@@ -403,13 +455,24 @@ try {
   observation(`unmigrated run, database step: ${JSON.stringify(databaseStepLines(unmigrated.output))}`);
 
   const unmigratedPending = /PENDING: the database is reachable/.test(unmigrated.output);
-  const unmigratedCalledUnreachable = /could not connect to the database/.test(unmigrated.output);
+  const unmigratedCalledUnreachable = claimsConnectionFailure(unmigrated.output);
+  const unmigratedPassLines = (unmigrated.output.match(/^CHECK .*$/gm) ?? []).filter((line) =>
+    /^CHECK connection PASS\b/.test(line)
+  ).length;
+
+  record(
+    'unmigrated-output-names-no-connection-failure',
+    unmigrated.exitCode === 0 && unmigratedPending && !unmigratedCalledUnreachable,
+    `observed_exit_code=${unmigrated.exitCode} printed_pending=${unmigratedPending} ` +
+      `claims_a_connection_failure=${unmigratedCalledUnreachable} connection_PASS_lines=${unmigratedPassLines} ` +
+      '(the Owner\'s requirement: on the un-migrated output there must be no "CHECK connection FAIL" line)'
+  );
 
   record(
     'real-unmigrated-output-is-pending-not-unreachable',
     unmigrated.exitCode === 0 && unmigratedPending && !unmigratedCalledUnreachable,
     `observed_exit_code=${unmigrated.exitCode} printed_pending=${unmigratedPending} ` +
-      `called_unreachable=${unmigratedCalledUnreachable} (db-check's second "connection FAIL relation \"plans\" does not exist" line must not win over the migration line)`
+      `called_unreachable=${unmigratedCalledUnreachable} (db-check\'s real post-repair output — connection PASS, migration FAIL, seed-plans not run — must reach the PENDING arm and never the unreachable one)`
   );
 
   // --- case 7: the two environment refusals are untouched -------------------

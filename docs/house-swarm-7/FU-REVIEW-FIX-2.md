@@ -1,5 +1,12 @@
 # H7-REVIEW-FIX-2 — the Supabase claim gate was vacuous; it now forbids what it used to require
 
+> INTERNAL — NOT DELIVERED.
+> This is the vendor's own working record (repair log / lane report). It is kept in the
+> repository because the delivered documents cite it as evidence, but it is **not part of
+> what a buyer receives**. The delivered set is declared in `DELIVERY-MANIFEST.md` at the
+> repository root, and the gate `server/scripts/proofs/wu5/delivery-manifest-check.mjs`
+> enforces that classification.
+
 Work unit: `H7-REVIEW-FIX-CHECK` (correlation id
 `house-swarm-7-review-fix-check-20260929`). Finding closed: review
 `REVIEW-SWARM-7-MT01-WU2-WU6-CLAUDE-2026-09-28.md`, **ISSUE 1 (MEDIUM)**.

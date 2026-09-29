@@ -12,7 +12,8 @@
     "test:quota": "vitest run tests/quota-enforcement.test.ts",
     "test:web": "vitest run tests/demo-auth-gate.test.ts && node scripts/proofs/wu4/i18n-parity.mjs && node scripts/proofs/wu4/e2e-web.mjs",
     "test:web:i18n": "node scripts/proofs/wu4/i18n-parity.mjs",
-    "test:web:e2e": "node scripts/proofs/wu4/e2e-web.mjs"
+    "test:web:e2e": "node scripts/proofs/wu4/e2e-web.mjs",
+    "test:delivery": "node scripts/proofs/wu5/delivery-manifest-check.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.4",

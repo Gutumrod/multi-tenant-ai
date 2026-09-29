@@ -250,7 +250,12 @@ environment; it is not a deployment and it is not a replacement for this manual.
 Running the commands in this section by hand gives the same result. A reachable
 database whose schema does not exist yet is reported `PENDING`, which is not an
 error — it means the server has not run its migrations yet, and starting the
-server once (section 3.4) creates them.
+server once (section 3.4) creates them. What the operator sees in that case is
+`CHECK connection PASS ...`, a `CHECK migration-tables FAIL missing: ...` line and
+a `CHECK seed-plans FAIL not run: ...` line, then `PENDING`. Every check is named
+after the step that ran it, and **no line claims a connection failure**: the
+connection succeeded, and only a connection that could not be opened at all is
+reported as `CHECK connection FAIL`.
 
 **มีสคริปต์ตั้งค่าแถมมากับคู่มือนี้ และทำขั้นนี้ให้คุณได้** มีสองไฟล์อยู่ในโฟลเดอร์ส่งมอบ
 ข้าง ๆ `docs/`: ตัวสคริปต์ `scripts/house-swarm-7/setup.sh` และเอกสารอธิบาย
@@ -270,7 +275,11 @@ server once (section 3.4) creates them.
 สคริปต์นี้**ไม่บังคับ** มันช่วยรันขั้น 3.2 ถึง 3.5 และตรวจสภาพแวดล้อมให้ ไม่ใช่การ deploy
 และไม่ใช่ตัวแทนของคู่มือนี้ การรันคำสั่งในข้อนี้เองให้ผลเหมือนกัน ฐานข้อมูลที่ต่อได้แต่ยังไม่มี
 สคีมาจะถูกรายงานว่า `PENDING` ซึ่งไม่ใช่ข้อผิดพลาด — หมายความว่าเซิร์ฟเวอร์ยังไม่ได้รัน
-migration และการสตาร์ทเซิร์ฟเวอร์หนึ่งครั้ง (ข้อ 3.4) จะสร้างสคีมาให้
+migration และการสตาร์ทเซิร์ฟเวอร์หนึ่งครั้ง (ข้อ 3.4) จะสร้างสคีมาให้ สิ่งที่ผู้ปฏิบัติจะเห็นในกรณีนั้นคือ
+`CHECK connection PASS ...` ตามด้วยบรรทัด `CHECK migration-tables FAIL missing: ...` และ
+`CHECK seed-plans FAIL not run: ...` แล้วจึงเป็น `PENDING` ทุกข้อตรวจตั้งชื่อตามขั้นที่รันจริง และ
+**ไม่มีบรรทัดใดบอกว่าการต่อล้มเหลว** เพราะการต่อสำเร็จ และมีแต่การต่อที่เปิดไม่ขึ้นเลยเท่านั้นที่ถูกรายงาน
+เป็น `CHECK connection FAIL`
 
 **Expected output (expected output):** npm reports the packages it added and
 exits 0 without listing any error. There are three runtime dependencies only:
@@ -298,7 +307,7 @@ place. Nothing reads it. Do not treat it as a configuration file.
 ไฟล์ `server/.env.example` ในที่เก็บโค้ดนี้เป็น**เอกสารเท่านั้น** มันคือรายการชื่อตัวแปร
 ที่โค้ดอ่าน เก็บไว้ให้เห็นครบในที่เดียว ไม่มีอะไรอ่านมัน อย่าถือว่ามันเป็นไฟล์คอนฟิก
 
-**The complete set of variables the server reads — exactly thirteen:**
+**The complete set of variables the server reads — exactly fourteen:**
 
 | Variable / ตัวแปร | Required? / ต้องใส่ไหม | Meaning / ความหมาย |
 |---|---|---|
@@ -313,8 +322,9 @@ place. Nothing reads it. Do not treat it as a configuration file.
 | `GEMINI_API_KEY` | optional / ไม่บังคับ | Gemini key, alternative to the above. / คีย์ Gemini ใช้แทนตัวข้างบนได้ |
 | `STRIPE_SECRET_KEY` | optional / ไม่บังคับ | Your own Stripe secret key, for the payment demo route. / คีย์ลับ Stripe ของคุณเอง สำหรับเส้นทาง payment demo |
 | `STRIPE_WEBHOOK_SECRET` | optional / ไม่บังคับ | Your own Stripe webhook signing secret, for verifying incoming webhooks. / signing secret สำหรับ webhook ของ Stripe ของคุณเอง ใช้ยืนยัน webhook ที่เข้ามา |
-| `WEBHOOK_RATE_LIMIT_MAX` | optional / ไม่บังคับ | Rate limit for `POST /payment/webhook`: requests allowed per window. Unit is **requests** (a count, not seconds). Default `60`. A value that is not a positive integer is rejected, clamped to `60`, and warned about — it can never disable the limiter. / rate limit ของ `POST /payment/webhook`: จำนวนคำขอที่อนุญาตต่อหนึ่งหน้าต่าง หน่วยเป็น**จำนวนคำขอ** (ไม่ใช่วินาที) ค่าเริ่มต้น `60` ค่าที่ไม่ใช่จำนวนเต็มบวกจะถูกปฏิเสธ clamp เป็น `60` และมีคำเตือน — ปิด limiter ไม่ได้เด็ดขาด |
-| `WEBHOOK_RATE_LIMIT_WINDOW_MS` | optional / ไม่บังคับ | Length of the rate limit window for `POST /payment/webhook`. Unit is **milliseconds**, not seconds. Default `60000` (60 requests per 60 seconds). See `docs/house-swarm-7/FU-RATELIMIT.md`. / ความยาวหน้าต่างของ rate limit สำหรับ `POST /payment/webhook` หน่วยเป็น**มิลลิวินาที** ไม่ใช่วินาที ค่าเริ่มต้น `60000` (60 คำขอต่อ 60 วินาที) ดู `docs/house-swarm-7/FU-RATELIMIT.md` |
+| `WEBHOOK_RATE_LIMIT_MAX` | optional / ไม่บังคับ | Rate limit for `POST /payment/webhook`: wrong-signature requests allowed per window **per source address**. Unit is **requests** (a count, not seconds). Default `60`. A value that is not a positive integer is rejected, clamped to `60`, and warned about — it can never disable the limiter. / rate limit ของ `POST /payment/webhook`: จำนวนคำขอที่ลายเซ็น**ผิด**ที่อนุญาตต่อหนึ่งหน้าต่าง **ต่อที่อยู่ต้นทาง** หน่วยเป็น**จำนวนคำขอ** (ไม่ใช่วินาที) ค่าเริ่มต้น `60` ค่าที่ไม่ใช่จำนวนเต็มบวกจะถูกปฏิเสธ clamp เป็น `60` และมีคำเตือน — ปิด limiter ไม่ได้เด็ดขาด |
+| `WEBHOOK_RATE_LIMIT_WINDOW_MS` | optional / ไม่บังคับ | Length of the rate limit window for `POST /payment/webhook`. Unit is **milliseconds**, not seconds. Default `60000` (60 wrong-signature requests per source per 60 seconds). See `docs/house-swarm-7/FU-RATELIMIT.md`. / ความยาวหน้าต่างของ rate limit สำหรับ `POST /payment/webhook` หน่วยเป็น**มิลลิวินาที** ไม่ใช่วินาที ค่าเริ่มต้น `60000` (60 คำขอลายเซ็นผิดต่อแหล่งต่อ 60 วินาที) ดู `docs/house-swarm-7/FU-RATELIMIT.md` |
+| `WEBHOOK_RATE_LIMIT_BACKSTOP_MAX` | optional / ไม่บังคับ | The coarse every-request backstop for `POST /payment/webhook`: requests allowed per window across the **whole route**, whatever their signature. Unit is **requests**. Default `1000`. Keep it materially larger than `WEBHOOK_RATE_LIMIT_MAX`, or it becomes a route-wide limit. A value that is not a positive integer is rejected, clamped to `1000`, and warned about — it can never disable the limiter. / backstop แบบหยาบที่นับทุกคำขอสำหรับ `POST /payment/webhook`: จำนวนคำขอที่อนุญาตต่อหนึ่งหน้าต่าง**ทั้งเส้นทาง** ไม่ว่าลายเซ็นจะเป็นอะไร หน่วยเป็น**จำนวนคำขอ** ค่าเริ่มต้น `1000` ตั้งให้ใหญ่กว่าค่า `WEBHOOK_RATE_LIMIT_MAX` อย่างมีนัยสำคัญ ไม่งั้นจะกลายเป็นขีดจำกัดทั้งเส้นทาง ค่าที่ไม่ใช่จำนวนเต็มบวกจะถูกปฏิเสธ clamp เป็น `1000` และมีคำเตือน — ปิด limiter ไม่ได้เด็ดขาด |
 
 Set them for the process. A POSIX shell does it on the command line, so the value
 exists only in that process and is written to no file:
@@ -528,6 +538,17 @@ usage_counters
 `CHECK migration-tables PASS all 6 expected tables present` and
 `CHECK seed-plans PASS both seed plans present: free, pro`.
 
+**On a reachable database whose schema is not created yet, `db-check.mjs` says so
+without ever claiming a connection failure.** It prints
+`CHECK connection PASS connected to the database in DATABASE_URL`, then
+`CHECK migration-tables FAIL missing: ...`, then
+`CHECK seed-plans FAIL not run: the schema is not created yet, so there is no
+plans table to read; start the server once so the migrations run`. There is **no**
+`CHECK connection FAIL` line in that output — the connection succeeded, and each
+failing check is named after the step that actually failed. Every check is named
+after the step that ran it (`connection`, `migration-tables`, `seed-plans`), and
+the seed-plan query is not run before the tables it reads exist.
+
 **วิธีตรวจว่าได้ผล** — นับตารางที่มีอยู่ (คำสั่ง SQL ข้างบน)
 
 **`psql` ไม่บังคับ — อย่าคิดว่ามันติดตั้งอยู่** คำสั่งข้างบนให้เป็น SQL ไม่ใช่คำสั่ง `psql`
@@ -542,7 +563,9 @@ usage_counters
   process environment: `node scripts/house-swarm-7/db-check.mjs`
   มันพิมพ์บรรทัด `CHECK <name> PASS|FAIL <detail>` ต่อหนึ่งข้อ และออกไม่เป็นศูนย์ถ้ามีข้อใด
   ล้มเหลว ถ้าฐานข้อมูลต่อได้แต่ยังไม่มีสคีมา มันจะรายงานตารางที่ขาดและบอกให้สตาร์ทเซิร์ฟเวอร์
-  หนึ่งครั้ง สคริปต์ตั้งค่า (ข้อ 3.2) ถือกรณีนั้นเป็น `PENDING`
+  หนึ่งครั้ง โดย**ไม่มี**บรรทัด `CHECK connection FAIL` เลย เพราะการต่อสำเร็จ ทุกข้อตรวจตั้งชื่อตาม
+  ขั้นที่รันจริง (`connection`, `migration-tables`, `seed-plans`) และคำสั่งอ่าน seed plans จะไม่ถูกรัน
+  ก่อนที่ตารางที่มันอ่านจะถูกสร้าง สคริปต์ตั้งค่า (ข้อ 3.2) ถือกรณีนั้นเป็น `PENDING`
 
 Two seed plans result from the migrations alone: `free` (50 AI requests and 5
 payments per month) and `pro` (1000 AI requests and 100 payments per month).
@@ -973,49 +996,85 @@ an internet-facing multi-instance deployment.
    คนแรกที่ชี้มันไปที่โปรเจกต์จริง และส่วนนั้นยังไม่ถูกทดสอบ
 5. **Rate limiting on `POST /payment/webhook` is in-process only.** The route
    **is** rate limited. `server/src/app.ts` mounts `webhookRateLimitMiddleware`
-   on `POST /payment/webhook` ahead of `express.raw()` and ahead of the handler,
-   so a request over the limit is refused **before** signature verification and
-   **before** any HMAC work is done — a flood costs no HMAC. The limiter is not
+   on `POST /payment/webhook` **after** `express.raw()` and **before** the
+   handler. It verifies the delivery's signature itself, on the same raw body and
+   the same secret the handler uses, and charges only the requests whose
+   signature is **wrong** to a bucket keyed on the request's own source address
+   (`req.socket.remoteAddress`) — so a **correctly-signed delivery is never
+   counted into a bucket an attacker can fill, and cannot be refused by an
+   outsider's flood.** What that costs, stated plainly: because verification now
+   runs before the tight per-source limit, **a flood DOES cost HMAC work**, and
+   that work is bounded instead by a **coarse, generous every-request backstop**
+   charged with every request that reaches the route — `WEBHOOK_RATE_LIMIT_BACKSTOP_MAX`,
+   default `1000` requests per window (about 16.7/second), an order of magnitude
+   above the per-source limit so a legitimate Stripe burst is not refused at the
+   same point. The limiter is not
    new code written for this delivery: it is the Module Hub `rate-limit` module,
    vendored at `modules/rate-limit/` (provenance in
    `modules/rate-limit/PROVENANCE-RATELIMIT.md`), wired on the host side by
    `server/src/lib/rate-limit.ts`. A refusal is **HTTP 429**, body code
-   **`RATE_LIMITED`**, carrying a **`Retry-After`** header. The limits are the two
-   environment variables listed in §3.3: `WEBHOOK_RATE_LIMIT_MAX`, default `60`
-   requests, and `WEBHOOK_RATE_LIMIT_WINDOW_MS`, default `60000` milliseconds —
-   that is 60 requests per 60 seconds. `docs/house-swarm-7/FU-RATELIMIT.md` is the
+   **`RATE_LIMITED`**, carrying a **`Retry-After`** header. The limits are the
+   three environment variables listed in §3.3: `WEBHOOK_RATE_LIMIT_MAX`, default
+   `60` wrong-signature requests **per source**, per
+   `WEBHOOK_RATE_LIMIT_WINDOW_MS`, default `60000` milliseconds — that is 60
+   wrong-signature requests per source per 60 seconds — plus the `1000`-request
+   route backstop above. `docs/house-swarm-7/FU-RATELIMIT.md` is the
    full account of it. What it is **not**: the counter lives in one process's
    memory, so the limit is **per-instance and resets when the process restarts**;
    several instances behind a load balancer share no counter, so the effective
-   ceiling multiplies by the number of instances; and one key covers the endpoint
-   rather than the caller, so a burst of legitimate Stripe deliveries is throttled
-   together with a flood of hostile ones. It is a process-protection limit, **not**
+   ceiling multiplies by the number of instances; and behind a reverse proxy or
+   load balancer every request arrives from the same socket address, so all
+   callers share one source bucket. It is a process-protection limit, **not**
    a substitute for a rate limit at your edge or reverse proxy in a multi-instance
-   deployment. Replay defence is a separate question and unchanged: the signature
+   deployment. **The residual risk:** a flood large enough to exhaust the backstop
+   — more than `1000` requests in one window, by default — **is** refused, and
+   while it lasts a real delivery arriving in that window would be refused too.
+   The redesign narrows that from "60 junk requests a minute are enough to stop a
+   real delivery" to "the endpoint is saturated" and does not remove it; an
+   edge/proxy limit remains the real answer. Replay defence is a separate question
+   and unchanged: the signature
    verifier refuses a signature whose timestamp falls outside its tolerance window
    (code `WEBHOOK_EXPIRED_TIMESTAMP`), and the subscription ledger's idempotency is
    what makes a redelivered event apply at most once. An earlier version of this
-   section asserted the opposite about rate limiting; that statement is obsolete.
+   section asserted that the limiter sat **ahead of** `express.raw()` and refused a
+   request **before** signature verification, so that a flood cost no HMAC work;
+   **that ordering and that claim were themselves corrected** (lane P3b, review
+   finding LOW-2) and are obsolete.
    / **rate limiting บน `POST /payment/webhook` เป็นแบบในโปรเซสเดียว**
    เส้นทางนี้**มี** rate limit แล้ว `server/src/app.ts` ติดตั้ง
-   `webhookRateLimitMiddleware` บน `POST /payment/webhook` **ก่อน** `express.raw()`
-   และก่อน handler คำขอที่เกินขีดจึงถูกปฏิเสธ**ก่อน**การตรวจลายเซ็นและ**ก่อน**งาน HMAC
-   การยิงถล่มจึงไม่กินงาน HMAC ตัวจำกัดนี้ไม่ใช่โค้ดใหม่ของงานนี้: มันคือโมดูล
+   `webhookRateLimitMiddleware` บน `POST /payment/webhook` **หลัง** `express.raw()`
+   และ**ก่อน** handler มันตรวจลายเซ็นของการส่งเอง บน raw body เดียวกันและ secret
+   เดียวกันที่ handler ใช้ และนับเฉพาะคำขอที่ลายเซ็น**ผิด**เข้า bucket ที่คีย์ด้วยที่อยู่
+   ต้นทางของคำขอเอง (`req.socket.remoteAddress`) — การส่งที่ลายเซ็น**ถูกต้องจึงไม่ถูกนับเข้า
+   bucket ที่ผู้โจมตีเติมได้ และถูกปฏิเสธเพราะการยิงถล่มจากภายนอกไม่ได้** ราคาที่ต้องจ่าย
+   ระบุตรง ๆ: เพราะการตรวจทำงานก่อนขีดจำกัดต่อแหล่งที่เข้มงวด **การยิงถล่มจึง**กิน**งาน HMAC**
+   และงานนั้นถูกจำกัดขอบเขตด้วย **backstop แบบหยาบที่ใจกว้างซึ่งนับทุกคำขอ** ที่มาถึงเส้นทาง —
+   `WEBHOOK_RATE_LIMIT_BACKSTOP_MAX` ค่าเริ่มต้น `1000` คำขอต่อหน้าต่าง (ราว 16.7/วินาที)
+   มากกว่าขีดจำกัดต่อแหล่งหนึ่งหลัก เพื่อไม่ให้การส่งของ Stripe ที่ถูกต้องถูกปฏิเสธที่จุดเดียวกัน
+   ตัวจำกัดนี้ไม่ใช่
+   โค้ดใหม่ของงานนี้: มันคือโมดูล
    `rate-limit` จาก Module Hub ที่ vendor ไว้ที่ `modules/rate-limit/` (ที่มา
    `modules/rate-limit/PROVENANCE-RATELIMIT.md`) ต่อสายฝั่งโฮสต์ใน
    `server/src/lib/rate-limit.ts` การปฏิเสธคือ **HTTP 429** รหัสใน body
-   **`RATE_LIMITED`** พร้อม header **`Retry-After`** ขีดจำกัดคือตัวแปรสภาพแวดล้อมสองตัว
-   ในข้อ 3.3: `WEBHOOK_RATE_LIMIT_MAX` ค่าเริ่มต้น `60` คำขอ และ
-   `WEBHOOK_RATE_LIMIT_WINDOW_MS` ค่าเริ่มต้น `60000` มิลลิวินาที คือ 60 คำขอต่อ 60 วินาที
+   **`RATE_LIMITED`** พร้อม header **`Retry-After`** ขีดจำกัดคือตัวแปรสภาพแวดล้อมสามตัว
+   ในข้อ 3.3: `WEBHOOK_RATE_LIMIT_MAX` ค่าเริ่มต้น `60` คำขอลายเซ็นผิด**ต่อแหล่ง**
+   และ `WEBHOOK_RATE_LIMIT_WINDOW_MS` ค่าเริ่มต้น `60000` มิลลิวินาที คือ 60 คำขอลายเซ็นผิด
+   ต่อแหล่งต่อ 60 วินาที บวก backstop ทั้งเส้นทาง `1000` คำขอข้างบน
    รายละเอียดทั้งหมดอยู่ที่ `docs/house-swarm-7/FU-RATELIMIT.md` สิ่งที่มัน**ไม่**ใช่:
    ตัวนับอยู่ในหน่วยความจำของโปรเซสเดียว ขีดจำกัดจึง**แยกตามอินสแตนซ์และรีเซ็ตเมื่อโปรเซส
    รีสตาร์ท** หลายอินสแตนซ์หลังโหลดบาลานเซอร์ไม่แชร์ตัวนับ เพดานจริงจึงคูณตามจำนวน
-   อินสแตนซ์ และคีย์หนึ่งตัวคลุมทั้งเส้นทางไม่ใช่ต่อผู้เรียก การส่งของ Stripe ที่ถูกต้อง
-   จึงถูกจำกัดไปพร้อมการยิงถล่ม มันเป็นขีดจำกัดเพื่อป้องกันโปรเซส **ไม่**ใช่สิ่งทดแทน
-   rate limit ที่ edge หรือ reverse proxy ของคุณในการ deploy หลายอินสแตนซ์ การป้องกัน
-   การเล่นซ้ำเป็นเรื่องแยกและไม่เปลี่ยน: ตัวตรวจลายเซ็นปฏิเสธลายเซ็นที่เวลาอยู่นอกหน้าต่าง
+   อินสแตนซ์ และหลัง reverse proxy หรือโหลดบาลานเซอร์ ทุกคำขอมาจากที่อยู่ socket เดียวกัน
+   ผู้เรียกทุกคนจึงแชร์ bucket ต่อแหล่งตัวเดียว มันเป็นขีดจำกัดเพื่อป้องกันโปรเซส **ไม่**ใช่สิ่งทดแทน
+   rate limit ที่ edge หรือ reverse proxy ของคุณในการ deploy หลายอินสแตนซ์
+   **ความเสี่ยงที่เหลืออยู่:** การยิงถล่มที่ใหญ่พอจะทำให้ backstop หมด — เกิน `1000` คำขอในหนึ่ง
+   หน้าต่างตามค่าเริ่มต้น — จะ**ถูกปฏิเสธ** และระหว่างที่มันเกิด การส่งจริงที่เข้ามาในหน้าต่างนั้น
+   ก็จะถูกปฏิเสธด้วย การออกแบบใหม่ลดจาก "60 คำขอขยะต่อนาทีก็พอจะหยุดการส่งจริง" เหลือ
+   "ปลายทางอิ่มตัว" และไม่ได้กำจัดมัน การจำกัดที่ edge/proxy ยังเป็นคำตอบจริง
+   การป้องกันการเล่นซ้ำเป็นเรื่องแยกและไม่เปลี่ยน: ตัวตรวจลายเซ็นปฏิเสธลายเซ็นที่เวลาอยู่นอกหน้าต่าง
    tolerance (รหัส `WEBHOOK_EXPIRED_TIMESTAMP`) และ idempotency ของ ledger คือสิ่งที่ทำให้
-   เหตุการณ์ที่ส่งซ้ำมีผลครั้งเดียว ฉบับก่อนของข้อนี้เขียนไว้ตรงกันข้าม คำกล่าวนั้นล้าสมัยแล้ว
+   เหตุการณ์ที่ส่งซ้ำมีผลครั้งเดียว ฉบับก่อนของข้อนี้ระบุว่าตัวจำกัดอยู่**ก่อน** `express.raw()`
+   และปฏิเสธ**ก่อน**การตรวจลายเซ็น การยิงถล่มจึงไม่กินงาน HMAC **ลำดับนั้นและข้อกล่าวนั้น
+   ถูกแก้เองแล้ว** (เลน P3b ตามข้อสังเกต LOW-2) และล้าสมัยแล้ว
 6. **No multi-instance deployment proof.** Everything here was run as a single
    process against a single database. Running several instances behind a load
    balancer has not been tested, and the in-memory fallback is per-process.

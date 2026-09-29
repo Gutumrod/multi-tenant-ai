@@ -191,20 +191,22 @@ npm run typecheck || die "typecheck failed; the source tree does not compile, so
 #    message was not one of the two exact sentences used to fall through to
 #    "passed" while the script still exited 0.
 #
-#    WHY THE MIGRATION CASE IS TESTED BEFORE THE CONNECTION CASE. On a real
-#    reachable-but-unmigrated database db-check prints BOTH lines: it records
-#    "CHECK migration-tables FAIL ..." and then, inside its own error handler,
-#    records "CHECK connection FAIL relation \"plans\" does not exist" — the
-#    follow-up query for the seed plans fails because the tables do not exist
-#    yet, and that is reported under the connection name. Testing for
-#    "connection FAIL" first therefore caught the PENDING case and reported a
-#    perfectly reachable, merely un-migrated database as "could not connect".
-#    A genuine connection failure cannot be mis-ordered this way: when the
-#    connection really fails the tables are never queried, so db-check prints no
-#    "CHECK migration-tables" line at all and this falls through to the
-#    connection case, exactly as before. db-check.mjs itself is not modified
-#    here (it is outside this repair's scope); only the order of the two
-#    explanations in this script changes.
+#    THE TWO ARMS ARE MUTUALLY EXCLUSIVE, and that is a property of db-check,
+#    not an assumption about wording. db-check emits `CHECK connection FAIL` for
+#    exactly one thing — a connection that could not be opened at all — and when
+#    that happens it skips every later check, so the line cannot appear next to
+#    a `CHECK migration-tables` line. Either order is therefore correct; the
+#    connection case is tested first because it is the one that stops the
+#    script. It is no longer an ordering workaround. It used to be one: on a
+#    reachable-but-unmigrated database db-check ran its seed-plan query against
+#    a `plans` table that did not exist yet, sent the resulting
+#    `relation "plans" does not exist` error to its single catch block, and
+#    printed it as `CHECK connection FAIL` directly underneath its own
+#    `CHECK connection PASS` line — telling the reader a reachable database had
+#    a connection problem. That is fixed in db-check.mjs, which now names every
+#    check after the step that actually ran (connection / migration-tables /
+#    seed-plans), does not run the seed-plan query before the tables it reads
+#    exist, and reports that check as not run instead.
 #
 #    HOW THE FILE IS HANDED TO `node`. The path is RELATIVE to the repository
 #    root and never absolute. On Windows/Git-Bash the absolute path this script
@@ -241,13 +243,17 @@ else
       *"CHECK migration-tables FAIL"*)
         # Intentional, documented outcome (scripts/house-swarm-7/setup.md §3.3):
         # the database is reachable but the server has not run its migrations
-        # yet, and the server creates the schema at boot. Not a failure.
-        # Tested BEFORE the connection case on purpose — see the note above.
+        # yet, and the server creates the schema at boot. Not a failure. The
+        # connection really was established — db-check prints its
+        # "CHECK connection PASS" line in this output — and the failing checks
+        # name the schema, not the connection.
         say "PENDING: the database is reachable, but the migration schema is not created yet."
         say "The server creates it at boot. Do this next, then run this script again:"
         say "    cd server && npm run start"
         ;;
       *"CHECK connection FAIL"*)
+        # The connection could not be opened at all. db-check stops at that
+        # point, so this is the only failure it reported.
         die "could not connect to the database in DATABASE_URL (db-check exited $CHECK_STATUS). Check the host, port, database name and credentials, then run this script again."
         ;;
       *)

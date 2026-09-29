@@ -16,7 +16,7 @@
  *
  * and exits non-zero if any check fails.
  *
- * The eight check names are fixed by the work unit:
+ * The nine check names are fixed by the work unit:
  *
  *   sales-docs-bilingual-headings
  *   no-price-or-licence-in-sales-docs
@@ -26,6 +26,7 @@
  *   migrations-proven-by-script
  *   node-version-stated-22
  *   ui-evidence-described-as-http-html
+ *   sales-numbers-agree-with-ledger   (added in MT01-PRESALE-P1)
  *
  * Every check here is written so that it CAN fail, and every one of them was
  * observed failing against a mutated copy of the documents before this harness was
@@ -653,8 +654,15 @@ const SALES = [
    * it appears as a claim label — bold and separated from the rest of the
    * sentence by an em dash, a colon or the end of the bold run — which is how
    * every labelled claim in both documents is written.
+   *
+   * A `## ` SECTION HEADING written as `## 3. What it does **V4** — … / …` is a
+   * claim label too: the TH document's V4 carries its Thai and English text
+   * inside the same section heading, and before this tolerance the heading was
+   * skipped because it is not a `**V4 — …**` bullet. The label form and the
+   * separator required are unchanged; only the leading `**` is now optional, so
+   * a document cannot satisfy the check by writing a bare `V4` in prose.
    */
-  const LABEL_IN_DOC = /(?:^|\*\*)([RBVNQS]\d{1,2})\b\s*(?:—|–|-|:|\*\*)/;
+  const LABEL_IN_DOC = /(?:^|\*\*)([RBVNQS]\d{1,2})\b\s*(?:—|–|-|:|\.{3}|\*\*)/;
 
   /** Every group label a document visibly carries, as a Set. */
   function carriedLabels(text) {
@@ -683,6 +691,479 @@ const SALES = [
 
   const C_IDS = [];
   for (let i = 1; i <= 64; i += 1) C_IDS.push(`C${i}`);
+
+  /**
+   * NUMERIC GATE (the ninth check). The two sales documents and the ledger state
+   * the same measurement — the `npm test` counts — and nothing used to compare
+   * them, which is exactly how the sales documents kept `51`-totalled figures
+   * after the ledger had moved to `58`.
+   *
+   * THE RULE THE FIRST ATTEMPT GOT WRONG, and why. The first version compared
+   * whole SETS: every figure each sales document states against every figure the
+   * ledger's C38/C39/C40 rows state. Both sides legitimately QUOTE superseded
+   * figures as history and neither may stop doing so — C39/C40 carry the older
+   * `files(5)` / `tests(51)` in their evidence cells, labelled superseded, and
+   * C40 carries the old failed run's `failures(1)`; and
+   * `server/scripts/proofs/fu/manual-claims-proof.mjs` CHECK 12 REQUIRES C40 to
+   * keep that history. A set comparison therefore fails the documents it is
+   * supposed to protect. The rule below compares MATCHING CLAIMS instead: a
+   * figure is classified LIVE or HISTORY on the side it is read from, and a
+   * figure quoted as superseded history on one side is permitted to appear as
+   * superseded history on the other, or not at all.
+   *
+   * HOW A FIGURE IS CLASSIFIED. Both sides use the same vocabulary
+   * `manual-claims-proof.mjs` already applies to the manual and the ledger
+   * (its `isQuotedHistory` / HISTORY_MARKERS and its `SUPERSEDED_IN_LEDGER`
+   * list): a figure is HISTORY when the line it is read from (sales documents)
+   * or the row it is read from (ledger) carries a marker from SUPERSEDED —
+   * "superseded", "obsolete", "no longer", "the earlier figures", "History",
+   * "used to fail", "FIXED", ล้าสมัย, แก้แล้ว, … — and LIVE otherwise.
+   *
+   * THE RULES THAT ARE ENFORCED:
+   *
+   *   * LIVE figures are compared as SETS, in both directions. A live figure
+   *     only the sales documents state is drift; a live figure only the ledger
+   *     states is drift. This is the rule the work unit was written for and it is
+   *     what catches `51`.
+   *   * A HISTORY figure never has to be quoted by the other side — the ledger's
+   *     history is an archive, and the owner's correction to these documents
+   *     deliberately dropped the old `5 -> 7` row-delta story. It may not be
+   *     passed off as LIVE: a history figure on one side that is a LIVE figure on
+   *     the other fails, because that is one side resurrecting a number the other
+   *     has retired.
+   *   * The two documents must tell the same repeatability story: if one document
+   *     asserts the suite is not repeatable and the other says it is repeatable,
+   *     that fails even though neither line carries the word "not repeatable".
+   *
+   * THE TWO FIGURE SETS. A "figure" is a (kind, total) pair read out of a
+   * summary line. Both the labelled form (`Test Files … (N)`, `Tests … (M)`) and
+   * the BARE form the documents also use (`5 passed | 1 skipped (6)` files) are
+   * read, because the two languages quote the same summary in both shapes:
+   *
+   *   files(6)   `Test Files 5 passed | 1 skipped (6)`  → kind 'files', total 6
+   *   tests(58)  `Tests 53 passed | 5 skipped (58)`     → kind 'tests', total 58
+   *   failures(1) `Tests 1 failed | 50 passed (51)`     → kind 'failures', total 1
+   *
+   * The bare patterns are anchored on the total and on a verb only a test
+   * summary uses (`N passed` / `N skipped` / `N failed` immediately before
+   * `(T)`), so a bare `6 passed (6)` outside a `Test Files` / `Tests` label is
+   * still read as the file total it is, and the old
+   * `docs/house-swarm-7/WU6-SALES-TH.md` wording, which wrote that figure with
+   * no label at all, cannot be misread as a `tests` total. The TH document's
+   * English counterpart was corrected too, so both languages now state the two
+   * labelled figures.
+   *
+   * The ledger's side is rows C38/C39/C40 only. FAIL names the offending figure
+   * and the file/row it came from.
+   */
+
+  /** A figure is a (kind, total) pair. `key` is its printed name. */
+  const figureKey = (figure) => `${figure.kind}(${figure.total})`;
+
+  /**
+   * The test-summary figures in a piece of text.
+   *
+   * `Test Files`/`Tests` are matched with `i`, so a line that mixes the two
+   * languages (`… tests; with DATABASE_URL`) is matched on its words rather than
+   * its capitalisation. The tail windows stop at a bracket, so a summary cannot
+   * swallow the NEXT summary's total.
+   *
+   * Two shapes are read, and both are read for the same reason: the documents
+   * quote the same summary in both. The LABELLED shape carries the kind
+   * explicitly (`Test Files 6 passed (6)`); the BARE shape names only the outcome
+   * (`6 passed (6)`), which the EN document writes as "`5 passed | 1 skipped (6)`
+   * files and `53 passed | 5 skipped (58)` tests". The bare shape is anchored on
+   * a `(T)` total reached by a `N passed` / `N skipped` / `N failed` run, which
+   * is wording only a test summary uses, so ordinary prose ("about 6 (6)") cannot
+   * become a figure.
+   *
+   * A bare `(T)` is attributed to the kind by the noun that follows it ("files"
+   * vs "tests"). Nothing in this document set writes `files`/`tests` as the first
+   * word of a bullet, so a document cannot smuggle a figure in by labelling it
+   * with a bullet prefix.
+   *
+   * The `(?![|0-9])` guards are what keep the two shapes apart, and they are load
+   * bearing: without them the labelled pattern `Tests[^()]{0,60}\((\d+)\)` reads
+   * `Tests 53 passed | 5 skipped (58)` — and also the OLD `Tests 53 passed
+   * (53)`-style figure next to it — by letting the window slide ACROSS the total
+   * it just matched. The labelled total must therefore be the number the label
+   * actually reaches (no `|` and no further digit in front of the bracket), which
+   * is exactly how a reader reads the line.
+   */
+  const BARE_TAIL = '(?:\\s+(?:files?|tests?))';
+  function figuresIn(text) {
+    const flatText = text.replace(/\\\|/g, '|');
+    const found = [];
+    const patterns = [
+      { kind: 'files', pattern: /Test Files[^()|\n]{0,60}(?<![\d.])\((\d+)\)/gi },
+      { kind: 'tests', pattern: /\bTests[^()|\n]{0,60}(?<![\d.])\((\d+)\)/gi },
+      { kind: 'failures', pattern: /\bTests[^()|\n]{0,60}\b(\d+) failed\b/gi },
+      {
+        // Any run of `N passed` / `N skipped` / `N failed` segments ending at
+        // `(T)`, where the following noun (if any) decides files vs tests.
+        pattern: new RegExp(
+          `(?:\\d+\\s+(?:passed|skipped|failed)\\s*(?:\\||,)?\\s*)*(\\d+)\\s+(?:passed|skipped|failed)\\s*\\((\\d+)\\)(${BARE_TAIL}?)`,
+          'gi'
+        ),
+        bare: true,
+      },
+    ];
+    for (const { kind, pattern, bare } of patterns) {
+      for (const match of flatText.matchAll(pattern)) {
+        if (bare) {
+          const noun = (match[3] ?? '').trim().toLowerCase();
+          const resolved = noun === '' ? null : noun.startsWith('file') ? 'files' : 'tests';
+          if (resolved === null) continue;
+          const total = Number(match[2]);
+          found.push({
+            kind: resolved,
+            total,
+            figure: figureKey({ kind: resolved, total: match[2] }),
+          });
+          continue;
+        }
+        found.push({ kind, total: Number(match[1]), figure: figureKey({ kind, total: match[1] }) });
+      }
+    }
+    return found;
+  }
+
+  /**
+   * The markers that make a figure HISTORY rather than a live claim. The same
+   * vocabulary `manual-claims-proof.mjs` uses for the manual and the ledger — its
+   * HISTORY_MARKERS (what its `isQuotedHistory` tests) and the SUPERSEDED list its
+   * CHECK 3 quote-scoping is built on — because the sentence a correct document
+   * writes is the same sentence in all three files: the figure is quoted and
+   * called dead in the same breath ("the earlier figures … are superseded",
+   * "both statements are superseded", "**History**, kept so an older copy cannot
+   * mislead"). The Thai markers are checked too; a bilingual document carries
+   * every claim twice.
+   */
+  const SUPERSEDED = [
+    /superseded/i,
+    /\bobsolete\b/i,
+    /\bno longer\b/i,
+    /\bpreviously\b/i,
+    /\bused to\b/i,
+    /\bfixed\b/i,
+    /An earlier version/i,
+    /\bHistory\b/,
+    /before the fix/i,
+    /earlier figures/i,
+    /earlier count/i,
+    /earlier description/i,
+    /assertionerror: expected/i,
+    /ล้าสมัย/,
+    /แก้แล้ว/,
+    /ถูกแก้/,
+    /ไม่จริงอีกต่อไป/,
+    /เคยล้มเหลว/,
+    /ฉบับก่อน/,
+    /ถูกล้มเลิก/,
+  ];
+
+  /** True when a line/cell presents the figure it carries as dead history. */
+  function isSuperseded(text) {
+    return SUPERSEDED.some((pattern) => pattern.test(text));
+  }
+
+  /**
+   * The CLAIM a figure is made in, as the text around it.
+   *
+   * Classification is per SENTENCE, not per line/cell, and that distinction is
+   * what makes the rule compare matching claims instead of whole rows. The ledger
+   * is a table: its claim cell and its evidence cell are separate claims that sit
+   * on ONE line, and the corrected C38/C39/C40 rows make the live claim in the
+   * claim cell and the superseded one in the evidence cell. Judged per row, the
+   * evidence cell's "the earlier figures … are superseded" would mark the live
+   * figure dead too — which is precisely the false drift this check was
+   * rewritten to remove. Judged per sentence, each figure is classified by the
+   * sentence it is written in.
+   *
+   * Boundaries: a full stop that is followed by space and a capital (so
+   * `WU5-DEPLOY.md`, `f03c48d`, `tests/webhook.test.ts`, `ae74b74`,
+   * `4 passed | 1 skipped (5)` and `58 passed (58)` do not split), an em dash
+   * surrounded by spaces, and a markdown table `|`. A Thai clause runs without a
+   * space before its full stop, so the `(?<=[^\s\d])` guard stops `(58) กับ ledger`
+   * from being cut at the `.` of a filename or a number.
+   *
+   * A figure may be carried on the NEXT sentence ("the earlier figures" `(…)` /
+   * `(…) were measured … and are superseded"), so the sentence after the figure
+   * is considered only when the figure's own sentence says nothing either way.
+   * That is a fallback, never an override: a sentence that carries `FIXED` or
+   * `superseded` keeps its figure dead, and a sentence that says nothing is
+   * filled in by the next one.
+   */
+  function sentencesOf(text) {
+    return text
+      .split(/(?<=[^\s\d])\.(?=\s+[A-Z])|\s—\s|\|/)
+      .map((part) => part.trim())
+      .filter((part) => part !== '');
+  }
+
+  /**
+   * The sentence a figure is judged in: its own sentence, or — when that sentence
+   * says nothing about history — the sentence that follows it.
+   */
+  function claimScopeOf(entry) {
+    const own = entry.sentence;
+    if (isSuperseded(own)) return { text: own, via: 'own sentence' };
+    const next = entry.sentences[entry.index + 1];
+    if (next !== undefined && isSuperseded(next)) {
+      return { text: next, via: 'following sentence' };
+    }
+    return { text: own, via: 'own sentence' };
+  }
+
+  /** True when the claim a figure sits in presents it as dead history. */
+  function figureIsHistory(entry) {
+    return isSuperseded(claimScopeOf(entry).text);
+  }
+
+  /**
+   * The test-summary figures of a piece of text, each tagged LIVE or HISTORY by
+   * the CLAIM it is made in.
+   *
+   * `line` only locates the figure for the origin report; the classification is
+   * `figureIsHistory` on the sentence the figure sits in (see `claimScopeOf`).
+   */
+  function figureClaimsIn(text) {
+    const claims = [];
+    for (const [index, line] of text.split(/\r?\n/).entries()) {
+      const sentences = sentencesOf(line);
+      sentences.forEach((sentence, position) => {
+        for (const { kind, total } of figuresIn(sentence)) {
+          const entry = { index: position, sentence, sentences };
+          claims.push({
+            kind,
+            total,
+            key: figureKey({ kind, total }),
+            history: figureIsHistory(entry),
+            via: claimScopeOf(entry).via,
+            line: index + 1,
+          });
+        }
+      });
+    }
+    return claims;
+  }
+
+  /** The (live, history) figure sets of a document, plus where each figure came from. */
+  function figureSetsFrom(claims) {
+    const live = new Set();
+    const history = new Set();
+    for (const claim of claims) {
+      if (claim.history) history.add(claim.key);
+      else live.add(claim.key);
+    }
+    return { live, history };
+  }
+
+  /**
+   * The ledger's side. Rows C38/C39/C40 only, and — like the documents — every
+   * figure is classified by the CLAIM it is made in, not by the row it sits on.
+   *
+   * The row is still the unit the check READS: only these three rows contribute
+   * figures at all, so a figure quoted anywhere else in the map cannot make the
+   * sets agree by accident. Inside the row, the claim cell and the evidence cell
+   * are separate claims; C38/C39/C40 state the live figures in the claim cell and
+   * quote the superseded ones in the evidence cell, and the sentence split is what
+   * keeps those two apart.
+   */
+  function ledgerFigureSets(text) {
+    const live = new Set();
+    const history = new Set();
+    const origins = [];
+    const rows = [];
+    for (const line of text.split(/\r?\n/)) {
+      const idMatch = line.match(/^\|\s*(C\d+)\s*\|/);
+      if (!idMatch) continue;
+      if (!['C38', 'C39', 'C40'].includes(idMatch[1])) continue;
+      const row = line.replace(/\\\|/g, '|');
+      rows.push(idMatch[1]);
+      for (const claim of figureClaimsIn(row)) {
+        if (claim.history) history.add(claim.key);
+        else live.add(claim.key);
+        origins.push({ key: claim.key, row: idMatch[1], history: claim.history });
+      }
+    }
+    return { live, history, origins, rows };
+  }
+
+  /**
+   * A live assertion that the suite is not repeatable / cannot be re-run against
+   * one database. Banned per line unless that line marks it dead; the Thai form is
+   * checked too, because a bilingual document carries every claim twice.
+   */
+  const NOT_REPEATABLE = [
+    { label: 'not repeatable', pattern: /\bnot\s+repeatable\b/i },
+    { label: 'not repeatable (hyphenated)', pattern: /\bnon-?repeatable\b/i },
+    { label: 'cannot be repeat(ed|able)|is not repeat(ed|able)', pattern: /\bcannot be repeat(?:ed|able)\b|\bis not repeat(?:ed|able)\b/i },
+    { label: 'รันซ้ำ…ไม่ได้', pattern: /รันซ้ำ[^.\n]{0,40}ไม่ได้/ },
+    { label: 'ไม่สามารถรันซ้ำ', pattern: /ไม่สามารถรันซ้ำ/ },
+  ];
+
+  /**
+   * The positive half of the same claim: the document says the suite IS
+   * repeatable against one database. Neither sales document is allowed to assert
+   * the negative, and they are not allowed to disagree with each other either —
+   * a document that silently drops the position while the other states it is the
+   * same contradiction one level down, and it is the form a "correction" that
+   * deleted the sentence would take.
+   */
+  const REPEATABLE = [
+    { label: 'repeatable', pattern: /\brepeatable\b/i },
+    { label: 'รันซ้ำได้', pattern: /รันซ้ำได้/ },
+  ];
+
+  {
+    const problems = [];
+
+    // ---- the two sales documents -------------------------------------------------
+    const salesSets = [];
+    const repeatabilityProblems = [];
+    const repeatableDocs = [];
+
+    for (const doc of SALES) {
+      if (doc.text === null) {
+        problems.push(`${doc.label} is missing, so its test-count figures cannot be compared with the ledger`);
+        continue;
+      }
+
+      const docClaims = figureClaimsIn(doc.text);
+      const { live, history } = figureSetsFrom(docClaims);
+      salesSets.push({ label: doc.label, live, history, claims: docClaims });
+
+      // A live assertion that the suite is NOT repeatable. The superseded
+      // warning is allowed to be quoted as history (the same per-line
+      // classification the figures get), but where it is quoted the line must
+      // say it is dead.
+      for (const [index, line] of doc.text.split(/\r?\n/).entries()) {
+        if (!NOT_REPEATABLE.some((entry) => entry.pattern.test(line))) continue;
+        if (isSuperseded(line)) continue;
+        const which = NOT_REPEATABLE.find((entry) => entry.pattern.test(line)).label;
+        repeatabilityProblems.push(
+          `${doc.label} line ${index + 1} still asserts the suite is not repeatable (${which}): "${line.trim().slice(0, 160)}"`
+        );
+      }
+
+      // The positive half. The owner's correction removed the claim that the
+      // suite is NOT repeatable; a document that also deleted the statement that
+      // the suite IS repeatable would leave a buyer with no position at all, and
+      // a correction that silently dropped the sentence is exactly the mutation
+      // this guards.
+      const carriesRepeatable = REPEATABLE.some((entry) => entry.pattern.test(doc.text));
+      repeatableDocs.push({ label: doc.label, carriesRepeatable });
+      if (!carriesRepeatable) {
+        problems.push(
+          `${doc.label} never states that the suite is repeatable against one database`
+        );
+      }
+    }
+
+    // ---- the ledger's C38/C39/C40 rows -------------------------------------------
+    let ledgerSets = null;
+    if (CLAIMS_MAP === null) {
+      problems.push('WU6-CLAIMS-EVIDENCE.md is missing, so the sales figures cannot be compared with it');
+    } else {
+      ledgerSets = ledgerFigureSets(CLAIMS_MAP);
+      for (const row of ['C38', 'C39', 'C40']) {
+        if (!ledgerSets.rows.includes(row)) {
+          problems.push(`WU6-CLAIMS-EVIDENCE.md has no ${row} row, so the figure sets cannot agree`);
+        }
+      }
+    }
+
+    // ---- the gate ------------------------------------------------------------------
+    //
+    // MATCHING CLAIMS, not raw sets. Each figure is already classified LIVE or
+    // HISTORY on the side it was read from. What follows compares live against
+    // live and checks that history is not resurrected as live; a superseded figure
+    // on one side never forces the other side to keep it.
+    if (ledgerSets !== null && salesSets.length === 2) {
+      const salesLive = new Set();
+      for (const { live } of salesSets) for (const key of live) salesLive.add(key);
+      const salesHistory = new Set();
+      for (const { history } of salesSets) for (const key of history) salesHistory.add(key);
+
+      const salesWhere = (key) =>
+        salesSets
+          .filter((set) => set.live.has(key))
+          .map((set) => set.label)
+          .join(' and ');
+      const ledgerWhere = (key) =>
+        ledgerSets.origins
+          .filter((origin) => origin.key === key && origin.row)
+          .map((origin) => origin.row)
+          .join(', ');
+
+      // 1. A LIVE figure only the sales documents state is drift.
+      for (const key of salesLive) {
+        if (!ledgerSets.live.has(key)) {
+          problems.push(
+            `a sales document states the live figure ${key} (${salesWhere(key)}) that the ledger's C38/C39/C40 rows state only as history or not at all`
+          );
+        }
+      }
+      // 2. A LIVE figure only the ledger states is drift.
+      for (const key of ledgerSets.live) {
+        if (!salesLive.has(key)) {
+          problems.push(
+            `the ledger's C38/C39/C40 rows state the live figure ${key} (${ledgerWhere(key)}) that the sales documents state only as history or not at all`
+          );
+        }
+      }
+      // 3. A figure one side has RETIRED as history may not be offered as live by
+      //    the other: that is one document resurrecting a number the other one
+      //    has already called dead. The guard is `!…live.has(key)`: a figure a
+      //    side states live AND quotes as history is not retired — the corrected
+      //    documents do exactly that ("the run that used to fail now passes with
+      //    `Tests 58 passed (58)`"), and that is quoting, not resurrection.
+      for (const key of salesLive) {
+        if (ledgerSets.history.has(key) && !ledgerSets.live.has(key)) {
+          problems.push(
+            `the figure ${key} stands as a live claim in ${salesWhere(key)} while the ledger's C38/C39/C40 rows have retired it as superseded history (${ledgerWhere(key)})`
+          );
+        }
+      }
+      for (const key of ledgerSets.live) {
+        if (salesHistory.has(key) && !salesLive.has(key)) {
+          problems.push(
+            `the ledger's C38/C39/C40 rows state ${key} as a live claim (${ledgerWhere(key)}) while the sales documents keep it only as superseded history`
+          );
+        }
+      }
+      // 4. The two documents must tell the same repeatability story.
+      if (
+        repeatableDocs.length === 2 &&
+        repeatableDocs[0].carriesRepeatable !== repeatableDocs[1].carriesRepeatable
+      ) {
+        const without = repeatableDocs.find((entry) => !entry.carriesRepeatable).label;
+        problems.push(
+          `${without} does not state that the suite is repeatable against one database while the other sales document does, so the two documents disagree on repeatability`
+        );
+      }
+    }
+
+    for (const problem of repeatabilityProblems) problems.push(problem);
+
+    const salesLiveText = salesSets
+      .map((set) => `${set.label}: lived [${[...set.live].sort().join(', ')}], history [${[...set.history].sort().join(', ')}]`)
+      .join('; ');
+    const ledgerText =
+      ledgerSets === null
+        ? '(ledger unreadable)'
+        : `C38/C39/C40 lived [${[...ledgerSets.live].sort().join(', ')}], history [${[...ledgerSets.history].sort().join(', ')}]`;
+
+    record(
+      'sales-numbers-agree-with-ledger',
+      problems.length === 0,
+      problems.length === 0
+        ? `rule: the test-count figures the two sales documents state LIVE must be the SAME SET as the figures WU6-CLAIMS-EVIDENCE.md rows C38/C39/C40 state LIVE, in both directions (a live figure on one side and not the other is drift), and a figure either side has retired as superseded history may not stand as a live claim on the other; neither sales document may assert the suite is not repeatable, and both must state that it is repeatable — ${salesLiveText}; ledger ${ledgerText}. Live figures are compared as matching claims; a superseded figure quoted as history on one side is permitted to be quoted as history on the other, or not to appear at all, so the corrected documents and the ledger's kept history are not drift`
+        : problems.join('; ')
+    );
+    if (problems.length > 0) for (const problem of problems.slice(0, 8)) console.log(`  ${problem}`);
+  }
 
   if (CLAIMS_MAP === null) {
     problems.push('WU6-CLAIMS-EVIDENCE.md is missing');
@@ -965,6 +1446,7 @@ const EXPECTED_NAMES = [
   'migrations-proven-by-script',
   'node-version-stated-22',
   'ui-evidence-described-as-http-html',
+  'sales-numbers-agree-with-ledger',
 ];
 const missingNames = EXPECTED_NAMES.filter(
   (name) => !results.some((result) => result.name === name)
@@ -985,7 +1467,7 @@ if (missingNames.length > 0) {
 // It is OFF BY DEFAULT and never runs on a normal invocation: nothing above this
 // point opens a database connection. Set CLAIMS_ROW_PROBE=1 together with
 // DATABASE_URL to run it. It is READ-ONLY (SELECT only), it prints no connection
-// string, and it does not affect the eight checks or the exit code above, which
+// string, and it does not affect the nine checks or the exit code above, which
 // have already been decided by the time it runs.
 // ---------------------------------------------------------------------------
 if (process.env.CLAIMS_ROW_PROBE === '1') {

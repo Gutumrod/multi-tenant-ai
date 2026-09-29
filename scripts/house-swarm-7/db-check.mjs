@@ -15,6 +15,33 @@
  * It uses the `pg` package that `server/node_modules` already provides, so it
  * adds no dependency.
  *
+ * EVERY CHECK IS NAMED AFTER THE STEP THAT RAN IT. That is the rule this file
+ * now follows, and it is the whole point of the four names below:
+ *
+ *   connection        — opening the connection. This is the ONLY name that may
+ *                       ever report a failure here, and it does so only when
+ *                       the connection could not be established at all
+ *                       (unreachable host, refused port, rejected credentials).
+ *   migration-tables  — listing the tables the migrations create.
+ *   seed-plans        — reading the two seed plan rows. The query behind it
+ *                       reads `plans`, so it is NOT run before that table
+ *                       exists: when the schema is missing this check is
+ *                       reported as FAIL "not run: ..." rather than being
+ *                       attempted, and it is never reported under the name
+ *                       "connection". (An earlier revision ran it anyway and
+ *                       sent the resulting "relation \"plans\" does not exist"
+ *                       error to its single catch block, which recorded it as
+ *                       `CHECK connection FAIL` directly underneath a
+ *                       `CHECK connection PASS` line on a database that was
+ *                       perfectly reachable. The reader was told the database
+ *                       had a connection problem when the connection had
+ *                       succeeded and the schema did not exist yet.)
+ *
+ * THIS FILE REPORTS WHAT IT OBSERVES; IT DOES NOT CLASSIFY. There is no
+ * "PENDING" concept here. A reachable database whose schema is not created yet
+ * produces failing checks and a non-zero exit, and `scripts/house-swarm-7/setup.sh`
+ * decides what that combination means.
+ *
  * Prints one machine-readable line per check: "CHECK <name> PASS|FAIL <detail>",
  * exactly like the other harnesses in server/scripts/proofs/. Exits non-zero if
  * any check fails.
@@ -51,6 +78,11 @@ function redact(text) {
   return String(text).replace(/:\/\/([^:@/]+):[^@/]*@/g, '://$1:***@');
 }
 
+/** A failure message safe to print, from anything a catch block received. */
+function reason(error) {
+  return redact(error instanceof Error ? error.message : String(error));
+}
+
 if (!process.env.DATABASE_URL) {
   record('database-url-present', false, 'DATABASE_URL is not set in the process environment');
 } else {
@@ -59,52 +91,97 @@ if (!process.env.DATABASE_URL) {
   const pg = require('pg');
   const client = new pg.Client({ connectionString: process.env.DATABASE_URL });
 
+  // -------------------------------------------------------------------------
+  // 1. connection. The only step whose failure may be called a connection
+  //    failure, and the only one that can produce `CHECK connection FAIL`.
+  //    Nothing after it reports under this name.
+  // -------------------------------------------------------------------------
+  let connected = false;
   try {
     await client.connect();
+    connected = true;
     record('connection', true, 'connected to the database in DATABASE_URL');
+  } catch (error) {
+    record('connection', false, reason(error));
+  }
 
-    const { rows } = await client.query(
-      `SELECT table_name FROM information_schema.tables
-        WHERE table_schema = 'public' ORDER BY table_name`
-    );
-    const present = rows.map((row) => row.table_name);
-    const missing = TABLES_CREATED_BY_THE_MIGRATIONS.filter((name) => !present.includes(name));
+  // -------------------------------------------------------------------------
+  // 2. the migration tables. Skipped entirely when the connection never
+  //    opened: nothing could be observed, so nothing is reported, and the
+  //    `connection` line above is the only failure in the output.
+  // -------------------------------------------------------------------------
+  let tablesWereListed = false;
+  let schemaIsComplete = false;
 
-    if (missing.length === 0) {
+  if (connected) {
+    try {
+      const { rows } = await client.query(
+        `SELECT table_name FROM information_schema.tables
+          WHERE table_schema = 'public' ORDER BY table_name`
+      );
+      const present = rows.map((row) => row.table_name);
+      const missing = TABLES_CREATED_BY_THE_MIGRATIONS.filter((name) => !present.includes(name));
+
+      tablesWereListed = true;
+      schemaIsComplete = missing.length === 0;
+
       record(
         'migration-tables',
-        true,
-        `all ${TABLES_CREATED_BY_THE_MIGRATIONS.length} expected tables present`
+        schemaIsComplete,
+        schemaIsComplete
+          ? `all ${TABLES_CREATED_BY_THE_MIGRATIONS.length} expected tables present`
+          : `missing: ${missing.join(', ')}; start the server once so the migrations run`
+      );
+    } catch (error) {
+      // Not a connection failure: the connection is already established, so
+      // this is reported under the name of the step that failed.
+      record('migration-tables', false, `could not list the tables in the database: ${reason(error)}`);
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // 3. the seed plans. Its query reads `plans`, so it runs only once that table
+  //    is known to exist. When the schema is not there yet the check is
+  //    reported as not run, in its own name, with the reason in the detail —
+  //    never as a connection failure, and never as a silent pass.
+  // -------------------------------------------------------------------------
+  if (connected) {
+    if (!tablesWereListed) {
+      record(
+        'seed-plans',
+        false,
+        'not run: the migration-table check above could not list the tables, so the seed-plan query was not attempted'
+      );
+    } else if (!schemaIsComplete) {
+      record(
+        'seed-plans',
+        false,
+        'not run: the schema is not created yet, so there is no plans table to read; start the server once so the migrations run'
       );
     } else {
-      record(
-        'migration-tables',
-        false,
-        `missing: ${missing.join(', ')}; start the server once so the migrations run`
-      );
+      try {
+        const { rows: planRows } = await client.query(
+          'SELECT id FROM plans WHERE id IN ($1, $2) ORDER BY id',
+          ['free', 'pro']
+        );
+        const planIds = planRows.map((row) => row.id);
+        record(
+          'seed-plans',
+          planIds.length === 2,
+          planIds.length === 2
+            ? 'both seed plans present: free, pro'
+            : `expected the seed plans free and pro, found: ${planIds.length === 0 ? 'none' : planIds.join(', ')}`
+        );
+      } catch (error) {
+        record('seed-plans', false, `could not read the seed plans: ${reason(error)}`);
+      }
     }
+  }
 
-    const { rows: planRows } = await client.query(
-      'SELECT id FROM plans WHERE id IN ($1, $2) ORDER BY id',
-      ['free', 'pro']
-    );
-    const planIds = planRows.map((row) => row.id);
-    record(
-      'seed-plans',
-      planIds.length === 2,
-      planIds.length === 2
-        ? 'both seed plans present: free, pro'
-        : `expected the seed plans free and pro, found: ${planIds.length === 0 ? 'none' : planIds.join(', ')}`
-    );
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    record('connection', false, redact(message));
-  } finally {
-    try {
-      await client.end();
-    } catch {
-      // Closing a connection that never opened is not itself a failure.
-    }
+  try {
+    await client.end();
+  } catch {
+    // Closing a connection that never opened is not itself a failure.
   }
 }
 

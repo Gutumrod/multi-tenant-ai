@@ -1,5 +1,12 @@
 # FU-REVIEW-FIX-3 — the review's hygiene findings: hermetic e2e, the `index.ts` export note, and the internal-path sweep
 
+> INTERNAL — NOT DELIVERED.
+> This is the vendor's own working record (repair log / lane report). It is kept in the
+> repository because the delivered documents cite it as evidence, but it is **not part of
+> what a buyer receives**. The delivered set is declared in `DELIVERY-MANIFEST.md` at the
+> repository root, and the gate `server/scripts/proofs/wu5/delivery-manifest-check.mjs`
+> enforces that classification.
+
 **Work units:** `H7-REVIEW-FIX-HYGIENE` and its continuation `H7-REVIEW-FIX-REPAIR`
 · **Correlation id:** `house-swarm-7-review-fix-report-20260929`
 **Report revision:** `d37173f54ac42dce0abe189be6af7913b80b8761` · **Date:** 2026-09-29
