@@ -7,7 +7,7 @@
 
 ## 1. สิ่งที่แก้
 
-Repo: `D:\AI-Workspace\projects\saas-product-hub\products\multi-tenant-ai`
+Repo: `saas-product-hub/products/multi-tenant-ai`
 
 | ไฟล์ | การแก้ |
 |------|--------|

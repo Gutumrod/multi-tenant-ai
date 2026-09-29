@@ -1,0 +1,21 @@
+{
+  "name": "@module-hub/rate-limit",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Reusable Rate Limit module — deterministic fixed-window rate limiting with a Host-injected key, store and config. The module never reads env and never infers identity; it is dependency-free at runtime.",
+  "main": "./index.ts",
+  "exports": {
+    ".": "./index.ts"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@vitest/coverage-v8": "^2.1.9",
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.4"
+  }
+}

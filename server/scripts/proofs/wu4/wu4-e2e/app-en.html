@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en" data-locale="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light" />
+    <title data-i18n="page.app.title">Use the AI — sample UI</title>
+    <link rel="stylesheet" href="assets/app.css" />
+  </head>
+  <body data-page="app">
+    <header class="site-header" data-include="header">
+    <div class="site-header__inner">
+      <a class="brand" href="/?lang=en" data-i18n="site.title">Multi-Tenant AI Starter Kit — sample UI</a>
+      <nav class="site-nav" data-role="site-nav">
+        <a href="/?lang=en" data-i18n="nav.home">Home</a>
+        <a href="/signup?lang=en" data-i18n="nav.signup">Sign up</a>
+        <a href="/login?lang=en" data-i18n="nav.login">Log in</a>
+        <a href="/plans?lang=en" data-i18n="nav.plans">Choose a plan</a>
+        <a href="/app?lang=en" aria-current="page" data-i18n="nav.app">Use the AI</a>
+      </nav>
+      <div class="langswitch">
+        <span class="langswitch__label" data-i18n="lang.label">Language</span>
+        <a href="?lang=th" data-locale-option="th" data-i18n="lang.th">Thai</a>
+        <a href="?lang=en" data-locale-option="en" aria-current="true" data-i18n="lang.en">English</a>
+      </div>
+    </div>
+    </header>
+
+    <main class="page">
+      <h1 data-i18n="app.title">Use the AI and read the quota</h1>
+      <p class="lede" data-i18n="app.intro">One request to POST /ai/demo consumes exactly one unit of ai_requests_per_month. The counter, the plan and the limit shown below come from the server responses, not from this page.</p>
+
+      <div class="note" data-panel="no-identity" hidden>
+        <span data-i18n="app.identity.none">No demo tenant id is stored in this browser.</span>
+        <a href="login.html" data-continue="login.html" data-i18n="app.identity.go_login">Go to log in</a>
+      </div>
+
+      <h2 data-i18n="app.identity.title">Demo identity in use</h2>
+      <dl class="facts">
+        <dt data-i18n="app.identity.title">Demo identity in use</dt>
+        <dd data-account-value>—</dd>
+      </dl>
+
+      <h2 data-i18n="app.authmode.title">Authentication mode (read from the server)</h2>
+      <div class="status" data-status="authmode" data-tone="plain"></div>
+      <p class="note note--strong" data-status="authmode-detail"></p>
+      <pre class="code-block" data-role="authmode-body">—</pre>
+
+      <h2 data-i18n="app.quota.title">Quota for ai_requests_per_month</h2>
+      <div class="status" data-status="quota" data-tone="plain"></div>
+      <dl class="facts">
+        <dt data-i18n="app.quota.feature">Feature key</dt>
+        <dd data-role="quota-feature">ai_requests_per_month</dd>
+        <dt data-i18n="app.quota.plan">Plan (subscription.planId)</dt>
+        <dd data-role="quota-plan">—</dd>
+        <dt data-i18n="app.quota.usage">Usage counter (server usage)</dt>
+        <dd data-role="quota-usage">—</dd>
+        <dt data-i18n="app.quota.limit">Limit (server limit)</dt>
+        <dd data-role="quota-limit">—</dd>
+      </dl>
+      <div class="actions">
+        <button type="button" class="btn btn--secondary" data-action="refresh-status" data-i18n="app.quota.refresh">Re-read GET /subscription/status</button>
+      </div>
+
+      <h2 data-i18n="app.ai.title">Ask the AI</h2>
+      <form data-form="ai">
+        <div class="field">
+          <label for="prompt" data-i18n="app.ai.prompt.label">Prompt</label>
+          <input
+            id="prompt"
+            name="prompt"
+            type="text"
+            autocomplete="off"
+            spellcheck="false"
+            data-i18n-placeholder="app.ai.prompt.placeholder"
+            placeholder="Type anything; the server sends it to the configured provider"
+          />
+        </div>
+        <div class="actions">
+          <button type="submit" class="btn" data-action="use-ai" data-i18n="app.ai.submit">Use the AI (consumes 1 unit)</button>
+        </div>
+      </form>
+      <div class="status" data-status="ai" data-tone="plain" hidden></div>
+
+      <div data-panel="ai-result" hidden>
+        <h3 data-i18n="app.ai.result_title">What the server returned</h3>
+        <dl class="facts">
+          <dt data-i18n="app.response.status">HTTP status</dt>
+          <dd data-role="ai-result-status">—</dd>
+          <dt data-i18n="app.response.code">code</dt>
+          <dd data-role="ai-result-code">—</dd>
+          <dt data-i18n="app.response.limit">limit</dt>
+          <dd data-role="ai-result-limit">—</dd>
+          <dt data-i18n="app.response.usage">usage</dt>
+          <dd data-role="ai-result-usage">—</dd>
+          <dt data-i18n="app.response.server_message">error (server wording)</dt>
+          <dd data-role="ai-result-error">—</dd>
+        </dl>
+
+        <h3 data-i18n="app.response.title">Server response, printed as received</h3>
+        <p class="note" data-i18n="app.response.hint">These values are the server's own response fields, shown verbatim. When the quota gate refuses, the server sends 402 QUOTA_NOT_ENTITLED or 429 QUOTA_EXCEEDED and this page shows its code, its limit and its usage unchanged.</p>
+        <pre class="code-block" data-role="ai-raw">—</pre>
+      </div>
+
+      <h2 data-i18n="landing.notimpl.title">Not implemented — do not expect these</h2>
+      <p data-i18n="landing.notimpl.intro">These capabilities are not part of this build, and this page does not pretend otherwise:</p>
+      <ul class="capability-list" data-role="not-implemented-list">
+        <li data-not-implemented="opentelemetry-exporter">
+          <strong data-i18n="landing.notimpl.otel">OpenTelemetry exporter: the tracing module only records spans in process memory (MemoryTracer). There is no OTLP endpoint and no collector export.</strong>
+        </li>
+        <li data-not-implemented="line-webhook-verifier">
+          <strong data-i18n="landing.notimpl.line">LINE webhook verifier: the verifier returns the error code WEBHOOK_UNKNOWN_PROVIDER and states that it is not implemented.</strong>
+        </li>
+        <li data-not-implemented="github-webhook-verifier">
+          <strong data-i18n="landing.notimpl.github">GitHub webhook verifier: same behaviour — WEBHOOK_UNKNOWN_PROVIDER, not implemented.</strong>
+        </li>
+        <li data-not-implemented="real-supabase-auth">
+          <strong data-i18n="landing.notimpl.supabase">Real Supabase authentication: the authentication path exists, but it is unverified here because this repository ships no Supabase project and no credentials.</strong>
+        </li>
+        <li data-not-implemented="production-deployment">
+          <strong data-i18n="landing.notimpl.deploy">Production deployment: there is no container, no reverse proxy, no TLS and no process supervisor in this repository. Run it on your own machine only.</strong>
+        </li>
+        <li data-not-implemented="demo-identity-is-not-authentication">
+          <strong data-i18n="landing.notimpl.demo">Demo identity is not authentication: it is a tenant id typed into a form, with no password and no session token.</strong>
+        </li>
+      </ul>
+    </main>
+
+    <footer class="site-footer" data-include="footer">
+    <div class="site-footer__inner">
+      <p data-i18n="footer.note">Sample UI shipped with the Multi-Tenant AI Starter Kit reference server. No external CDN, no web font, no stock photo.</p>
+      <p><span class="tag" data-role="demo-auth-flag">DEMO_AUTH on</span></p>
+    </div>
+    </footer>
+
+    <script type="module" src="assets/app.js"></script>
+  </body>
+</html>
