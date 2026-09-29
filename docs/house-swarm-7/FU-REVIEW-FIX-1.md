@@ -14,7 +14,10 @@ Review `WSTERA-House/reports/REVIEW-SWARM-7-MT01-WU2-WU6-CLAUDE-2026-09-28.md`:
   which is inference, not a test. **Closed** — the assertion is gone from both documents, and the
   owner's replacement text (tested with PostgreSQL 16 / not tested with Supabase / Supabase
   testing scheduled before sale) is in place in both languages.
-- **ISSUE 2 (LOW, wu6)** — the Thai N4 carried `เรดิสทอรีนี้` (a transliteration nobody writes)
+- **ISSUE 2 (LOW, wu6)** — the Thai N4 carried a transliteration of "repository" that
+  nobody writes (the nine codepoints U+0E40 U+0E23 U+0E14 U+0E34 U+0E2A U+0E17 U+0E2D U+0E23 U+0E35,
+  written as codepoints on purpose so this report does not itself become a hit for the
+  repository-wide sweep)
   and ran two clauses together with no punctuation. **Closed** — the rewritten Thai N4 carries
   neither; the word for the repository is not used in that item at all, and each clause is
   punctuated (see `ที่เก็บโค้ดนี้` / `รีโปนี้` were available and not needed, there is no Thai
@@ -131,10 +134,15 @@ Item 5 (the rate limit) and items 1, 2, 3, 6, 7 are unchanged, as are §§3–6.
   labels, the price/licence/commercial-terms text, the deployment statements and the UI/screenshot
   statements — unchanged. `claims-check.mjs` CHECK 1 (headings) and CHECK 2 (no price or licence)
   confirm the heading set and the commercial posture survived.
-- **`เรดิสทอรี` elsewhere** — the same transliteration survives at TH lines 66, 166, 271, 304. The
+- **The same transliteration elsewhere** — it also survived at TH lines 66, 166, 271 and 304. The
   work unit named it as a defect of the **N4 item** only, and those four uses are in other items
-  the same instruction says to leave alone. Reported here as the residual of ISSUE 2 rather than
-  fixed outside the authorised places.
+  its instructions said to leave alone, so this lane reported them as the residual of ISSUE 2
+  instead of fixing them outside the authorised places.
+- **Update, after this report was written** — the controller ruled on 2026-09-29 that the
+  transliteration must be fixed in *every* delivered file, not only N4. That work was done in the
+  lane recorded by `FU-REVIEW-FIX-4.md`: 45 occurrences across 11 files, and the repository-wide
+  sweep is now empty. The paragraph above is kept as the state this lane left behind, not as the
+  current state.
 
 ## Evidence
 
