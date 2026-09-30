@@ -251,8 +251,8 @@ Running the commands in this section by hand gives the same result. A reachable
 database whose schema does not exist yet is reported `PENDING`, which is not an
 error — it means the server has not run its migrations yet, and starting the
 server once (section 3.4) creates them. What the operator sees in that case is
-`CHECK connection PASS ...`, a `CHECK migration-tables FAIL missing: ...` line and
-a `CHECK seed-plans FAIL not run: ...` line, then `PENDING`. Every check is named
+`CHECK connection PASS ...`, a `CHECK migration-tables PENDING missing: ...` line and
+a `CHECK seed-plans PENDING not run: ...` line, then `PENDING`. Every check is named
 after the step that ran it, and **no line claims a connection failure**: the
 connection succeeded, and only a connection that could not be opened at all is
 reported as `CHECK connection FAIL`.
@@ -276,8 +276,8 @@ reported as `CHECK connection FAIL`.
 และไม่ใช่ตัวแทนของคู่มือนี้ การรันคำสั่งในข้อนี้เองให้ผลเหมือนกัน ฐานข้อมูลที่ต่อได้แต่ยังไม่มี
 สคีมาจะถูกรายงานว่า `PENDING` ซึ่งไม่ใช่ข้อผิดพลาด — หมายความว่าเซิร์ฟเวอร์ยังไม่ได้รัน
 migration และการสตาร์ทเซิร์ฟเวอร์หนึ่งครั้ง (ข้อ 3.4) จะสร้างสคีมาให้ สิ่งที่ผู้ปฏิบัติจะเห็นในกรณีนั้นคือ
-`CHECK connection PASS ...` ตามด้วยบรรทัด `CHECK migration-tables FAIL missing: ...` และ
-`CHECK seed-plans FAIL not run: ...` แล้วจึงเป็น `PENDING` ทุกข้อตรวจตั้งชื่อตามขั้นที่รันจริง และ
+`CHECK connection PASS ...` ตามด้วยบรรทัด `CHECK migration-tables PENDING missing: ...` และ
+`CHECK seed-plans PENDING not run: ...` แล้วจึงเป็น `PENDING` ทุกข้อตรวจตั้งชื่อตามขั้นที่รันจริง และ
 **ไม่มีบรรทัดใดบอกว่าการต่อล้มเหลว** เพราะการต่อสำเร็จ และมีแต่การต่อที่เปิดไม่ขึ้นเลยเท่านั้นที่ถูกรายงาน
 เป็น `CHECK connection FAIL`
 
@@ -541,8 +541,8 @@ usage_counters
 **On a reachable database whose schema is not created yet, `db-check.mjs` says so
 without ever claiming a connection failure.** It prints
 `CHECK connection PASS connected to the database in DATABASE_URL`, then
-`CHECK migration-tables FAIL missing: ...`, then
-`CHECK seed-plans FAIL not run: the schema is not created yet, so there is no
+`CHECK migration-tables PENDING missing: ...`, then
+`CHECK seed-plans PENDING not run: the schema is not created yet, so there is no
 plans table to read; start the server once so the migrations run`. There is **no**
 `CHECK connection FAIL` line in that output — the connection succeeded, and each
 failing check is named after the step that actually failed. Every check is named

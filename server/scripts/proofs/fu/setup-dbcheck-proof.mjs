@@ -188,8 +188,8 @@ const STUB_MODES = {
     body:
       'CHECK database-url-present PASS DATABASE_URL is set in the process environment, value not printed\n' +
       'CHECK connection PASS connected to the database in DATABASE_URL\n' +
-      'CHECK migration-tables FAIL missing: billing_event_ledger, plans, schema_migrations, subscriptions, tenants, usage_counters; start the server once so the migrations run\n' +
-      'CHECK seed-plans FAIL not run: the schema is not created yet, so there is no plans table to read; start the server once so the migrations run\n' +
+      'CHECK migration-tables PENDING missing: billing_event_ledger, plans, schema_migrations, subscriptions, tenants, usage_counters; start the server once so the migrations run\n' +
+      'CHECK seed-plans PENDING not run: the schema is not created yet, so there is no plans table to read; start the server once so the migrations run\n' +
       'db-check: PENDING — the database is reachable but 2 schema check(s) not done yet (migration-tables, seed-plans); the server creates the schema at boot\n',
     what: 'the real post-repair shape of a reachable-but-unmigrated run: connection PASS, migration FAIL, seed-plans FAIL as not-run — no check named "connection" fails, exit 2 (db-check\'s own PENDING code)',
   },

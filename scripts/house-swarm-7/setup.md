@@ -55,16 +55,16 @@ Five things, in this order, and then it stops:
 ### The two outcomes of the database step / ผลลัพธ์สองแบบของขั้นตรวจฐานข้อมูล
 
 - **Reachable database, schema not created yet → PENDING.** The output is
-  `CHECK connection PASS ...`, then `CHECK migration-tables FAIL missing: ...`,
-  then `CHECK seed-plans FAIL not run: the schema is not created yet, so there is
+  `CHECK connection PASS ...`, then `CHECK migration-tables PENDING missing: ...`,
+  then `CHECK seed-plans PENDING not run: the schema is not created yet, so there is
   no plans table to read; start the server once so the migrations run`. There is
   **no** `CHECK connection FAIL` line: the connection succeeded, and the two
   failing checks name the schema rather than the connection. The script then says
   `PENDING` and tells you to start the server once, because the server applies
   its migrations at boot (`server/src/index.ts` runs them before `app.listen`).
   This is not an error. / **ต่อฐานข้อมูลได้ แต่ยังไม่มีสคีมา → PENDING** ผลที่เห็นคือ
-  `CHECK connection PASS ...` แล้วตามด้วย `CHECK migration-tables FAIL missing: ...`
-  และ `CHECK seed-plans FAIL not run: the schema is not created yet, ...` — **ไม่มี**
+  `CHECK connection PASS ...` แล้วตามด้วย `CHECK migration-tables PENDING missing: ...`
+  และ `CHECK seed-plans PENDING not run: the schema is not created yet, ...` — **ไม่มี**
   บรรทัด `CHECK connection FAIL` เพราะการต่อสำเร็จ และข้อที่ล้มเหลวสองข้อชื่อสคีมา ไม่ใช่การต่อ
   จากนั้นสคริปต์จะบอก `PENDING` และให้คุณสตาร์ทเซิร์ฟเวอร์หนึ่งครั้ง เพราะเซิร์ฟเวอร์รัน
   migration ตอนบูต (`server/src/index.ts` รันก่อน `app.listen`) ไม่ใช่ข้อผิดพลาด
@@ -208,12 +208,12 @@ lockfile ใหม่สะอาด typecheck รันใหม่ และ�
 Every message is prefixed so it can be grepped in a build log: `[setup]` for
 normal progress, `[setup] WARN:` for something you should read, and
 `[setup] FAIL:` for a refusal or failure. The database probe prints one
-`CHECK <name> PASS|FAIL <detail>` line per check, like the project's other
+`CHECK <name> PASS|FAIL|PENDING <detail>` line per check, like the project's other
 harnesses.
 
 ทุกข้อความมีคำนำหน้าให้ grep ในบันทึกบิลด์ได้: `[setup]` สำหรับความคืบหน้าปกติ,
 `[setup] WARN:` สำหรับเรื่องที่ควรอ่าน และ `[setup] FAIL:` สำหรับการปฏิเสธหรือ
-ความล้มเหลว ตัวตรวจฐานข้อมูลพิมพ์บรรทัด `CHECK <name> PASS|FAIL <detail>` หนึ่งบรรทัด
+ความล้มเหลว ตัวตรวจฐานข้อมูลพิมพ์บรรทัด `CHECK <name> PASS|FAIL|PENDING <detail>` หนึ่งบรรทัด
 ต่อหนึ่งข้อเหมือน harness ตัวอื่นของโปรเจกต์
 
 No message ever contains a credential: the connection string is reported as set

@@ -61,8 +61,18 @@
  * added later — makes the exit code 1, so a new failure can never inherit the
  * benign label.
  *
- * Prints one machine-readable line per check: "CHECK <name> PASS|FAIL <detail>",
- * exactly like the other harnesses in server/scripts/proofs/.
+ * Prints one machine-readable line per check: "CHECK <name> PASS|FAIL|PENDING <detail>",
+ * in the same shape the other harnesses in server/scripts/proofs/ use.
+ *
+ * WHY THERE IS A THIRD WORD. "The migrations have not run yet" is not a failure —
+ * the server creates the schema at boot — and printing it as `FAIL` told the
+ * reader two things that are not true: that something is wrong, and (when the
+ * same state was reported per check and then summarised) the same verdict twice.
+ * A check that cannot yet be satisfied because the schema does not exist is
+ * reported as **PENDING**, and `FAIL` is reserved for a check that ran and
+ * failed. Only PENDING may carry the PENDING exit code; a PENDING word on a
+ * check that is NOT one of the two schema-shaped ones is impossible, because the
+ * verdict is chosen per check by the code below.
  *
  * Usage:  node scripts/house-swarm-7/db-check.mjs
  */
@@ -94,8 +104,16 @@ const results = [];
  */
 const SCHEMA_PENDING_CHECKS = new Set(['migration-tables', 'seed-plans']);
 
-function record(name, passed, detail) {
-  results.push({ name, passed, detail });
+/**
+ * Records one check. `verdict` is `PASS`, `FAIL` or `PENDING`:
+ *
+ *   PASS    the check ran and was satisfied;
+ *   PENDING the check could not be satisfied yet because the migration schema
+ *           does not exist — not a failure, and never printed as one;
+ *   FAIL    the check ran and failed.
+ */
+function record(name, verdict, detail) {
+  results.push({ name, verdict, detail });
 }
 
 /** Never let the connection string reach the output. */
@@ -109,9 +127,9 @@ function reason(error) {
 }
 
 if (!process.env.DATABASE_URL) {
-  record('database-url-present', false, 'DATABASE_URL is not set in the process environment');
+  record('database-url-present', 'FAIL', 'DATABASE_URL is not set in the process environment');
 } else {
-  record('database-url-present', true, 'DATABASE_URL is set in the process environment, value not printed');
+  record('database-url-present', 'PASS', 'DATABASE_URL is set in the process environment, value not printed');
 
   const pg = require('pg');
   const client = new pg.Client({ connectionString: process.env.DATABASE_URL });
@@ -125,9 +143,9 @@ if (!process.env.DATABASE_URL) {
   try {
     await client.connect();
     connected = true;
-    record('connection', true, 'connected to the database in DATABASE_URL');
+    record('connection', 'PASS', 'connected to the database in DATABASE_URL');
   } catch (error) {
-    record('connection', false, reason(error));
+    record('connection', 'FAIL', reason(error));
   }
 
   // -------------------------------------------------------------------------
@@ -150,9 +168,12 @@ if (!process.env.DATABASE_URL) {
       tablesWereListed = true;
       schemaIsComplete = missing.length === 0;
 
+      // PENDING, not FAIL: the schema is simply not created yet, and the server
+      // creates it at boot. FAIL here would be a lie about the cause, and the
+      // listing itself succeeded — what is missing is the migration run.
       record(
         'migration-tables',
-        schemaIsComplete,
+        schemaIsComplete ? 'PASS' : 'PENDING',
         schemaIsComplete
           ? `all ${TABLES_CREATED_BY_THE_MIGRATIONS.length} expected tables present`
           : `missing: ${missing.join(', ')}; start the server once so the migrations run`
@@ -160,7 +181,7 @@ if (!process.env.DATABASE_URL) {
     } catch (error) {
       // Not a connection failure: the connection is already established, so
       // this is reported under the name of the step that failed.
-      record('migration-tables', false, `could not list the tables in the database: ${reason(error)}`);
+      record('migration-tables', 'FAIL', `could not list the tables in the database: ${reason(error)}`);
     }
   }
 
@@ -174,13 +195,13 @@ if (!process.env.DATABASE_URL) {
     if (!tablesWereListed) {
       record(
         'seed-plans',
-        false,
+        'PENDING',
         'not run: the migration-table check above could not list the tables, so the seed-plan query was not attempted'
       );
     } else if (!schemaIsComplete) {
       record(
         'seed-plans',
-        false,
+        'PENDING',
         'not run: the schema is not created yet, so there is no plans table to read; start the server once so the migrations run'
       );
     } else {
@@ -192,13 +213,13 @@ if (!process.env.DATABASE_URL) {
         const planIds = planRows.map((row) => row.id);
         record(
           'seed-plans',
-          planIds.length === 2,
+          planIds.length === 2 ? 'PASS' : 'FAIL',
           planIds.length === 2
             ? 'both seed plans present: free, pro'
             : `expected the seed plans free and pro, found: ${planIds.length === 0 ? 'none' : planIds.join(', ')}`
         );
       } catch (error) {
-        record('seed-plans', false, `could not read the seed plans: ${reason(error)}`);
+        record('seed-plans', 'FAIL', `could not read the seed plans: ${reason(error)}`);
       }
     }
   }
@@ -211,32 +232,36 @@ if (!process.env.DATABASE_URL) {
 }
 
 for (const result of results) {
-  console.log(`CHECK ${result.name} ${result.passed ? 'PASS' : 'FAIL'} ${result.detail}`);
+  console.log(`CHECK ${result.name} ${result.verdict} ${result.detail}`);
 }
 
-const failed = results.filter((result) => !result.passed);
+const failed = results.filter((result) => result.verdict === 'FAIL');
+const pending = results.filter((result) => result.verdict === 'PENDING');
 
-if (failed.length === 0) {
+if (failed.length === 0 && pending.length === 0) {
   console.log(`db-check: all ${results.length} checks PASSED`);
   process.exit(0);
 }
 
-// Every failure is on a schema-shaped check, and the connection itself was
-// established: this is the documented PENDING state, not a broken database. The
-// server creates the schema at boot, so setup.sh may continue — but it is
-// reported as PENDING and it exits 2, never 0, so "not done yet" can never be
-// mistaken for "passed".
-const schemaOnly = failed.every((result) => SCHEMA_PENDING_CHECKS.has(result.name));
-const connected = results.some((result) => result.name === 'connection' && result.passed);
+// THE PENDING STATE, and the only way it is reachable: nothing failed, at least
+// one check is PENDING, the connection was established, and every PENDING check
+// is one of the two schema-shaped ones. The server creates the schema at boot,
+// so setup.sh may continue — but it exits 2, never 0, so "not done yet" can
+// never be mistaken for "passed", and no line says FAIL about work not yet done.
+const pendingOnlySchema =
+  pending.length > 0 && pending.every((result) => SCHEMA_PENDING_CHECKS.has(result.name));
+const connected = results.some((result) => result.name === 'connection' && result.verdict === 'PASS');
 
-if (schemaOnly && connected) {
+if (failed.length === 0 && pendingOnlySchema && connected) {
   console.log(
-    `db-check: PENDING — the database is reachable but ${failed.length} schema check(s) not done yet (${failed
+    `db-check: PENDING — the database is reachable but ${pending.length} schema check(s) not done yet (${pending
       .map((result) => result.name)
-      .join(', ')}); the server creates the schema at boot`
+      .join(', ')}); the server creates the schema at boot. Nothing failed.`
   );
   process.exit(2);
 }
 
+// Anything else is a real failure. A PENDING check alongside a failure is
+// reported as the failure it is; the PENDING word never softens a FAILED run.
 console.error(`db-check: ${failed.length} of ${results.length} checks FAILED`);
 process.exit(1);

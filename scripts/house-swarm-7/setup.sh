@@ -218,7 +218,7 @@ npm run typecheck || die "typecheck failed; the source tree does not compile, so
 #    WHY THERE IS NO DUPLICATE FAILURE LINE HERE. db-check prints one line per
 #    check and its own closing summary, and this script prints db-check's output
 #    verbatim. On a reachable-but-unmigrated database that output contains
-#    `CHECK migration-tables FAIL …` and `CHECK seed-plans FAIL not run: …` — the
+#    `CHECK migration-tables PENDING …` and `CHECK seed-plans PENDING not run: …` — the
 #    honest statement of what was not done — and this script adds only the
 #    PENDING sentence, so the reader sees the state named once and the individual
 #    checks once, never the same verdict twice in contradictory senses.
