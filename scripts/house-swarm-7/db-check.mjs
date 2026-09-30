@@ -8,7 +8,7 @@
  * and impossible to check with the project's own typechecker.
  *
  * It reads DATABASE_URL from the PROCESS ENVIRONMENT only. It never reads a
- * file (this project has no dotenv — see docs/house-swarm-7/WU5-DEPLOY.md §3.3),
+ * file (this project has no dotenv — see docs/product/WU5-DEPLOY.md §3.3),
  * it never writes anything, and it never prints the connection string or the
  * password inside it.
  *
@@ -37,14 +37,32 @@
  *                       had a connection problem when the connection had
  *                       succeeded and the schema did not exist yet.)
  *
- * THIS FILE REPORTS WHAT IT OBSERVES; IT DOES NOT CLASSIFY. There is no
- * "PENDING" concept here. A reachable database whose schema is not created yet
- * produces failing checks and a non-zero exit, and `scripts/house-swarm-7/setup.sh`
- * decides what that combination means.
+ * THIS FILE REPORTS WHAT IT OBSERVES, AND IT DISTINGUISHES ONE STATE IN ITS
+ * EXIT CODE. A reachable database whose schema is not created yet is a
+ * documented INTERMEDIATE state — the server creates the schema at boot — and it
+ * is not the same thing as a broken database. The exit code says which:
+ *
+ *   0  every check passed;
+ *   2  reachable, but the migration schema is not created yet (the seed-plan
+ *      check is therefore NOT RUN). This is the PENDING state, and it is the
+ *      ONLY non-zero exit that `scripts/house-swarm-7/setup.sh` treats as
+ *      anything other than a failure;
+ *   1  anything else: the connection could not be opened, or a check failed for
+ *      a reason that is not the missing schema.
+ *
+ * The exit code, not the wording, is the verdict. That is why a distinct code
+ * exists: an earlier revision made setup.sh recognise PENDING by matching
+ * db-check's output text, which meant any failure whose sentence was not one of
+ * the recognised ones fell through to a pass branch. A state with its own exit
+ * code cannot be confused with a message.
+ *
+ * The PENDING verdict is only reachable when the ONLY failures are the two
+ * schema-shaped ones. A check that failed for any other reason — including one
+ * added later — makes the exit code 1, so a new failure can never inherit the
+ * benign label.
  *
  * Prints one machine-readable line per check: "CHECK <name> PASS|FAIL <detail>",
- * exactly like the other harnesses in server/scripts/proofs/. Exits non-zero if
- * any check fails.
+ * exactly like the other harnesses in server/scripts/proofs/.
  *
  * Usage:  node scripts/house-swarm-7/db-check.mjs
  */
@@ -68,6 +86,13 @@ const TABLES_CREATED_BY_THE_MIGRATIONS = [
 ];
 
 const results = [];
+
+/**
+ * The two checks whose failure means "the migrations have not run yet" rather
+ * than "something is wrong". They are the only two that may produce the PENDING
+ * exit code; a failure in any other check is exit 1.
+ */
+const SCHEMA_PENDING_CHECKS = new Set(['migration-tables', 'seed-plans']);
 
 function record(name, passed, detail) {
   results.push({ name, passed, detail });
@@ -190,9 +215,28 @@ for (const result of results) {
 }
 
 const failed = results.filter((result) => !result.passed);
-if (failed.length > 0) {
-  console.error(`db-check: ${failed.length} of ${results.length} checks FAILED`);
-  process.exit(1);
+
+if (failed.length === 0) {
+  console.log(`db-check: all ${results.length} checks PASSED`);
+  process.exit(0);
 }
 
-console.log(`db-check: all ${results.length} checks PASSED`);
+// Every failure is on a schema-shaped check, and the connection itself was
+// established: this is the documented PENDING state, not a broken database. The
+// server creates the schema at boot, so setup.sh may continue — but it is
+// reported as PENDING and it exits 2, never 0, so "not done yet" can never be
+// mistaken for "passed".
+const schemaOnly = failed.every((result) => SCHEMA_PENDING_CHECKS.has(result.name));
+const connected = results.some((result) => result.name === 'connection' && result.passed);
+
+if (schemaOnly && connected) {
+  console.log(
+    `db-check: PENDING — the database is reachable but ${failed.length} schema check(s) not done yet (${failed
+      .map((result) => result.name)
+      .join(', ')}); the server creates the schema at boot`
+  );
+  process.exit(2);
+}
+
+console.error(`db-check: ${failed.length} of ${results.length} checks FAILED`);
+process.exit(1);

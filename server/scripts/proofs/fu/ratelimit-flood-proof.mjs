@@ -53,6 +53,7 @@
 import { dirname, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import crypto from 'node:crypto';
+import { spawnSync } from 'node:child_process';
 import { tsImport } from 'tsx/esm/api';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -66,6 +67,30 @@ const SERVER_DIR = join(HERE, '../../..');
 const LIMIT = 3;
 const BACKSTOP = 5_000;
 const WINDOW_MS = 60_000;
+
+/**
+ * The BACKSTOP PHASE's own values (see check 8 below). The backstop has to be
+ * SMALL here so the flood can exceed it inside one window in a fraction of a
+ * second; with the phase-1 value of 5000 the flood needed to reach it would take
+ * minutes and would straddle window boundaries, which is why the previous
+ * revision of this harness set `BACKSTOP=5000` and flooded six times — and so
+ * passed on code that refused correctly-signed deliveries once the backstop was
+ * exhausted. The documented defaults themselves (60 / 1000) are driven by the
+ * vitest scenario, which can hold the clock still; here the property under test
+ * is the ORDER (nothing is refused before the verdict), and a small backstop
+ * tests it honestly and fast.
+ *
+ * The per-source limit is set ABOVE the backstop, so the BACKSTOP is the binding
+ * limit — the relationship the defaults have (60 < 1000). With it below, the
+ * per-source stage would refuse the flood first and the backstop would never be
+ * reached, so the phase would prove nothing about it.
+ */
+const BACKSTOP_PHASE_LIMIT = 20;
+const BACKSTOP_PHASE_BACKSTOP = 12;
+const BACKSTOP_PHASE_WINDOW_MS = 60_000;
+
+/** The route-level bucket key the backstop uses; a refusal naming it is the backstop's. */
+const BACKSTOP_KEY = 'route:POST /payment/webhook';
 
 /** How much of a window must be left before the run starts, so nothing straddles a boundary. */
 const MIN_WINDOW_REMAINING_MS = 5_000;
@@ -364,6 +389,96 @@ async function main() {
       Math.floor(Date.now() / WINDOW_MS) === windowIndex,
       `window_index_before=${windowIndex} window_index_after=${Math.floor(Date.now() / WINDOW_MS)} elapsedMs=${elapsedMs} windowMs=${WINDOW_MS} same_window=${Math.floor(Date.now() / WINDOW_MS) === windowIndex}`
     );
+
+    // -----------------------------------------------------------------------
+    // 5. THE BACKSTOP PHASE — the defect the first harness could not see.
+    //
+    // This phase needs the app booted with its OWN rate-limit settings, and
+    // `rate-limit.ts` resolves those ONCE at module evaluation. Inside this
+    // process the module graph is already evaluated (with the phase-1 values), so
+    // no in-process re-import can change them. The phase therefore runs in a
+    // CHILD PROCESS with its own environment — a genuinely fresh graph, the
+    // production app, and the numbers below — and this process re-reports its
+    // CHECK lines.
+    //
+    // What it drives, in one source:
+    //   (a) a forged flood PAST the backstop,
+    //   (b) a correctly-signed delivery,
+    //   (c) another forged request.
+    //
+    // On the pre-P3C revision the backstop was charged with EVERY request BEFORE
+    // the signature was verified, so (b) was refused 429 once (a) had exhausted
+    // the route bucket. With the 5000-request backstop this file used to set, the
+    // flood never reached it and the defect stayed invisible.
+    // -----------------------------------------------------------------------
+    const child = spawnSync(process.execPath, [fileURLToPath(import.meta.url)], {
+      env: {
+        ...process.env,
+        MT01_P3C_PHASE: 'backstop',
+        WEBHOOK_RATE_LIMIT_MAX: String(BACKSTOP_PHASE_LIMIT),
+        WEBHOOK_RATE_LIMIT_WINDOW_MS: String(BACKSTOP_PHASE_WINDOW_MS),
+        WEBHOOK_RATE_LIMIT_BACKSTOP_MAX: String(BACKSTOP_PHASE_BACKSTOP),
+        STRIPE_SECRET_KEY: PLACEHOLDER_KEY,
+        STRIPE_WEBHOOK_SECRET: SECRET,
+      },
+      encoding: 'utf8',
+      timeout: 120_000,
+      shell: false,
+    });
+
+    const childOutput = `${child.stdout ?? ''}${child.stderr ?? ''}`;
+    for (const line of childOutput.split('\n').map((line) => line.trimEnd())) {
+      if (line.startsWith('CHECK ') || line.startsWith('OBSERVATION ')) {
+        console.log(line);
+      }
+    }
+
+    // Re-record the child's checks here, so this harness's own SUMMARY counts
+    // them: a child crash or a missing line is a FAIL, not a silent gap.
+    const childChecks = new Map();
+    for (const line of childOutput.split('\n').map((line) => line.trimEnd())) {
+      const match = /^CHECK (\S+) (PASS|FAIL) ?(.*)$/.exec(line);
+      if (match) childChecks.set(match[1], { passed: match[2] === 'PASS', detail: match[3] });
+    }
+
+    const REQUIRED_CHILD_CHECKS = [
+      'forged-flood-past-the-backstop-is-refused-and-names-the-route-bucket',
+      'signed-delivery-is-not-refused-when-the-backstop-is-exhausted',
+      'forged-traffic-is-still-refused-after-the-signed-delivery-survived-the-backstop',
+    ];
+
+    // Always recorded, so the check count is stable and a child that never ran
+    // cannot disappear from the summary.
+    if (child.error) {
+      record(
+        'backstop-phase-child-process-ran',
+        false,
+        `the backstop phase could not be spawned: ${child.error.message}`
+      );
+    } else if (child.status !== 0) {
+      record(
+        'backstop-phase-child-process-ran',
+        false,
+        `the backstop phase child exited ${child.status}; its CHECK lines above are re-reported below`
+      );
+    } else {
+      record(
+        'backstop-phase-child-process-ran',
+        true,
+        `the backstop phase ran the production app in a fresh process with limit=${BACKSTOP_PHASE_LIMIT} backstop=${BACKSTOP_PHASE_BACKSTOP} windowMs=${BACKSTOP_PHASE_WINDOW_MS} and exited 0`
+      );
+    }
+
+    for (const name of REQUIRED_CHILD_CHECKS) {
+      const observed = childChecks.get(name);
+      record(
+        name,
+        observed !== undefined && observed.passed,
+        observed === undefined
+          ? `the backstop phase child did not report this check (exit ${child.status}); a missing check is never a pass`
+          : `${observed.detail} [child_process exit ${child.status}]`
+      );
+    }
   } finally {
     // Stop what was started: every listener this harness bound is closed, so no
     // port is left listening when the process exits.
@@ -385,9 +500,150 @@ async function main() {
   if (failed.length > 0) process.exitCode = 1;
 }
 
-try {
-  await main();
-} catch (error) {
-  console.log(`CHECK harness FAIL unexpected_error=${error.message}`);
-  process.exitCode = 1;
+/**
+ * The BACKSTOP PHASE, run in a CHILD PROCESS with its own environment.
+ *
+ * Why a child process: `server/src/lib/rate-limit.ts` resolves its settings once,
+ * at module evaluation, so an in-process re-import cannot change them and the
+ * phase would silently run with the parent's numbers. A fresh process is the only
+ * honest way to boot the production app with different settings.
+ *
+ * It is the SAME file (`process.execPath` running this module) with
+ * `MT01_P3C_PHASE=backstop`, and it exits non-zero if its own checks fail, so a
+ * broken phase surfaces in the parent as a failed child rather than as silence.
+ */
+async function runBackstopPhaseChild() {
+  const targetLimit = Number(process.env.WEBHOOK_RATE_LIMIT_MAX);
+  const targetBackstop = Number(process.env.WEBHOOK_RATE_LIMIT_BACKSTOP_MAX);
+  const targetWindowMs = Number(process.env.WEBHOOK_RATE_LIMIT_WINDOW_MS);
+
+  // The app under test: the real one, whose settings come from THIS process's
+  // environment — exactly what the child exists to vary.
+  const { createApp } = await tsImport(
+    pathToFileURL(join(SERVER_DIR, 'src/app.ts')).href,
+    import.meta.url
+  );
+  const app = createApp();
+  const server = await new Promise((resolve, reject) => {
+    const listener = app.listen(0, '127.0.0.1', () => resolve(listener));
+    listener.on('error', reject);
+  });
+  const baseUrl = `http://127.0.0.1:${server.address().port}`;
+  observation(
+    `backstop phase child: listening on port ${server.address().port} limit=${targetLimit} backstop=${targetBackstop} windowMs=${targetWindowMs}`
+  );
+
+  let seq = 0;
+  const event = () => {
+    seq += 1;
+    return JSON.stringify({
+      id: `evt_mt01p3cbackstop_${Date.now()}_${seq}`,
+      type: 'invoice.paid',
+      data: { object: { id: `pi_mt01p3cbackstop_${seq}`, amount: 500, currency: 'usd', status: 'succeeded' } },
+    });
+  };
+  const forge = () => {
+    const body = event();
+    const sig = crypto
+      .createHmac('sha256', `${SECRET}-not-the-real-secret`)
+      .update(`${Math.floor(Date.now() / 1000)}.${body}`)
+      .digest('hex');
+    return { body, signature: `t=${Math.floor(Date.now() / 1000)},v1=${sig}` };
+  };
+  const post = async (options) => {
+    const body = options.body ?? event();
+    const headers = { 'content-type': 'application/json' };
+    headers['stripe-signature'] =
+      options.signature ?? stripeSignature(body, Math.floor(Date.now() / 1000));
+    const response = await fetch(`${baseUrl}/payment/webhook`, { method: 'POST', headers, body });
+    const text = await response.text();
+    let parsed = text;
+    try {
+      parsed = JSON.parse(text);
+    } catch {
+      /* keep raw text */
+    }
+    return {
+      status: response.status,
+      retryAfter: response.headers.get('retry-after'),
+      code: codeOf(parsed),
+      bucketKey: parsed && typeof parsed === 'object' ? parsed.details?.key ?? null : null,
+    };
+  };
+
+  try {
+    // (a) a forged flood PAST the backstop, from one source.
+    const FLOOD = targetBackstop + 3;
+    let accepted = 0;
+    let refusedBySource = 0;
+    let refusedByBackstop = 0;
+    let firstBackstopRefusal = null;
+    for (let i = 0; i < FLOOD; i += 1) {
+      const observed = await post(forge());
+      if (observed.status === 429) {
+        if (observed.bucketKey === BACKSTOP_KEY) {
+          refusedByBackstop += 1;
+          if (firstBackstopRefusal === null) firstBackstopRefusal = observed;
+        } else {
+          refusedBySource += 1;
+        }
+      } else {
+        accepted += 1;
+      }
+    }
+    observation(
+      `backstop phase child flood: sent=${FLOOD} accepted=${accepted} refused_by_source=${refusedBySource} refused_by_backstop=${refusedByBackstop} backstop_refusal_bucket=${firstBackstopRefusal ? `"${firstBackstopRefusal.bucketKey}"` : '(none)'}`
+    );
+    record(
+      'forged-flood-past-the-backstop-is-refused-and-names-the-route-bucket',
+      refusedByBackstop >= 1 &&
+        firstBackstopRefusal !== null &&
+        firstBackstopRefusal.bucketKey === BACKSTOP_KEY,
+      `flood_sent=${FLOOD} accepted=${accepted} refused_by_source=${refusedBySource} refused_by_backstop=${refusedByBackstop} expected_backstop_key="${BACKSTOP_KEY}" observed_backstop_key=${firstBackstopRefusal ? `"${firstBackstopRefusal.bucketKey}"` : '(none)'}`
+    );
+
+    // (b) THE PROPERTY: a correctly-signed delivery is NOT refused, even with the
+    // backstop exhausted. This is what failed before P3C.
+    const signedAfterBackstop = await post({});
+    record(
+      'signed-delivery-is-not-refused-when-the-backstop-is-exhausted',
+      signedAfterBackstop.status !== 429 && signedAfterBackstop.retryAfter === null,
+      `signed_delivery_status=${signedAfterBackstop.status} (200 = the handler accepted it; 429 = the backstop refused a real delivery, which is the pre-P3C defect) refused_by_limiter=${signedAfterBackstop.status === 429} retry_after=${signedAfterBackstop.retryAfter === null ? '(absent)' : `"${signedAfterBackstop.retryAfter}"`}`
+    );
+
+    // (c) the limiter is still armed for junk after that delivery.
+    const forgedAfterSigned = await post(forge());
+    record(
+      'forged-traffic-is-still-refused-after-the-signed-delivery-survived-the-backstop',
+      forgedAfterSigned.status === 429,
+      `forged_after_good_status=${forgedAfterSigned.status} code=${forgedAfterSigned.code} bucket=${forgedAfterSigned.bucketKey === null ? '(none)' : `"${forgedAfterSigned.bucketKey}"`} (429 = still armed, not disabled to make the delivery pass)`
+    );
+  } finally {
+    await new Promise((resolve, reject) => {
+      server.close((error) => (error ? reject(error) : resolve()));
+    });
+  }
+
+  const failed = results.filter((r) => !r.passed);
+  console.log(
+    `SUMMARY checks=${results.length} passed=${results.length - failed.length} failed=${failed.length} phase=backstop limit=${targetLimit} backstop=${targetBackstop} windowMs=${targetWindowMs}` +
+      (failed.length > 0 ? ` failed_names=[${failed.map((f) => f.name).join(',')}]` : '')
+  );
+  if (failed.length > 0) process.exitCode = 1;
+}
+
+if (process.env.MT01_P3C_PHASE === 'backstop') {
+  try {
+    await runBackstopPhaseChild();
+  } catch (error) {
+    console.log(`CHECK backstop-phase-child FAIL unexpected_error=${error.message}`);
+    process.exitCode = 1;
+  }
+} else {
+  try {
+    await main();
+  } catch (error) {
+    console.log(`CHECK harness FAIL unexpected_error=${error.message}`);
+    process.exitCode = 1;
+  }
 }

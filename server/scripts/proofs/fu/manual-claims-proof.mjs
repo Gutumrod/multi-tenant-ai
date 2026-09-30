@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 /**
  * H7-FU-RATELIMIT-REPAIR7 manual-claims-proof — mechanically checks the factual
- * claims `docs/house-swarm-7/WU5-DEPLOY.md`, `docs/CURRENT_STATUS.md` and
- * `docs/house-swarm-7/WU6-CLAIMS-EVIDENCE.md` make, against each other and
+ * claims `docs/product/WU5-DEPLOY.md`, `docs/CURRENT_STATUS.md` and
+ * `docs/product/WU6-CLAIMS-EVIDENCE.md` make, against each other and
  * against the tree.
  *
  * What it checks, and why it exists: the document set has repeatedly carried
@@ -12,8 +12,8 @@
  * documents and compares their claims with the measured ground truth and with
  * the tree itself:
  *
- *   * the counts with `DATABASE_URL` SET   -> `Test Files 6 passed (6)` / `Tests 58 passed (58)`
- *   * the counts with `DATABASE_URL` UNSET -> `Test Files 5 passed | 1 skipped (6)` / `Tests 53 passed | 5 skipped (58)`
+ *   * the counts with `DATABASE_URL` SET   -> `Test Files 6 passed (6)` / `Tests 62 passed (62)`
+ *   * the counts with `DATABASE_URL` UNSET -> `Test Files 5 passed | 1 skipped (6)` / `Tests 57 passed | 5 skipped (62)`
  *   * `server/tests/` really holds SIX test files
  *   * the row leak is FIXED: the suite deletes the rows it creates, three
  *     consecutive runs against one database leave `subscriptions` 0 and
@@ -80,7 +80,7 @@
  * line of the document for each failure. It exits 0 only when every claim matches.
  *
  * `FU_DOCS_DIR` exists so a reviewer can watch this harness go red on demand: it
- * repoints the `docs/house-swarm-7` lookup at a mutated copy (used to demonstrate
+ * repoints the `docs/product` lookup at a mutated copy (used to demonstrate
  * the failure mode during this work unit). `FU_ROOT_DOCS_DIR` does the same for
  * the `docs` directory that holds `CURRENT_STATUS.md`. Both default to this
  * repository, and the delivered documents are the ones under those defaults.
@@ -99,7 +99,7 @@ const REPO_DIR = join(SERVER_DIR, '..');
 
 const DOCS_DIR = process.env.FU_DOCS_DIR
   ? process.env.FU_DOCS_DIR
-  : join(REPO_DIR, 'docs/house-swarm-7');
+  : join(REPO_DIR, 'docs/product');
 const ROOT_DOCS_DIR = process.env.FU_ROOT_DOCS_DIR
   ? process.env.FU_ROOT_DOCS_DIR
   : join(REPO_DIR, 'docs');
@@ -228,11 +228,11 @@ if (MANUAL === null) {
 // ---------------------------------------------------------------------------
 const WITH_DB = {
   files: 'Test Files 6 passed (6)',
-  tests: 'Tests 58 passed (58)',
+  tests: 'Tests 62 passed (62)',
 };
 const WITHOUT_DB = {
   files: 'Test Files 5 passed | 1 skipped (6)',
-  tests: 'Tests 53 passed | 5 skipped (58)',
+  tests: 'Tests 57 passed | 5 skipped (62)',
 };
 
 /**
@@ -250,6 +250,27 @@ const WITHOUT_DB = {
  * are banned everywhere, history included.
  */
 const STALE = [
+  {
+    // SUPERSEDED BY MT01-PRESALE-P3C. The P3A revision moved the total to 61 and
+    // the P3C revision (one new backstop scenario, one scenario re-scoped) moved
+    // it again to the 62 the documents now state. A document still stating the
+    // 58 this lane's predecessor measured is stale for the same reason the (51)
+    // entries below are: the suite is not that size any more.
+    label: 'tests-without-db total 58 (pre-P3C)',
+    pattern: /\bTests\s+53 passed \| 5 skipped \(58\)/,
+    correct: WITHOUT_DB.tests,
+  },
+  {
+    label: 'tests-with-db total 58 (pre-P3C)',
+    pattern: /\bTests\s+58 passed \(58\)/,
+    correct: WITH_DB.tests,
+  },
+  {
+    label: 'any test total of (58) in a Tests summary (pre-P3C)',
+    pattern: /\bTests[^()\n]{0,40}\(58\)/,
+    correct: WITH_DB.tests,
+    quoteScoped: true,
+  },
   {
     label: 'files-with-db total 5',
     pattern: /Test Files\s+5 passed \(5\)/,
@@ -383,12 +404,12 @@ record(
 {
   const problems = [];
   const filesLine = firstLine(/6 passed \(6\)/);
-  const testsLine = firstLine(/58 passed \(58\)/);
+  const testsLine = firstLine(/62 passed \(62\)/);
 
   if (!FLAT.includes(WITH_DB.files) && !/Test Files\s+6 passed \(6\)/.test(FLAT)) {
     problems.push(`the manual never states \`${WITH_DB.files}\``);
   }
-  if (!/Tests\s+58 passed \(58\)/.test(FLAT)) {
+  if (!/Tests\s+62 passed \(62\)/.test(FLAT)) {
     problems.push(`the manual never states \`${WITH_DB.tests}\``);
   }
 
@@ -412,12 +433,12 @@ record(
 {
   const problems = [];
   const filesLine = firstLine(/5 passed \| 1 skipped \(6\)/);
-  const testsLine = firstLine(/53 passed \| 5 skipped \(58\)/);
+  const testsLine = firstLine(/57 passed \| 5 skipped \(62\)/);
 
   if (!/Test Files\s+5 passed \| 1 skipped \(6\)/.test(FLAT)) {
     problems.push(`the manual never states \`${WITHOUT_DB.files}\``);
   }
-  if (!/Tests\s+53 passed \| 5 skipped \(58\)/.test(FLAT)) {
+  if (!/Tests\s+57 passed \| 5 skipped \(62\)/.test(FLAT)) {
     problems.push(`the manual never states \`${WITHOUT_DB.tests}\``);
   }
 
@@ -1139,10 +1160,10 @@ record(
 
     // The counts the ledger MUST state, matching the manual's own figures.
     for (const required of [
-      { label: 'the set-database counts', pattern: /Test Files 6 passed \(6\)[\s\S]{0,160}Tests 58 passed \(58\)/ },
+      { label: 'the set-database counts', pattern: /Test Files 6 passed \(6\)[\s\S]{0,160}Tests 62 passed \(62\)/ },
       {
         label: 'the unset-database counts',
-        pattern: /Test Files 5 passed \| 1 skipped \(6\)[\s\S]{0,200}(?:Tests|53 passed \| 5 skipped \(58\))/,
+        pattern: /Test Files 5 passed \| 1 skipped \(6\)[\s\S]{0,200}(?:Tests|57 passed \| 5 skipped \(62\))/,
       },
     ]) {
       if (!required.pattern.test(ledgerFlat)) {
@@ -1188,7 +1209,7 @@ record(
     'claims-ledger-counts-agree-with-manual',
     problems.length === 0,
     problems.length === 0
-      ? `rule: WU6-CLAIMS-EVIDENCE.md must agree with ${'`docs/house-swarm-7/WU5-DEPLOY.md`'} §6.1 — it must state the manual's own figures (6 passed (6) / 58 passed (58) with DATABASE_URL set, 5 passed | 1 skipped (6) / 53 passed | 5 skipped (58) without), it must not stand any superseded figure (5/51 totals, 1 failed | 4 passed (5), 1 failed | 50 passed (51) or "five test files") up as a live claim, its C40 row must state that the older used-database failure is FIXED (the suite deletes the rows it created) while keeping that failure's history, and its C64 row must not assert the obsolete row leak`
+      ? `rule: WU6-CLAIMS-EVIDENCE.md must agree with ${'`docs/product/WU5-DEPLOY.md`'} §6.1 — it must state the manual's own figures (6 passed (6) / 62 passed (62) with DATABASE_URL set, 5 passed | 1 skipped (6) / 57 passed | 5 skipped (62) without), it must not stand any superseded figure (5/51 totals, 1 failed | 4 passed (5), 1 failed | 50 passed (51) or "five test files") up as a live claim, its C40 row must state that the older used-database failure is FIXED (the suite deletes the rows it created) while keeping that failure's history, and its C64 row must not assert the obsolete row leak`
       : `${problems.length} contradiction(s) with the manual: ${problems.slice(0, 3).join(' | ')}`
   );
   if (problems.length > 0) for (const problem of problems.slice(0, 8)) console.log(`  ${problem}`);

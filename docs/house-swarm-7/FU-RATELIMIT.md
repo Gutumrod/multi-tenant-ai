@@ -371,11 +371,11 @@ recorded, not hidden, in the wiring file `server/src/lib/rate-limit.ts`.
 และถูกบันทึกไว้ ไม่ได้ซ่อน ไว้ในไฟล์ต่อสาย `server/src/lib/rate-limit.ts`
 
 Set them **in the process environment**, not in a file — this project has no dotenv and
-`server/.env.example` is documentation only (see `docs/house-swarm-7/WU5-DEPLOY.md`
+`server/.env.example` is documentation only (see `docs/product/WU5-DEPLOY.md`
 §3.3). For example, and the value exists only in that process:
 
 ตั้งค่า**ใน process environment** ไม่ใช่ในไฟล์ — โปรเจกต์นี้ไม่มี dotenv และ
-`server/.env.example` เป็นเอกสารเท่านั้น (ดู `docs/house-swarm-7/WU5-DEPLOY.md` ข้อ 3.3)
+`server/.env.example` เป็นเอกสารเท่านั้น (ดู `docs/product/WU5-DEPLOY.md` ข้อ 3.3)
 ตัวอย่าง ค่าจะอยู่แค่ในโปรเซสนั้น:
 
     export WEBHOOK_RATE_LIMIT_MAX=60

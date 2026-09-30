@@ -1040,14 +1040,159 @@ describe('webhook rate limit — per-source allowance is independent', () => {
 });
 
 // ---------------------------------------------------------------------------
-// REQUIRED (P3A): webhook-backstop-bounds-total-work-even-for-valid-signatures
+// REQUIRED (P3C, independent review HIGH): a forged flood that exhausts the
+// BACKSTOP must still not refuse a correctly-signed delivery.
 //
-// Point 3 of the work unit: verification now happens BEFORE the tight
-// per-source limit, so a flood costs HMAC work. The coarse backstop is what
-// bounds that work, and this scenario drives it with a flood that a per-source
-// limit could never stop — CORRECTLY-SIGNED requests, each from a source with
-// no allowance spent — proving the bound comes from the backstop and that its
-// refusal covers the whole route, not one source.
+// THE DEFECT THIS SCENARIO EXISTS TO KEEP OUT. The pre-P3C revision charged the
+// route-level backstop with EVERY request BEFORE the signature was verified and
+// refused at that point. A refusal decided before the verdict cannot tell an
+// attacker's junk from a real Stripe delivery, so an unauthenticated flood could
+// fill the shared bucket and a correctly-signed delivery arriving in the same
+// window was then refused 429. It was reproduced with the DOCUMENTED DEFAULTS:
+// 60 x 401, the rest 429, and the signed delivery after the flood = 429.
+//
+// WHY THE NUMBERS HERE ARE THE DOCUMENTED DEFAULTS, not test-sized ones. The
+// harness that missed the defect set `WEBHOOK_RATE_LIMIT_BACKSTOP_MAX=5000`, so
+// its six-request flood never reached the backstop and the check passed on
+// defective code. This scenario therefore sets NO rate-limit variable at all and
+// asserts the resolved settings against the module's own exported defaults
+// (`60` per source, `1000` per window), then floods PAST the backstop.
+//
+// The clock is injected and held fixed, for the same reason the window-reset
+// scenario injects one: 1003 requests take seconds, the default window is 60 s,
+// and the fixed-window store resets at a wall-clock boundary. A rollover would
+// reset the counters mid-flood and the bound being measured would disappear.
+// What is injected is the clock only — the settings, the limiter factory, the
+// handler and the mount order are all the production ones, driven over real HTTP.
+// ---------------------------------------------------------------------------
+describe('webhook rate limit — a flood past the backstop cannot consume the delivery path', () => {
+  it('webhook-forged-flood-over-the-backstop-does-not-refuse-a-signed-delivery', async () => {
+    applyEnv({ ...CONFIGURED });
+    vi.resetModules();
+
+    const {
+      resolveWebhookRateLimit,
+      createWebhookRateLimitMiddleware,
+      WEBHOOK_RATE_LIMIT_DEFAULT_BACKSTOP_MAX,
+      WEBHOOK_RATE_LIMIT_DEFAULT_MAX,
+      WEBHOOK_RATE_LIMIT_DEFAULT_WINDOW_MS,
+    } = await import('../src/lib/rate-limit.js');
+    const { paymentWebhookHandler } = await import('../src/routes/payment-demo.js');
+
+    // Resolved from an EMPTY environment: the documented defaults, read from the
+    // module's own exported constants rather than restated here.
+    const resolved = resolveWebhookRateLimit({});
+    expect(resolved.limit).toBe(WEBHOOK_RATE_LIMIT_DEFAULT_MAX);
+    expect(resolved.limit).toBe(60);
+    expect(resolved.backstopLimit).toBe(WEBHOOK_RATE_LIMIT_DEFAULT_BACKSTOP_MAX);
+    expect(resolved.backstopLimit).toBe(1000);
+    expect(resolved.windowMs).toBe(WEBHOOK_RATE_LIMIT_DEFAULT_WINDOW_MS);
+
+    const store: RateLimitStore = createMemoryStore();
+    const base = Math.floor(1_700_000_000_000 / resolved.windowMs) * resolved.windowMs;
+    let clock = base;
+    const limiter = createWebhookRateLimitMiddleware({
+      settings: resolved,
+      store,
+      now: () => clock,
+    });
+
+    // The SAME production mount order as server/src/app.ts: raw body, limiter,
+    // handler.
+    const app = express();
+    app.post(
+      '/payment/webhook',
+      express.raw({ type: 'application/json' }),
+      limiter,
+      paymentWebhookHandler
+    );
+
+    const server = await new Promise<Server>((resolve) => {
+      const listener = app.listen(0, '127.0.0.1', () => resolve(listener));
+    });
+    booted = {
+      server,
+      baseUrl: `http://127.0.0.1:${(server.address() as AddressInfo).port}`,
+      app,
+    };
+
+    const nowSeconds = Math.floor(Date.now() / 1000);
+    const ROUTE_KEY = 'route:POST /payment/webhook';
+
+    // --- 1. the flood: forged signatures, PAST the backstop ------------------
+    let accepted = 0;
+    let refusedBySource = 0;
+    let refusedByBackstop = 0;
+    const FLOOD = resolved.backstopLimit + 3;
+    for (let i = 0; i < FLOOD; i += 1) {
+      const body = makeEvent();
+      const observed = await postWebhook(booted.baseUrl, {
+        body,
+        signature: forgedSignature(body, nowSeconds),
+      });
+      if (observed.status === 429) {
+        if (refusalKey(observed.body) === ROUTE_KEY) refusedByBackstop += 1;
+        else refusedBySource += 1;
+      } else {
+        accepted += 1;
+      }
+    }
+
+    // The per-source rule refused the forged flood after its own allowance, and
+    // the backstop refused what came after that — so both limiter stages are
+    // demonstrably armed and the backstop really was exhausted.
+    expect(accepted).toBe(resolved.limit);
+    expect(refusedBySource).toBe(resolved.backstopLimit - resolved.limit);
+    expect(refusedByBackstop).toBe(3);
+
+    // --- 2. THE ACCEPTANCE: the signed delivery is NOT refused ---------------
+    // On the pre-P3C revision this request was refused 429 at the backstop,
+    // because the backstop was charged before the signature was verified.
+    const signedDelivery = await postWebhook(booted.baseUrl, { signed: true });
+    expect(signedDelivery.status).not.toBe(429);
+    expect(signedDelivery.status).toBe(200);
+    expect(signedDelivery.retryAfter).toBeNull();
+
+    // Not a one-shot exemption: a second signed delivery is served too.
+    const secondSignedDelivery = await postWebhook(booted.baseUrl, { signed: true });
+    expect(secondSignedDelivery.status).toBe(200);
+    expect(secondSignedDelivery.retryAfter).toBeNull();
+
+    // ... and the limiter is still armed for junk, so the two 200s were not
+    // bought by disabling it.
+    const forgedAfterBody = makeEvent();
+    const forgedAfter = await postWebhook(booted.baseUrl, {
+      body: forgedAfterBody,
+      signature: forgedSignature(forgedAfterBody, nowSeconds),
+    });
+    expect(forgedAfter.status).toBe(429);
+    expect(refusalKey(forgedAfter.body)).toBe(ROUTE_KEY);
+
+    // Every observation belongs to ONE window, so the numbers above are the
+    // allowances and not a window rollover.
+    expect(clock).toBe(base);
+
+    // eslint-disable-next-line no-console
+    console.log(
+      `[P3C backstop-vs-delivery] flood=${FLOOD} accepted=${accepted} ` +
+        `refused_by_source=${refusedBySource} refused_by_backstop=${refusedByBackstop} ` +
+        `limit=${resolved.limit} backstop=${resolved.backstopLimit} windowMs=${resolved.windowMs} ` +
+        `signed_delivery_status=${signedDelivery.status} ` +
+        `second_signed_delivery_status=${secondSignedDelivery.status} ` +
+        `forged_after_good_status=${forgedAfter.status}`
+    );
+  }, 120_000);
+});
+
+// ---------------------------------------------------------------------------
+// REQUIRED (P3A, restated by P3C): the coarse backstop bounds non-valid traffic
+//
+// The scenario below was named `…-even-for-valid-signatures` while the backstop
+// was charged with every request. Under the P3C order a correctly-signed
+// delivery is charged to NO bucket, so that name is no longer true and is not
+// kept: what the backstop bounds is the traffic it can see — the requests whose
+// signature is wrong, and the UNJUDGEABLE ones (no secret configured), which is
+// the case driven here because it needs no per-source stage at all.
 //
 // The cost, and the reason this scenario spends real time: with no secret there
 // is no allowance to separate, so the backstop must be the binding limit. That
@@ -1055,8 +1200,8 @@ describe('webhook rate limit — per-source allowance is independent', () => {
 // a boundary, and a flood cannot be spread across a boundary and still bound
 // anything.
 // ---------------------------------------------------------------------------
-describe('webhook rate limit — the coarse backstop bounds total work', () => {
-  it('webhook-backstop-bounds-total-work-even-for-valid-signatures', async () => {
+describe('webhook rate limit — the coarse backstop bounds unjudgeable traffic', () => {
+  it('webhook-backstop-bounds-unjudgeable-traffic-when-no-secret-is-configured', async () => {
     const WINDOW_MS = 120_000;
     const BACKSTOP = 40;
 

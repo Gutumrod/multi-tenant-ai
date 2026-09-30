@@ -13,35 +13,45 @@ if a declared path residual has gone stale.
 ไม่ถูกจัดประเภท ถ้าไฟล์ที่ส่งมอบมีพาธเครื่องภายใน ถ้าไฟล์ที่ส่งมอบอ้างถึงไฟล์ที่ไม่ถูกส่งมอบ ถ้าไฟล์ที่
 ไม่ส่งมอบไม่มีเครื่องหมายหรือหายไป หรือถ้าข้อประกาศ "ส่วนที่เหลือ" ไม่จริงอีกต่อไป
 
-**The vendor's working record is NOT delivered.** The rule: a working paper under
-`docs/house-swarm-7/` whose name begins with `FU-` (the repair/review log) or `PRESALE-` (a lane
-report for this cleanup job). That is the whole family. Every other file in the tree is
-delivered, because the delivered code imports it, the deployment manual points at it, or it is
-the source a buyer is buying. A new file that matches no group is a gate failure, not something
-to guess about — **including a new working paper**, which is the drift gate `no-unclassified-file`
-exists to catch.
+**The buyer-facing product is delivered; the vendor's working record is NOT.** The buyer
+receives the running product, its buyer-facing documents, and the source it is built from. The
+vendor's working record is **everything under `docs/house-swarm-7/`** — the whole folder: the
+`FU-` repair/review logs, the `PRESALE-` lane reports for this cleanup job, and the feature
+records that used to be delivered (`FU-RATELIMIT.md`, `FU-REVIEW-FIX-2.md`). That family is
+closed by the folder, not by a name prefix, and the gate enforces it as a folder: a file added
+under `docs/house-swarm-7/` is not delivered whatever it is called, and a delivered file may not
+point at one by path. A buyer-facing document lives under `docs/product/`; the vendor keeps
+`docs/house-swarm-7/` as its own record of how the product was built and reviewed.
 
-**บันทึกการทำงานภายในของผู้ขายไม่ถูกส่งมอบ** กฎคือ ไฟล์ใต้ `docs/house-swarm-7/` ที่ชื่อขึ้นต้นด้วย
-`FU-` (บันทึกการซ่อม/ตรวจทาน) หรือ `PRESALE-` (รายงานรายเลนของงานเก็บกวาดนี้) เป็นครอบครัวเดียวกัน
-ทั้งหมด ไฟล์อื่นทั้งหมดถูกส่งมอบ ไฟล์ใหม่ที่ไม่อยู่ในกลุ่มใดเลยคือความล้มเหลวของ gate ไม่ใช่เรื่องให้เดา
-**รวมถึงไฟล์ทำงานภายในใหม่** ซึ่งเป็น drift ที่ gate ต้องจับ
+**สิ่งที่ผู้ซื้อได้รับคือตัวผลิตภัณฑ์และเอกสารฝั่งผู้ซื้อ — บันทึกการทำงานภายในไม่ถูกส่งมอบ** บันทึก
+ภายในคือ **ทุกไฟล์ใต้ `docs/house-swarm-7/`** ทั้งโฟลเดอร์: บันทึกซ่อม/ตรวจทาน `FU-` รายงานรายเลน
+`PRESALE-` และบันทึกฟีเจอร์ที่เคยถูกส่งมอบ (`FU-RATELIMIT.md`, `FU-REVIEW-FIX-2.md`) ครอบครัวนี้ปิด
+ด้วย "โฟลเดอร์" ไม่ใช่ด้วยคำนำหน้าชื่อ และ gate บังคับตามโฟลเดอร์จริง ๆ: ไฟล์ที่เพิ่มเข้าใต้
+`docs/house-swarm-7/` ไม่ถูกส่งมอบไม่ว่าชื่อจะเป็นอะไร และไฟล์ที่ส่งมอบอ้างถึงมันด้วยพาธไม่ได้
+เอกสารฝั่งผู้ซื้ออยู่ใน `docs/product/` ส่วน `docs/house-swarm-7/` เป็นบันทึกของผู้ขายเองว่า
+ผลิตภัณฑ์ถูกสร้างและตรวจอย่างไร
 
-**Two working papers stay DELIVERED, and one does not.** `FU-RATELIMIT.md` and
-`FU-REVIEW-FIX-2.md` are the vendor's technical detail for two shipped features, and delivered
-files cite them BY PATH as their reference — the deployment manual's environment-variable table
-and the rate-limit module's provenance record cite `FU-RATELIMIT.md`, and the delivered
-`claims-check.mjs` rule text and its fixtures cite `FU-REVIEW-FIX-2.md`. Those citing files are
-the delivered code and the manual, so the TARGET is delivered rather than the citation
-destroyed: a delivered file pointing at a file the buyer does not have is a dangling reference,
-and the work unit that raised this finding allowed exactly this resolution ("repoint it, or
-reclassify the target"). Both are path-clean. `FU-REVIEW-FIX-3.md`, the file the finding's
-review named, is **not** delivered — the one delivered file that cited it by path was repointed
-(see below).
+**What changed here, and why (review finding LOW-3).** The previous revision classified the
+vendor's record by name prefix (`FU-`/`PRESALE-`) and delivered two of those papers by
+declaring them exceptions, because delivered files cited them. The independent review of the
+merged revision recorded what that costs: the delivered set still carried the vendor's
+house-swarm-7 feature logs (`FU-RATELIMIT.md`, `FU-REVIEW-FIX-2.md`), and the delivered module
+documents carried an upstream author's machine path that the manifest exempted as a "recorded
+path residual" — a declaration the gate could not tell from an exemption. Both are corrected
+here rather than re-declared: the vendor's record is excluded as a folder (so a new file cannot
+join the delivered set by accident), the buyer-facing documents were moved to `docs/product/`,
+and the seven module files' machine paths were replaced with a repository-relative reference
+that keeps the provenance identity without the vendor's machine. There is now no declared path
+residual at all.
 
-**ทำไมบางไฟล์ยังส่งมอบ** `FU-RATELIMIT.md` และ `FU-REVIEW-FIX-2.md` เป็นรายละเอียดเชิงเทคนิคของ
-ฟีเจอร์ที่ผู้ซื้อได้รับ และไฟล์ที่ส่งมอบอ้างถึงมันด้วยพาธโดยตรง จึงเลือกทำให้ "เป้าหมาย" ส่งมอบ แทนที่จะ
-ทำลายการอ้างอิง ส่วน `FU-REVIEW-FIX-3.md` ที่ผู้ตรวจระบุชื่อไว้ **ไม่** ถูกส่งมอบ และการอ้างอิงจากไฟล์ที่
-ส่งมอบถูกแก้ให้ระบุชื่อโดยไม่มีพาธ
+**เปลี่ยนอะไรและเพราะอะไร (ข้อ LOW-3)** revision ก่อนจัดประเภทบันทึกภายในด้วยคำนำหน้าชื่อ
+(`FU-`/`PRESALE-`) และส่งมอบสองไฟล์เป็นข้อยกเว้นเพราะไฟล์ที่ส่งมอบอ้างถึง รีวิวอิสระของ revision ที่
+merge ไปแล้วบันทึกต้นทุนของวิธีนั้น: ชุดส่งมอบยังพาบันทึกฟีเจอร์ของบ้าน (`FU-RATELIMIT.md`,
+`FU-REVIEW-FIX-2.md`) ไปด้วย และเอกสารโมดูลที่ส่งมอบมีพาธเครื่องของผู้เขียนต้นทางซึ่ง manifest
+ยกเว้นเป็น "path residual" — คำประกาศที่ gate แยกไม่ออกจากข้อยกเว้น รอบนี้แก้ที่ต้นเหตุแทนการประกาศซ้ำ:
+ตัดบันทึกภายในออกเป็นรายโฟลเดอร์ (ไฟล์ใหม่จะหลุดเข้าชุดส่งมอบโดยบังเอิญไม่ได้) ย้ายเอกสารฝั่งผู้ซื้อไป
+`docs/product/` และแทนพาธเครื่องใน 7 ไฟล์โมดูลด้วยการอ้างอิงแบบ repo-relative ที่รักษา provenance
+ไว้โดยไม่มีข้อมูลเครื่องของผู้ขาย **ตอนนี้ไม่มี path residual ที่ต้องประกาศเลย**
 
 **Why a manifest and not a move out of the repository.** The papers are internal working
 records and they are already IN git history and on the remote; the decision that removes them
@@ -63,8 +73,9 @@ a property a check can hold, and it is enforced rather than trusted.
 ## Delivered
 
 Every path below is what a buyer receives. One line per file, repository-relative. The
-7 files under `modules/` listed in the next section are ALSO delivered — they are
-broken out there because they are the one recorded exception to the machine-path rule.
+`modules/` trees are delivered too, and every one of them is path-clean: the vendored
+module documents that used to carry an upstream author's machine path now cite their
+source repository-relative, so there is no exception to the machine-path rule.
 
 ```text
 .gitignore
@@ -72,14 +83,12 @@ BRIEF.md
 DELIVERY-MANIFEST.md
 STAGE3_EVIDENCE_REPORT.md
 docs/CURRENT_STATUS.md
-docs/house-swarm-7/FU-RATELIMIT.md
-docs/house-swarm-7/FU-REVIEW-FIX-2.md
-docs/house-swarm-7/WU3-PAID-ROUTE-INVENTORY.md
-docs/house-swarm-7/WU4-SAMPLE-UI.md
-docs/house-swarm-7/WU5-DEPLOY.md
-docs/house-swarm-7/WU6-CLAIMS-EVIDENCE.md
-docs/house-swarm-7/WU6-SALES-EN.md
-docs/house-swarm-7/WU6-SALES-TH.md
+docs/product/WU3-PAID-ROUTE-INVENTORY.md
+docs/product/WU4-SAMPLE-UI.md
+docs/product/WU5-DEPLOY.md
+docs/product/WU6-CLAIMS-EVIDENCE.md
+docs/product/WU6-SALES-EN.md
+docs/product/WU6-SALES-TH.md
 modules/ai-provider/DESIGN.md
 modules/ai-provider/MODULE.md
 modules/ai-provider/VERSION
@@ -321,27 +330,6 @@ web/plans.html
 web/signup.html
 ```
 
-## Delivered with a recorded path residual
-
-These 7 files ARE delivered — the seven vendored module trees are imported by the
-running code, so they travel with it. Each carries an **upstream author's own** machine path
-inside upstream-authored text (the DESIGN.md "Deliverable exists at …" acceptance line, and the
-agent prompts that point at it). They are not the vendor's paths, they are not something a buyer
-executes, and editing an upstream-authored copy would falsify the provenance record that asserts
-the copy — so they are RECORDED rather than rewritten. The gate asserts each one still exists and
-is still dirty; a machine path in any other delivered file fails the gate. Full write-up, by file
-and line: `docs/house-swarm-7/WU6-CLAIMS-EVIDENCE.md` §9a.
-
-```text
-modules/auth-supabase/.agy-design-prompt.txt
-modules/auth-supabase/DESIGN.md
-modules/payment/.agy-prompt.md
-modules/payment/DESIGN.md
-modules/rate-limit/DESIGN.md
-modules/tenant-context/agy-prompt.md
-modules/webhook-receiver/DESIGN.md
-```
-
 ## Not delivered
 
 The vendor's internal working record. These files stay in the repository **on purpose** —
@@ -351,7 +339,9 @@ misled. Their machine paths are expected and allowed; the gate reads this classi
 of sweeping the whole tree, which is what keeps the record intact.
 
 ```text
+docs/house-swarm-7/FU-RATELIMIT.md
 docs/house-swarm-7/FU-REVIEW-FIX-1.md
+docs/house-swarm-7/FU-REVIEW-FIX-2.md
 docs/house-swarm-7/FU-REVIEW-FIX-3.md
 docs/house-swarm-7/FU-REVIEW-FIX-4.md
 docs/house-swarm-7/FU-REVIEW-FIX-5.md
@@ -373,8 +363,8 @@ detail is vendor-internal:
 
 | delivered file | reference | what changed |
 |---|---|---|
-| `docs/house-swarm-7/WU6-CLAIMS-EVIDENCE.md` | row C46 | the path form of the per-lane report for the sales-number gate replaced with its name, marked vendor-internal (the row's `RPT(6)` location is inside the vendor evidence tree) |
-| `docs/house-swarm-7/WU6-CLAIMS-EVIDENCE.md` | §8 constraint 5 | the path form of the review-repair log entry for the `index.ts` export change replaced with its name, marked vendor-internal |
+| `docs/product/WU6-CLAIMS-EVIDENCE.md` | row C46 | the path form of the per-lane report for the sales-number gate replaced with its name, marked vendor-internal (the row's `RPT(6)` location is inside the vendor evidence tree) |
+| `docs/product/WU6-CLAIMS-EVIDENCE.md` | §8 constraint 5 | the path form of the review-repair log entry for the `index.ts` export change replaced with its name, marked vendor-internal |
 
 References from a **not-delivered** file to another working paper are untouched. This manifest
 itself names the not-delivered paths, because it has to declare them; the gate exempts it from
@@ -392,11 +382,12 @@ of the repository and mutates only the copies, never the tree:
 
 ## What this manifest does NOT claim
 
-* It does not claim every downloaded file is free of a `D:\`-rooted path: the 7
-  vendored upstream documents above carry their author's own, and that residual is recorded and
-  asserted rather than hidden. Making the product run without `modules/` is a product decision,
-  not a packaging one.
-* It does not remove the working papers from git history, and cannot: they are on the branch and
-  on the remote in every earlier revision.
+* It does not claim git history was rewritten: the vendor's working record was on the branch and
+  on the remote in every earlier revision, and it still is. What it claims is about the SET a
+  buyer receives, which the gate checks against the tree.
+* It does not claim the vendored module documents were never machine-specific. They were, and the
+  seven that were are listed in `docs/product/WU6-CLAIMS-EVIDENCE.md` §9a: the vendor's absolute
+  path was replaced with a repository-relative reference to the same source identity, so the
+  provenance still names the module and the upstream commit without naming the vendor's disk.
 * It does not decide what is delivered — it declares and enforces it. Changing the set means
   editing these groups; the gate then either agrees with the tree or fails.

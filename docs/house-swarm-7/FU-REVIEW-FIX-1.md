@@ -32,7 +32,7 @@ Review `WSTERA-House/reports/REVIEW-SWARM-7-MT01-WU2-WU6-CLAUDE-2026-09-28.md`:
 
 ## What was changed
 
-### 1. `docs/house-swarm-7/WU6-SALES-EN.md`
+### 1. `docs/product/WU6-SALES-EN.md`
 
 **N4** (label form kept, so `claims-check.mjs` still reads it):
 
@@ -70,7 +70,7 @@ Review `WSTERA-House/reports/REVIEW-SWARM-7-MT01-WU2-WU6-CLAUDE-2026-09-28.md`:
   — ส่วน URL ของ Supabase Postgres ยังไม่ถูกทดสอบที่นี่ แม้จะพูดโปรโตคอลเดียวกัน (ดู N4)
 ```
 
-### 2. `docs/house-swarm-7/WU6-SALES-TH.md`
+### 2. `docs/product/WU6-SALES-TH.md`
 
 The same three items, in the Thai-first order this document uses:
 
@@ -104,7 +104,7 @@ The same three items, in the Thai-first order this document uses:
   same protocol on the wire, but it is untested here (see N4).
 ```
 
-### 3. `docs/house-swarm-7/WU5-DEPLOY.md` §4.2 — one honest sentence, both languages
+### 3. `docs/product/WU5-DEPLOY.md` §4.2 — one honest sentence, both languages
 
 Added at the end of the subsection, after the existing TLS/`sslmode` facts (nothing else in
 §4.2 was touched):
@@ -127,7 +127,7 @@ Item 5 (the rate limit) and items 1, 2, 3, 6, 7 are unchanged, as are §§3–6.
 
 ## What was deliberately left alone
 
-- **`docs/house-swarm-7/WU6-CLAIMS-EVIDENCE.md`** — not touched. It is the ledger and work unit
+- **`docs/product/WU6-CLAIMS-EVIDENCE.md`** — not touched. It is the ledger and work unit
   FU-2's deliverable, and this lane does not run it. **Residual, reported rather than fixed:** the
   C49 / C52 / C59 rows still reason that a buyer's Supabase Postgres connection string works
   "because it is PostgreSQL". That inference is the root of the finding, and the ledger rows now

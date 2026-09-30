@@ -519,7 +519,7 @@ The following features are **explicitly out of scope** for v0.1.0 of the Rate Li
 
 A Stage 4 Reviewer MUST verify all of the following criteria before approving the module design & implementation:
 
-1. [ ] **File Location:** Deliverable exists at `D:\AI-Workspace\projects\modules-hub\modules\rate-limit\DESIGN.md`.
+1. [ ] **File Location:** Deliverable exists at `modules-hub@<source-commit>/modules/rate-limit\DESIGN.md`.
 2. [ ] **Runtime Independence:** Core code contains zero `node:*` imports and zero global `process.env` reads.
 3. [ ] **Public API Contract:** `checkRateLimit({ key, limit, windowMs })` returns exact shape `{ allowed, remaining, resetAt, retryAfterMs }`.
 4. [ ] **Adapter Abstraction:** `RateLimitStore` interface is strictly enforced, and `MemoryRateLimitStore` implements `consume(params)`.

@@ -3,12 +3,12 @@
 You are the ARCHITECT for the Tenant Context module in the Module Hub monorepo. Your ONLY deliverable is a single DESIGN.md file. Do NOT write any code, tests, or other docs. Do NOT run scaffolders, git clean, or rm -rf.
 
 ## Output file (write to this EXACT absolute path)
-D:\AI-Workspace\projects\modules-hub\modules\tenant-context\DESIGN.md
+modules-hub@<source-commit>/modules/tenant-context\DESIGN.md
 
 Write the complete DESIGN.md to that exact absolute path. Verify the file exists there before finishing.
 
 ## Module standard / format reference
-Match the structure and tone of the existing HTTP Client module DESIGN.md (D:\AI-Workspace\projects\modules-hub\http-client-module\DESIGN.md). That file uses numbered sections: Purpose, Public API (exact signatures), Exact Core Types, Structured Errors, Security Requirements, File Structure, Test Requirements (table), integration example reference shape, package.json/tsconfig.json, Explicit Non-Goals, Acceptance Criteria. Follow the same conventions: TypeScript, ES2022, strict mode, moduleResolution Bundler, Cloudflare Workers compatible (no node:* imports, Web APIs only), config injected by Host (core never reads env).
+Match the structure and tone of the existing HTTP Client module DESIGN.md (modules-hub@<source-commit>/http-client-module/DESIGN.md). That file uses numbered sections: Purpose, Public API (exact signatures), Exact Core Types, Structured Errors, Security Requirements, File Structure, Test Requirements (table), integration example reference shape, package.json/tsconfig.json, Explicit Non-Goals, Acceptance Criteria. Follow the same conventions: TypeScript, ES2022, strict mode, moduleResolution Bundler, Cloudflare Workers compatible (no node:* imports, Web APIs only), config injected by Host (core never reads env).
 
 ## Scope lock — v0.1 tenant context ONLY
 - TenantContext contract: { tenantId, actorId?, requestId?, correlationId?, environment?, metadata? } — tenantId is the canonical identifier.
@@ -36,5 +36,5 @@ Match the structure and tone of the existing HTTP Client module DESIGN.md (D:\AI
 
 ## Constraints
 - Write ONLY DESIGN.md. Do not create any code/test/doc files.
-- Write to the exact absolute path: D:\AI-Workspace\projects\modules-hub\modules\tenant-context\DESIGN.md
+- Write to the exact absolute path: modules-hub@<source-commit>/modules/tenant-context\DESIGN.md
 - Verify the file exists before finishing.

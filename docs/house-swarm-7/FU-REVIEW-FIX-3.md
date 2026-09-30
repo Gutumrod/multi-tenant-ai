@@ -25,7 +25,7 @@ Files the two lanes changed (from their own ARTIFACTS sections):
 - `server/scripts/proofs/wu4/e2e-web.mjs` — modified (hygiene lane; Finding on ISSUE 6)
 - `server/src/index.ts` — comment only, no code change (`npx tsc --noEmit` exit 0)
 - `server/scripts/proofs/fu/index-import-safety.mjs` — NEW (hygiene lane)
-- `docs/house-swarm-7/WU6-CLAIMS-EVIDENCE.md` — legend rewritten, §8 constraints 5 and 6 added
+- `docs/product/WU6-CLAIMS-EVIDENCE.md` — legend rewritten, §8 constraints 5 and 6 added
   (hygiene lane), §9 appended and constraint 6 reworded (repair lane)
 - `STAGE3_EVIDENCE_REPORT.md` — line 10 de-pathed (repair lane)
 - `modules/rate-limit/PROVENANCE-RATELIMIT.md` — staging path de-pathed (repair lane)
@@ -59,7 +59,7 @@ evidence.”)
 
 **What changed:**
 
-- `docs/house-swarm-7/WU6-CLAIMS-EVIDENCE.md` legend rewritten: `WT` / `CG(n)` / `RPT(n)` /
+- `docs/product/WU6-CLAIMS-EVIDENCE.md` legend rewritten: `WT` / `CG(n)` / `RPT(n)` /
   `WU6-RUN` are now vendor-internal, the `D:/AI-Workspace/…` prefixes are dropped, and
   `06-Agent-Logs/WSTERA-House/reports/…` is used where a path was needed. §8 constraint 5 (the
   `index.ts` export note) and constraint 6 (no internal machine path) were added. No claim row, no
@@ -74,7 +74,7 @@ evidence.”)
 
 ```
 python <docgates> --tree <WT> fu3-no-internal-path
-  baseline  -> exit 1  FAIL  ['docs/house-swarm-7/WU6-CLAIMS-EVIDENCE.md: AI-Workspace',
+  baseline  -> exit 1  FAIL  ['docs/product/WU6-CLAIMS-EVIDENCE.md: AI-Workspace',
                              'STAGE3_EVIDENCE_REPORT.md', 'PROVENANCE-RATELIMIT.md',
                              'PROVENANCE-WU2.md', 'PROVENANCE-WU3.md']
 python .../docgates.py --tree ... fu3-no-internal-path
@@ -82,7 +82,7 @@ python .../docgates.py --tree ... fu3-no-internal-path
 grep -qE 'AI-Workspace|Users.Win11|wachiraya' STAGE3_EVIDENCE_REPORT.md                    -> exit 1 (clean)
 grep -qE ... modules/{rate-limit/PROVENANCE-RATELIMIT,subscription/PROVENANCE-WU2,
             subscription/PROVENANCE-WU3}.md                                                -> exit 1 (clean)
-grep -qE ... docs/house-swarm-7/WU6-CLAIMS-EVIDENCE.md                                     -> exit 1 (clean)
+grep -qE ... docs/product/WU6-CLAIMS-EVIDENCE.md                                     -> exit 1 (clean)
 ```
 
 ### 1.2 ISSUE 6 (LOW · both sets) — the e2e harness was not hermetic
@@ -137,7 +137,7 @@ tests pass) — this should be in a note.”)
 
 **What changed:** the deletion is **kept** and is now recorded where the review asked — a comment
 in `server/src/index.ts` naming what the base did, why the module-scope `app` is gone and the
-evidence — plus `docs/house-swarm-7/WU6-CLAIMS-EVIDENCE.md` §8 constraint 5 and
+evidence — plus `docs/product/WU6-CLAIMS-EVIDENCE.md` §8 constraint 5 and
 `docs/CURRENT_STATUS.md` §2 item 8. Because it was a recorded decision, a runnable proof was added
 (`server/scripts/proofs/fu/index-import-safety.mjs`, 5 checks). See §3.
 
@@ -330,7 +330,7 @@ old: upstream_readonly_copy: D:/AI-Workspace/runtime/hermes-native/workspace/ ho
 new: upstream_readonly_copy: vendor-internal staging copy, not part of the delivered folder (WU-2 staging copy)
 ```
 
-**`docs/house-swarm-7/WU6-CLAIMS-EVIDENCE.md` §8 constraint 6** — reworded by the repair lane
+**`docs/product/WU6-CLAIMS-EVIDENCE.md` §8 constraint 6** — reworded by the repair lane
 (the old text contained the very token the rule bans, which is why the gate flagged the ledger):
 
 ```
@@ -338,7 +338,7 @@ old: `D:/AI-Workspace/…`, `D:\AI-Workspace\…`, `C:\Users\Win11\…`
 new: "a `D:`-rooted vendor path, a `C:`-rooted user path"
 ```
 
-**`docs/house-swarm-7/WU6-CLAIMS-EVIDENCE.md` lines 15, 17, 18 (the legend)** — changed by the
+**`docs/product/WU6-CLAIMS-EVIDENCE.md` lines 15, 17, 18 (the legend)** — changed by the
 **hygiene lane**. Note on the evidence: neither input records this change byte for byte; the
 hygiene lane records only its effect — `WT` / `CG(n)` / `RPT(n)` / `WU6-RUN` are now
 vendor-internal, the `D:/AI-Workspace/…` prefixes are dropped, and
@@ -489,7 +489,7 @@ exit 0, 13 lines (the ledger's lines 15, 17, 18 among them).
 
 ```
 Baseline, before any edit:
-    python <docgates> --tree <WT> fu3-no-internal-path   -> exit 1  FAIL  ['docs/house-swarm-7/WU6-CLAIMS-EVIDENCE.md: AI-Workspace', 'STAGE3_EVIDENCE_REPORT.md', 'PROVENANCE-RATELIMIT.md', 'PROVENANCE-WU2.md', 'PROVENANCE-WU3.md']
+    python <docgates> --tree <WT> fu3-no-internal-path   -> exit 1  FAIL  ['docs/product/WU6-CLAIMS-EVIDENCE.md: AI-Workspace', 'STAGE3_EVIDENCE_REPORT.md', 'PROVENANCE-RATELIMIT.md', 'PROVENANCE-WU2.md', 'PROVENANCE-WU3.md']
     python <docgates> --tree <WT> fu3-index-export       -> exit 0  PASS
     python <docgates> --tree <WT> fu3-provenance-identity -> exit 0 PASS
     git grep -nIE 'AI-Workspace|Users.Win11|wachiraya' -- .   -> exit 0, 19 hits
@@ -509,7 +509,7 @@ Guard checks:
       UNCHANGED 7/7                                                                               -> exit 0
     grep -qE 'AI-Workspace|Users.Win11|wachiraya' STAGE3_EVIDENCE_REPORT.md            -> exit 1 (clean)
     grep -qE ... modules/{rate-limit/PROVENANCE-RATELIMIT,subscription/PROVENANCE-WU2,subscription/PROVENANCE-WU3}.md -> exit 1 (clean)
-    grep -qE ... docs/house-swarm-7/WU6-CLAIMS-EVIDENCE.md                             -> exit 1 (clean)
+    grep -qE ... docs/product/WU6-CLAIMS-EVIDENCE.md                             -> exit 1 (clean)
 
 Delivered proof, re-run:
     cd server && npx tsx scripts/proofs/fu/index-import-safety.mjs

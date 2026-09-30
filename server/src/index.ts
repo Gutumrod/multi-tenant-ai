@@ -84,7 +84,7 @@ export { createApp, main };
 // `server/scripts/proofs/fu/index-import-safety.mjs` for the runnable proof:
 // importing this module binds no port, starts no database work, and exports
 // exactly `createApp` and `main`. Recorded also in
-// `docs/house-swarm-7/WU6-CLAIMS-EVIDENCE.md` §8 and `docs/CURRENT_STATUS.md` §2.
+// `docs/product/WU6-CLAIMS-EVIDENCE.md` §8 and `docs/CURRENT_STATUS.md` §2.
 
 // Auto-start only when this module is the process entry point. Importing it (a
 // test or a proof harness) must not bind a port or touch the database.

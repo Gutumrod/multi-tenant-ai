@@ -58,7 +58,7 @@ Two wordings were used, chosen per sentence, as the work unit directs:
   stays consistent.
 - **`รีโป`** — used only where the sentence is already technical and `git` is the subject.
 
-### 2.1 `docs/house-swarm-7/WU5-DEPLOY.md` — 15 occurrences on 12 lines
+### 2.1 `docs/product/WU5-DEPLOY.md` — 15 occurrences on 12 lines
 
 | line | old (the string, in its sentence) | new |
 |---|---|---|
@@ -92,7 +92,7 @@ file is 15 changed Thai lines and nothing else.
 | 82 | `เป็นสำเนาที่เก็บอยู่ภายใน<STRING>นี้` | `เป็นสำเนาที่เก็บอยู่ภายในที่เก็บโค้ดนี้` |
 | 90 | `ตรวจสอบได้ใน<STRING>นี้ ไม่ใช่แค่ที่ต้นทาง` | `ตรวจสอบได้ในที่เก็บโค้ดนี้ ไม่ใช่แค่ที่ต้นทาง` |
 
-### 2.3 `docs/house-swarm-7/WU4-SAMPLE-UI.md` — 5 occurrences on 5 lines
+### 2.3 `docs/product/WU4-SAMPLE-UI.md` — 5 occurrences on 5 lines
 
 | line | old | new |
 |---|---|---|
@@ -102,7 +102,7 @@ file is 15 changed Thai lines and nothing else.
 | 220 | `เพราะ<STRING>นี้ไม่มีโปรเจกต์ Supabase และไม่มี credential` | `เพราะที่เก็บโค้ดนี้ไม่มีโปรเจกต์ Supabase และไม่มี credential` |
 | 224 | `ใน<STRING>นี้ ใช้รันบนเครื่องตัวเองเท่านั้น` | `ในที่เก็บโค้ดนี้ ใช้รันบนเครื่องตัวเองเท่านั้น` |
 
-### 2.4 `docs/house-swarm-7/WU6-SALES-TH.md` — 4 occurrences on 4 lines
+### 2.4 `docs/product/WU6-SALES-TH.md` — 4 occurrences on 4 lines
 
 | line | old | new |
 |---|---|---|
@@ -111,7 +111,7 @@ file is 15 changed Thai lines and nothing else.
 | 271 | `ใน<STRING>นี้ — ไม่มีส่งมาและไม่ได้ถ่ายไว้` | `ในที่เก็บโค้ดนี้ — ไม่มีส่งมาและไม่ได้ถ่ายไว้` |
 | 304 | `ไม่มีการติดตั้งที่ root ของ<STRING>` | `ไม่มีการติดตั้งที่ root ของที่เก็บโค้ด` |
 
-### 2.5 `docs/house-swarm-7/WU6-SALES-EN.md` — 4 occurrences on 4 lines
+### 2.5 `docs/product/WU6-SALES-EN.md` — 4 occurrences on 4 lines
 
 The English document's Thai halves are the same sentences as 2.4, at different lines:
 
@@ -122,7 +122,7 @@ The English document's Thai halves are the same sentences as 2.4, at different l
 | 337 | `**ไม่มีภาพหน้าจอ** ใน<STRING>นี้ — …` | `**ไม่มีภาพหน้าจอ** ในที่เก็บโค้ดนี้ — …` |
 | 381 | `root ของ<STRING> และไม่มีที่โฟลเดอร์บนสุด…` | `root ของที่เก็บโค้ด และไม่มีที่โฟลเดอร์บนสุด…` |
 
-### 2.6 `docs/house-swarm-7/WU6-CLAIMS-EVIDENCE.md` — 3 occurrences, all outside the C-rows
+### 2.6 `docs/product/WU6-CLAIMS-EVIDENCE.md` — 3 occurrences, all outside the C-rows
 
 | line | where | old | new |
 |---|---|---|---|
@@ -224,7 +224,7 @@ comment block that ends with the `# ---` rule line above the database step. It i
 
 ## 4. ③ The records
 
-- **`docs/house-swarm-7/WU6-CLAIMS-EVIDENCE.md` §9 intro** — the sentence that said the
+- **`docs/product/WU6-CLAIMS-EVIDENCE.md` §9 intro** — the sentence that said the
   section records "the reason each was left alone" now says "what was done with each", and a
   new short paragraph records that the controller ruled on 2026-09-29 and that §9b is where
   the ruling was carried out. It also states that §9a is unchanged.

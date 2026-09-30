@@ -85,7 +85,7 @@ the commentary now describes what the code does. Observed:
 
 ### 2.3 The operator-facing docs
 
-`scripts/house-swarm-7/setup.md` step 5 and `docs/house-swarm-7/WU5-DEPLOY.md` §3.2/§5 now
+`scripts/house-swarm-7/setup.md` step 5 and `docs/product/WU5-DEPLOY.md` §3.2/§5 now
 show the real post-fix output shape and name the new check, keeping the PENDING explanation
 (the server does create the schema at boot — that is still why it is not an error).
 
@@ -198,7 +198,7 @@ re-ran every command quoted above.
 ## 8. Boundaries
 
 Touched: `scripts/house-swarm-7/{db-check.mjs,setup.sh,setup.md}`,
-`server/scripts/proofs/fu/setup-dbcheck-proof.mjs`, `docs/house-swarm-7/WU5-DEPLOY.md` and this
+`server/scripts/proofs/fu/setup-dbcheck-proof.mjs`, `docs/product/WU5-DEPLOY.md` and this
 report. Nothing else: `server/src/`, `server/tests/`, `server/package.json`,
 `server/package-lock.json`, `modules/`, `web/`, the sales documents, `WU6-CLAIMS-EVIDENCE.md`,
 `docs/CURRENT_STATUS.md`, `FU-RATELIMIT.md`, `modules/rate-limit/PROVENANCE-RATELIMIT.md` and

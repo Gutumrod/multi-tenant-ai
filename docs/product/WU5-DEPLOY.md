@@ -323,7 +323,7 @@ place. Nothing reads it. Do not treat it as a configuration file.
 | `STRIPE_SECRET_KEY` | optional / ไม่บังคับ | Your own Stripe secret key, for the payment demo route. / คีย์ลับ Stripe ของคุณเอง สำหรับเส้นทาง payment demo |
 | `STRIPE_WEBHOOK_SECRET` | optional / ไม่บังคับ | Your own Stripe webhook signing secret, for verifying incoming webhooks. / signing secret สำหรับ webhook ของ Stripe ของคุณเอง ใช้ยืนยัน webhook ที่เข้ามา |
 | `WEBHOOK_RATE_LIMIT_MAX` | optional / ไม่บังคับ | Rate limit for `POST /payment/webhook`: wrong-signature requests allowed per window **per source address**. Unit is **requests** (a count, not seconds). Default `60`. A value that is not a positive integer is rejected, clamped to `60`, and warned about — it can never disable the limiter. / rate limit ของ `POST /payment/webhook`: จำนวนคำขอที่ลายเซ็น**ผิด**ที่อนุญาตต่อหนึ่งหน้าต่าง **ต่อที่อยู่ต้นทาง** หน่วยเป็น**จำนวนคำขอ** (ไม่ใช่วินาที) ค่าเริ่มต้น `60` ค่าที่ไม่ใช่จำนวนเต็มบวกจะถูกปฏิเสธ clamp เป็น `60` และมีคำเตือน — ปิด limiter ไม่ได้เด็ดขาด |
-| `WEBHOOK_RATE_LIMIT_WINDOW_MS` | optional / ไม่บังคับ | Length of the rate limit window for `POST /payment/webhook`. Unit is **milliseconds**, not seconds. Default `60000` (60 wrong-signature requests per source per 60 seconds). See `docs/house-swarm-7/FU-RATELIMIT.md`. / ความยาวหน้าต่างของ rate limit สำหรับ `POST /payment/webhook` หน่วยเป็น**มิลลิวินาที** ไม่ใช่วินาที ค่าเริ่มต้น `60000` (60 คำขอลายเซ็นผิดต่อแหล่งต่อ 60 วินาที) ดู `docs/house-swarm-7/FU-RATELIMIT.md` |
+| `WEBHOOK_RATE_LIMIT_WINDOW_MS` | optional / ไม่บังคับ | Length of the rate limit window for `POST /payment/webhook`. Unit is **milliseconds**, not seconds. Default `60000` (60 wrong-signature requests per source per 60 seconds). See the vendor's FU-RATELIMIT.md record (not delivered). / ความยาวหน้าต่างของ rate limit สำหรับ `POST /payment/webhook` หน่วยเป็น**มิลลิวินาที** ไม่ใช่วินาที ค่าเริ่มต้น `60000` (60 คำขอลายเซ็นผิดต่อแหล่งต่อ 60 วินาที) ดู `FU-RATELIMIT.md` (vendor-internal, not delivered)` |
 | `WEBHOOK_RATE_LIMIT_BACKSTOP_MAX` | optional / ไม่บังคับ | The coarse every-request backstop for `POST /payment/webhook`: requests allowed per window across the **whole route**, whatever their signature. Unit is **requests**. Default `1000`. Keep it materially larger than `WEBHOOK_RATE_LIMIT_MAX`, or it becomes a route-wide limit. A value that is not a positive integer is rejected, clamped to `1000`, and warned about — it can never disable the limiter. / backstop แบบหยาบที่นับทุกคำขอสำหรับ `POST /payment/webhook`: จำนวนคำขอที่อนุญาตต่อหนึ่งหน้าต่าง**ทั้งเส้นทาง** ไม่ว่าลายเซ็นจะเป็นอะไร หน่วยเป็น**จำนวนคำขอ** ค่าเริ่มต้น `1000` ตั้งให้ใหญ่กว่าค่า `WEBHOOK_RATE_LIMIT_MAX` อย่างมีนัยสำคัญ ไม่งั้นจะกลายเป็นขีดจำกัดทั้งเส้นทาง ค่าที่ไม่ใช่จำนวนเต็มบวกจะถูกปฏิเสธ clamp เป็น `1000` และมีคำเตือน — ปิด limiter ไม่ได้เด็ดขาด |
 
 Set them for the process. A POSIX shell does it on the command line, so the value
@@ -359,10 +359,10 @@ writes its seed plans **before** it starts listening.
 
 **Expected output (expected output):** two lines. With `DATABASE_URL` set:
 
-```expected output
+``expected output
 Subscription repositories ready: persistent=true subscriptions=PostgresSubscriptionRepository usageCounters=PostgresUsageCounterRepository
 Server listening on port 3003
-```
+``
 
 With `DATABASE_URL` unset, the same two lines read `persistent=false
 subscriptions=Object usageCounters=Object`, which is correct and means the
@@ -374,9 +374,9 @@ in-memory repositories are in use.
 
 **Expected output (expected output):**
 
-```expected output
+``expected output
 {"ok":true}
-```
+``
 
 A 200 with that exact body means the process is serving. Then run the full
 checklist in section 6 before you trust the deployment.
@@ -525,14 +525,14 @@ have:
 **Expected output (expected output):** six rows naming `billing_event_ledger`,
 `plans`, `schema_migrations`, `subscriptions`, `tenants`, `usage_counters`.
 
-```expected output
+``expected output
 billing_event_ledger
 plans
 schema_migrations
 subscriptions
 tenants
 usage_counters
-```
+``
 
 `db-check.mjs` reports the same thing in its own shape:
 `CHECK migration-tables PASS all 6 expected tables present` and
@@ -587,7 +587,7 @@ own port if you did not use `3003`.
 |---|---|---|
 | 1 | `node --version` | `v22.` or higher. / `v22.` ขึ้นไป |
 | 2 | `cd server && npm ci` then `npm run typecheck` (do **not** run this with `NODE_ENV=production` set — use `npm ci --include=dev` if you must, or the devDependencies `tsc`/`tsx` will be missing, §3.2) | exits 0 and prints no type error. / ออกด้วย 0 และไม่พิมพ์ type error |
-| 3 | `cd server && npm test` — read §6.1 first: it gives the `DATABASE_URL` prerequisite and states what the suite does to your database | with `DATABASE_URL` **set against a fresh database** it exits 0 with every test file passing: `Test Files 6 passed (6)` and `Tests 58 passed (58)`. With `DATABASE_URL` **unset** it exits 0 with `Test Files 5 passed \| 1 skipped (6)` and `Tests 53 passed \| 5 skipped (58)`. / ออกด้วย 0 โดยไฟล์เทสต์ทั้งหมดผ่าน อ่าน §6.1 ก่อน เพราะมีเงื่อนไข `DATABASE_URL` และระบุว่าชุดเทสต์แตะฐานข้อมูลของคุณอย่างไร |
+| 3 | `cd server && npm test` — read §6.1 first: it gives the `DATABASE_URL` prerequisite and states what the suite does to your database | with `DATABASE_URL` **set against a fresh database** it exits 0 with every test file passing: `Test Files 6 passed (6)` and `Tests 62 passed (62)`. With `DATABASE_URL` **unset** it exits 0 with `Test Files 5 passed \| 1 skipped (6)` and `Tests 57 passed \| 5 skipped (62)`. / ออกด้วย 0 โดยไฟล์เทสต์ทั้งหมดผ่าน อ่าน §6.1 ก่อน เพราะมีเงื่อนไข `DATABASE_URL` และระบุว่าชุดเทสต์แตะฐานข้อมูลของคุณอย่างไร |
 | 4 | start with `DATABASE_URL` unset / สตาร์ทโดยไม่ตั้ง `DATABASE_URL` | logs `persistent=false` then `Server listening on port 3003`. / พิมพ์ `persistent=false` แล้ว `Server listening on port 3003` |
 | 5 | `curl -s http://127.0.0.1:3003/health` | `{"ok":true}` / เหมือนกัน |
 | 6 | `curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:3003/` | `200` — the sample UI landing page is served. / `200` — หน้าแรกของ UI ตัวอย่างถูกเสิร์ฟ |
@@ -599,20 +599,20 @@ own port if you did not use `3003`.
 ### 6.1 `npm test` in detail — the `DATABASE_URL` prerequisite and what the suite does to your database / รายละเอียดของ `npm test` — เงื่อนไข `DATABASE_URL` และสิ่งที่ชุดเทสต์ทำกับฐานข้อมูลของคุณ
 
 **Prerequisite: `DATABASE_URL` changes what you observe.** The first observation
-in checklist item 3 — `Test Files 6 passed (6)` and `Tests 58 passed (58)` — holds
+in checklist item 3 — `Test Files 6 passed (6)` and `Tests 62 passed (62)` — holds
 **only when `DATABASE_URL` is set**. `server/tests/postgres-persistence.test.ts`
 is an integration suite that skips itself when no database is configured. With
 `DATABASE_URL` **unset** the same command still exits 0, but the observed result
-is `Test Files 5 passed | 1 skipped (6)` and `Tests 53 passed | 5 skipped (58)`,
+is `Test Files 5 passed | 1 skipped (6)` and `Tests 57 passed | 5 skipped (62)`,
 and the five skipped tests are that file's. Both results are a pass; they are
 different observations of the same suite, and the condition is the database.
 `server/tests/` holds six test files; with `DATABASE_URL` set all six run.
 
 **เงื่อนไข: `DATABASE_URL` เปลี่ยนสิ่งที่คุณเห็น** ผลแรกในข้อ 3 — `Test Files 6 passed (6)`
-และ `Tests 58 passed (58)` — เกิด**เฉพาะเมื่อตั้ง `DATABASE_URL`** ไฟล์
+และ `Tests 62 passed (62)` — เกิด**เฉพาะเมื่อตั้ง `DATABASE_URL`** ไฟล์
 `server/tests/postgres-persistence.test.ts` เป็นชุด integration ที่ข้ามตัวเองเมื่อไม่มี
 ฐานข้อมูล ถ้า**ไม่ตั้ง** `DATABASE_URL` คำสั่งเดิมยังออกด้วย 0 แต่ผลที่เห็นคือ
-`Test Files 5 passed | 1 skipped (6)` และ `Tests 53 passed | 5 skipped (58)` โดยห้าเทสต์
+`Test Files 5 passed | 1 skipped (6)` และ `Tests 57 passed | 5 skipped (62)` โดยห้าเทสต์
 ที่ข้ามคือของไฟล์นั้น ทั้งสองผลถือว่าผ่าน เป็นการสังเกตชุดเดียวกันต่างเงื่อนไข และเงื่อนไขคือฐานข้อมูล
 `server/tests/` มีไฟล์เทสต์หกไฟล์ เมื่อตั้ง `DATABASE_URL` ทั้งหกไฟล์จะรัน
 
@@ -621,7 +621,7 @@ With `DATABASE_URL` set, `npm test` writes subscription and ledger rows into
 whatever database is configured, and **it deletes exactly the rows it created
 again before it exits**, so repeated runs against one database leave nothing
 behind. Measured on the author's local test database: three consecutive
-full-suite runs each reported `Test Files 6 passed (6)` and `Tests 58 passed (58)`,
+full-suite runs each reported `Test Files 6 passed (6)` and `Tests 62 passed (62)`,
 and the row counts after all three runs were `subscriptions` 0 and
 `billing_event_ledger` 0. Pointing a test suite at a scratch database rather than
 a production one is still the right habit, but this suite is **repeatable**: the
@@ -655,7 +655,7 @@ before this one, that warning is obsolete.**
 เมื่อตั้ง `DATABASE_URL` แล้ว `npm test` จะเขียนแถวของ subscription และ ledger ลงฐานข้อมูล
 ที่ถูกตั้งไว้ และ **มันลบแถวที่ตัวเองสร้างทิ้งก่อนจบ** การรันซ้ำบนฐานข้อมูลเดิมจึงไม่ทิ้งอะไรไว้
 วัดบนฐานข้อมูลทดสอบในเครื่องผู้เขียน: สามรอบรันติดกันรายงาน `Test Files 6 passed (6)` และ
-`Tests 58 passed (58)` ทุกรอบ และจำนวนแถวหลังทั้งสามรอบคือ `subscriptions` 0 และ
+`Tests 62 passed (62)` ทุกรอบ และจำนวนแถวหลังทั้งสามรอบคือ `subscriptions` 0 และ
 `billing_event_ledger` 0 การชี้ชุดเทสต์ไปที่ฐานข้อมูลทดสอบแทน production ยังเป็นนิสัยที่ถูก
 แต่ชุดเทสต์นี้**รันซ้ำได้**: ใช้ฐานข้อมูลเดิมซ้ำได้ทุกรอบ แถวเหล่านั้นมาจากไฟล์เทสต์สองไฟล์ และ
 ทั้งสองไฟล์เก็บกวาดของตัวเอง:
@@ -716,11 +716,11 @@ output looks like — they are **not** a claim about your machine or your host.
 - `node --version` → `v24.19.0`; `npm --version` → `11.11.1`
 - `npm run typecheck` → exit code 0
 - `npm test` → exit code 0, summary lines `Test Files  6 passed (6)` and
-  `Tests  58 passed (58)` — observed with `DATABASE_URL` set, on the local test
+  `Tests  62 passed (62)` — observed with `DATABASE_URL` set, on the local test
   database (with `DATABASE_URL` unset the same command gives
-  `5 passed | 1 skipped (6)` and `53 passed | 5 skipped (58)`; see §6.1)
+  `5 passed | 1 skipped (6)` and `57 passed | 5 skipped (62)`; see §6.1)
 - `npm test` with `DATABASE_URL` set left **no** rows behind: three consecutive
-  runs against one database each reported `6 passed (6)` / `58 passed (58)`, and
+  runs against one database each reported `6 passed (6)` / `62 passed (62)`, and
   the row counts afterwards were `subscriptions` 0 and `billing_event_ledger` 0 —
   the suite deletes the rows it creates; see §6.1
 - start without `DATABASE_URL` → `persistent=false subscriptions=Object usageCounters=Object`
@@ -935,9 +935,9 @@ server:
 **Expected output (expected output):** with those two variables set, `GET /me`
 answers:
 
-```expected output
+``expected output
 {"error":"Demonstration identity mode (DEMO_AUTH) is refused on a production server instance","code":"DEMO_AUTH_REFUSED_IN_PRODUCTION"}
-```
+``
 
 **What the refusal does and does not cover.** It is a hard stop for the demo gate,
 and it is the guarantee that this kit cannot accidentally ship a demo identity in
@@ -1018,7 +1018,7 @@ an internet-facing multi-instance deployment.
    `60` wrong-signature requests **per source**, per
    `WEBHOOK_RATE_LIMIT_WINDOW_MS`, default `60000` milliseconds — that is 60
    wrong-signature requests per source per 60 seconds — plus the `1000`-request
-   route backstop above. `docs/house-swarm-7/FU-RATELIMIT.md` is the
+   route backstop above. `FU-RATELIMIT.md` (vendor-internal, not delivered) is the
    full account of it. What it is **not**: the counter lives in one process's
    memory, so the limit is **per-instance and resets when the process restarts**;
    several instances behind a load balancer share no counter, so the effective
@@ -1060,7 +1060,7 @@ an internet-facing multi-instance deployment.
    ในข้อ 3.3: `WEBHOOK_RATE_LIMIT_MAX` ค่าเริ่มต้น `60` คำขอลายเซ็นผิด**ต่อแหล่ง**
    และ `WEBHOOK_RATE_LIMIT_WINDOW_MS` ค่าเริ่มต้น `60000` มิลลิวินาที คือ 60 คำขอลายเซ็นผิด
    ต่อแหล่งต่อ 60 วินาที บวก backstop ทั้งเส้นทาง `1000` คำขอข้างบน
-   รายละเอียดทั้งหมดอยู่ที่ `docs/house-swarm-7/FU-RATELIMIT.md` สิ่งที่มัน**ไม่**ใช่:
+   รายละเอียดทั้งหมดอยู่ที่ `FU-RATELIMIT.md` (vendor-internal, not delivered) สิ่งที่มัน**ไม่**ใช่:
    ตัวนับอยู่ในหน่วยความจำของโปรเซสเดียว ขีดจำกัดจึง**แยกตามอินสแตนซ์และรีเซ็ตเมื่อโปรเซส
    รีสตาร์ท** หลายอินสแตนซ์หลังโหลดบาลานเซอร์ไม่แชร์ตัวนับ เพดานจริงจึงคูณตามจำนวน
    อินสแตนซ์ และหลัง reverse proxy หรือโหลดบาลานเซอร์ ทุกคำขอมาจากที่อยู่ socket เดียวกัน

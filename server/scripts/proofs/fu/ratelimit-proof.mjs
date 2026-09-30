@@ -22,7 +22,7 @@
  *
  *   * a deleted file gives `Cannot find module` (node exit 1, or 127 from a shell) with no
  *     explanation, which reads as a broken tree; this stub exits 0 and says what happened;
- *   * four documents cite this path by name — `docs/house-swarm-7/FU-RATELIMIT.md`,
+ *   * four documents cite this path by name — the vendor's FU-RATELIMIT.md record (not delivered),
  *     `WU6-CLAIMS-EVIDENCE.md` (row C60), `FU-REVIEW-FIX-5.md` — so the path must keep
  *     resolving to something that explains itself.
  *

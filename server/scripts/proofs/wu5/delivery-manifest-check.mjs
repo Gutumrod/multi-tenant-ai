@@ -68,11 +68,30 @@ const MANIFEST = join(REPO_DIR, 'DELIVERY-MANIFEST.md');
 const INTERNAL_DIR_REL = 'docs/house-swarm-7';
 
 /**
- * The naming family the vendor's working record lives in, used as a GUARD: an
- * entry may only be classified "not delivered" if it is one of these. It is not
- * what decides the classification — the manifest decides, explicitly.
+ * The vendor's working record, as a FOLDER — the rule this gate now enforces.
+ *
+ * It used to be a name prefix (`FU-`/`PRESALE-` under `docs/house-swarm-7/`),
+ * with two feature papers declared delivered as exceptions. The independent
+ * review of the merged revision recorded what that cost: the delivered set still
+ * carried the vendor's feature logs, and a file added under that folder with a
+ * name outside the prefix would have needed a new decision rather than being
+ * covered by the rule. The rule is now the folder itself, so:
+ *
+ *   * a not-delivered entry is only accepted if it is under this folder;
+ *   * a file under this folder may NOT be delivered (no exceptions);
+ *   * a new file added under this folder is not delivered whatever it is called.
+ *
+ * A buyer-facing document lives under `docs/product/`, which is an ordinary
+ * delivered path.
  */
-const INTERNAL_FAMILY_RULE = /^docs\/house-swarm-7\/(?:FU-|PRESALE-)[A-Za-z0-9._-]+\.md$/;
+const INTERNAL_FOLDER = 'docs/house-swarm-7/';
+const isInternalRecord = (rel) => rel.startsWith(INTERNAL_FOLDER);
+
+/**
+ * Backwards-compatible name for the folder rule, kept because the CHECK text and
+ * the older reports refer to it as "the family rule".
+ */
+const INTERNAL_FAMILY_RULE = /^docs\/house-swarm-7\//;
 
 /** Every DELIVERED file must say nothing about the vendor's machine. */
 const MACHINE_PATTERNS = [
@@ -194,6 +213,12 @@ if (manifestText === null) {
   const missingGroups = [];
   if (!groups.has(GROUP.delivered)) missingGroups.push('## Delivered');
   if (!groups.has(GROUP.notDelivered)) missingGroups.push('## Not delivered');
+  // The residual group is OPTIONAL and, in the corrected manifest, absent: the
+  // delivered set is path-clean, so there is nothing to declare. Its absence is
+  // asserted below by `no-declared-path-residuals-remain` rather than assumed.
+  if (groups.has(GROUP.residual) && (groups.get(GROUP.residual)?.size ?? 0) === 0) {
+    missingGroups.push('## Delivered with a recorded path residual present but empty (drop the group)');
+  }
   parsed = missingGroups.length === 0 && delivered.size > 0;
 
   record(
@@ -229,14 +254,25 @@ const treeFiles = repoFiles(REPO_DIR);
       if (!classified.has(rel)) offenders.push(`unclassified: ${rel}`);
     }
     for (const rel of notDelivered) {
-      if (!INTERNAL_FAMILY_RULE.test(rel)) {
-        offenders.push(`not-delivered entry is not in the working-record family (${INTERNAL_FAMILY_RULE}): ${rel}`);
+      if (!isInternalRecord(rel)) {
+        offenders.push(
+          `not-delivered entry is not under the vendor's working-record folder (${INTERNAL_FOLDER}): ${rel}`
+        );
       }
       if (delivered.has(rel)) {
         offenders.push(`listed in BOTH groups: ${rel}`);
       }
     }
     for (const rel of delivered) {
+      // THE FOLDER RULE, ENFORCED ON THE DELIVERED SIDE TOO. A file under the
+      // vendor's working-record folder may not be in the delivered set — that is
+      // the whole point of making the rule the folder rather than a name prefix,
+      // and it is what stops a feature paper being re-declared as an exception.
+      if (isInternalRecord(rel)) {
+        offenders.push(
+          `delivered entry is under the vendor's working-record folder (${INTERNAL_FOLDER}) and must not be delivered: ${rel}`
+        );
+      }
       if (residual.has(rel)) continue;
       if (!treeFiles.includes(rel)) offenders.push(`delivered but not present in the tree: ${rel}`);
     }
@@ -262,10 +298,11 @@ const treeFiles = repoFiles(REPO_DIR);
 // allowed — that is what the classification is for — and firing on it would make
 // the check demand the destruction of the vendor's own evidence record.
 //
-// The exceptions are NAMED in the manifest, never inferred here, and check 4
-// asserts each one is still a real, still-dirty, vendored copy. A file that gains
-// a machine path without being declared fails this check rather than joining the
-// residual silently.
+// There are NO exceptions any more (review finding LOW-3): the vendored module
+// documents that used to be declared as a "recorded path residual" were cleaned,
+// so every delivered file is scanned and no list can exempt one. Check 4 asserts
+// independently that no residual group exists and that nothing in the delivered
+// set is path-dirty.
 // ---------------------------------------------------------------------------
 {
   const hits = [];
@@ -274,7 +311,9 @@ const treeFiles = repoFiles(REPO_DIR);
   if (!parsed) {
     record('delivered-files-carry-no-machine-path', false, 'the manifest could not be parsed (see delivery-manifest-parsed)');
   } else {
-    const toScan = [...delivered].filter((rel) => !residual.has(rel)).sort();
+    // NOTHING is filtered out: the delivered set is scanned whole. The residual
+    // filter is gone with the residual list.
+    const toScan = [...delivered].sort();
     for (const rel of toScan) {
       const text = readOrNull(join(REPO_DIR, rel));
       if (text === null) continue;
@@ -293,50 +332,65 @@ const treeFiles = repoFiles(REPO_DIR);
       'delivered-files-carry-no-machine-path',
       hits.length === 0,
       hits.length === 0
-        ? `no DELIVERED file carries an internal machine path; scanned ${scanned} delivered file(s) for ${MACHINE_PATTERNS.map(([l]) => l).join(', ')}; the ${notDelivered.size} not-delivered working papers are read from the classification and are allowed to carry them; ${residual.size} delivered file(s) are declared path residuals and are asserted separately`
+        ? `no DELIVERED file carries an internal machine path; scanned ${scanned} delivered file(s) for ${MACHINE_PATTERNS.map(([l]) => l).join(', ')}; the ${notDelivered.size} not-delivered working papers are read from the classification and are allowed to carry them; no delivered file is exempt, and no residual list exists to exempt one`
         : `${hits.length} machine path(s) in the delivered set: ${hits.slice(0, 10).join('; ')}`
     );
   }
 }
 
 // ---------------------------------------------------------------------------
-// CHECK 4 — recorded-path-residuals-are-live
+// CHECK 4 — no-declared-path-residuals-remain
 //
-// A declared residual is only honest while it is true. Each entry must exist, sit
-// under the vendored `modules/` tree, and STILL carry a machine path. Cleaning one
-// up — or removing the file — without updating the manifest fails this check, so
-// the residual list cannot quietly become a blanket exemption that hides a fixed
-// tree or an absent file.
+// THE CORRECTION THIS CHECK NOW MAKES (review finding LOW-3). The previous
+// revision DECLARED seven vendored module documents as a "recorded path
+// residual" and asserted the declaration stayed live. The independent review
+// recorded why that is not good enough: a declaration the gate enforces by
+// finding the machine path it declares is indistinguishable, to a reader, from
+// an exemption — and it let a delivered file keep the vendor's machine path as
+// long as the manifest said so.
+//
+// So the declaration is gone and the property it stood for is checked directly:
+// NO delivered file carries a machine path, and no residual group exists to
+// exempt one. This check fails if the group comes back, or if any delivered file
+// (including a vendored module document) carries a machine path that the
+// machine-path check would otherwise have skipped.
 // ---------------------------------------------------------------------------
 {
   const problems = [];
 
   if (!parsed) {
-    record('recorded-path-residuals-are-live', false, 'the manifest could not be parsed (see delivery-manifest-parsed)');
+    record('no-declared-path-residuals-remain', false, 'the manifest could not be parsed (see delivery-manifest-parsed)');
   } else {
-    for (const rel of [...residual].sort()) {
+    if (residual.size > 0) {
+      problems.push(
+        `${residual.size} file(s) are still declared as a "recorded path residual" (${[...residual]
+          .sort()
+          .slice(0, 10)
+          .join(', ')}); the corrected manifest declares none — a machine path must be removed, not declared`
+      );
+    }
+
+    // Independent of the group: scan the delivered set for the vendor's machine
+    // paths, EXCLUDING NOTHING. If a file's path is in the delivered group, its
+    // text must be clean; there is no residual list left to skip it.
+    const dirty = [];
+    for (const rel of [...delivered].sort()) {
       const text = readOrNull(join(REPO_DIR, rel));
-      if (text === null) {
-        problems.push(`${rel} is declared a path residual but does not exist`);
-        continue;
+      if (text === null) continue;
+      for (const [label, pattern] of MACHINE_PATTERNS) {
+        if (pattern.test(text)) dirty.push(`${rel} (${label})`);
       }
-      if (!rel.startsWith('modules/')) {
-        problems.push(`${rel} is declared a path residual but is not under the vendored modules/ tree`);
-      }
-      const found = MACHINE_PATTERNS.filter(([, pattern]) => pattern.test(text)).map(([label]) => label);
-      if (found.length === 0) {
-        problems.push(`${rel} is declared a path residual but now carries no machine path — the declaration is stale; reclassify or drop it`);
-      }
+    }
+    if (dirty.length > 0) {
+      problems.push(`${dirty.length} delivered file(s) carry a machine path: ${dirty.slice(0, 10).join('; ')}`);
     }
 
     record(
-      'recorded-path-residuals-are-live',
+      'no-declared-path-residuals-remain',
       problems.length === 0,
       problems.length === 0
-        ? residual.size === 0
-          ? 'no delivered file is declared a path residual: the whole delivered set is path-clean'
-          : `all ${residual.size} declared path residual(s) exist, are under modules/, and still carry a machine path — the residual is real and narrow, and it is named in DELIVERY-MANIFEST.md rather than inferred`
-        : `${problems.length} problem(s): ${problems.slice(0, 10).join('; ')}`
+        ? 'no delivered file is declared a path residual and none carries a machine path — the whole delivered set, vendored modules included, is path-clean and there is no exemption list'
+        : `${problems.length} problem(s): ${problems.slice(0, 5).join('; ')}`
     );
   }
 }
@@ -433,47 +487,50 @@ const treeFiles = repoFiles(REPO_DIR);
 }
 
 // ---------------------------------------------------------------------------
-// CHECK 8 — not-delivered-papers-are-not-cited-as-live-deliverables
+// CHECK 8 — no-working-paper-is-delivered
 //
-// A working paper cannot be delivered and not delivered at the same time, and the
-// buyer-facing documents must not present one as part of the package. This asserts
-// the weaker, checkable half: no not-delivered paper is named as a delivered item
-// in a group heading or a "delivered" sentence of the manifest, and the two that
-// ARE delivered are path-clean — so the exceptions cannot be widened to a paper
-// that carries a machine path.
+// The rule, stated as the property it is: a working paper is never part of what a
+// buyer receives. It used to be written as "no paper is named as a delivered item
+// AND the two exceptions are path-clean", which left the door open for a third
+// paper to be declared an exception. With the folder rule there is no door: every
+// delivered path is checked against the folder, and any file under it that appears
+// in the delivered group is a failure. This also names the working papers that ARE
+// delivered if any exist — which, after the correction, is none.
 // ---------------------------------------------------------------------------
 {
   const problems = [];
 
   if (!parsed) {
-    record('delivered-working-papers-are-path-clean', false, 'the manifest could not be parsed (see delivery-manifest-parsed)');
+    record('no-working-paper-is-delivered', false, 'the manifest could not be parsed (see delivery-manifest-parsed)');
   } else {
-    const deliveredPapers = [...delivered].filter((rel) => INTERNAL_FAMILY_RULE.test(rel)).sort();
-    for (const rel of deliveredPapers) {
-      if (residual.has(rel)) {
-        problems.push(`${rel} is a delivered working paper AND declared a path residual; a working paper that carries a machine path is not delivered`);
-        continue;
-      }
-      const text = readOrNull(join(REPO_DIR, rel));
-      if (text === null) {
-        problems.push(`${rel} is a delivered working paper but does not exist`);
-        continue;
-      }
-      const lines = text.split(/\r?\n/);
-      for (let i = 0; i < lines.length; i += 1) {
-        for (const [label, pattern] of MACHINE_PATTERNS) {
-          if (pattern.test(lines[i])) problems.push(`${rel}:${i + 1} is a DELIVERED working paper and carries a machine path (${label})`);
-        }
+    const deliveredPapers = [...delivered].filter((rel) => isInternalRecord(rel)).sort();
+
+    // The buyer-facing documents must live under docs/product/, not in the
+    // vendor's record folder — so a paper cannot be smuggled into the delivered
+    // set by moving its row and leaving the file where it is.
+    const expectedProductDocs = [
+      'docs/product/WU3-PAID-ROUTE-INVENTORY.md',
+      'docs/product/WU4-SAMPLE-UI.md',
+      'docs/product/WU5-DEPLOY.md',
+      'docs/product/WU6-CLAIMS-EVIDENCE.md',
+      'docs/product/WU6-SALES-EN.md',
+      'docs/product/WU6-SALES-TH.md',
+    ];
+    for (const rel of expectedProductDocs) {
+      if (!delivered.has(rel)) {
+        problems.push(`${rel} is not in the delivered set; the buyer-facing documents live under docs/product/`);
       }
     }
 
+    for (const rel of deliveredPapers) {
+      problems.push(`${rel} is a delivered working paper; the whole ${INTERNAL_FOLDER} folder is not delivered`);
+    }
+
     record(
-      'delivered-working-papers-are-path-clean',
+      'no-working-paper-is-delivered',
       problems.length === 0,
       problems.length === 0
-        ? deliveredPapers.length === 0
-          ? 'no working paper is delivered — the whole naming family is classified not delivered'
-          : `${deliveredPapers.length} working paper(s) are declared delivered (${deliveredPapers.join(', ')}) and each is path-clean; a paper that gained a machine path would have to be reclassified, not exempted`
+        ? `no working paper is delivered: ${delivered.size} delivered paths, none of them under ${INTERNAL_FOLDER}, and all ${expectedProductDocs.length} buyer-facing documents are present under docs/product/`
         : `${problems.length} problem(s): ${problems.slice(0, 10).join('; ')}`
     );
   }

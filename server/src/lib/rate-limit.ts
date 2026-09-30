@@ -35,25 +35,64 @@
  * ---------------------------------------------------------------------------
  * THE ORDER, AND WHY IT IS THIS ORDER
  * ---------------------------------------------------------------------------
- * The middleware is mounted ahead of `express.raw()` and the handler (see
+ * The middleware runs after `express.raw()` and before the handler (see
  * `server/src/app.ts`), and it works in three steps:
  *
- *   1. BACKSTOP — one coarse, generous fixed-window bucket under the constant
- *      route key `WEBHOOK_RATE_LIMIT_KEY`, charged with EVERY request. This is
- *      what keeps total work bounded, because step 2 costs an HMAC.
- *   2. VERIFY — the same real Stripe signature verification the handler would
+ *   1. VERIFY — the same real Stripe signature verification the handler would
  *      perform, against the same secret (`STRIPE_WEBHOOK_SECRET`), on the same
  *      raw body. The verdict is one of: valid / invalid / unavailable.
- *   3. PER-SOURCE — charged ONLY with the requests whose signature was INVALID,
+ *   2. PER-SOURCE — charged ONLY with the requests whose signature was INVALID,
  *      under a key derived from the request's source address.
+ *   3. BACKSTOP — one coarse, generous fixed-window bucket under the constant
+ *      route key `WEBHOOK_RATE_LIMIT_KEY`, charged with every request that is
+ *      NOT a real delivery (invalid, or unjudgeable because no secret is
+ *      configured). It bounds how much non-valid traffic this process will
+ *      process in one window.
  *
- * A request whose signature is VALID is therefore never charged to any bucket
- * except the backstop, and can never be refused because of an attacker's
- * flood: the attacker can only fill buckets the attacker's own requests are
- * charged to. That is the property the Owner's acceptance test states, and it
- * holds by construction rather than by luck:
+ * A request whose signature is VALID is never charged to ANY bucket and leaves
+ * through the branch immediately after the verdict, so it can never be refused
+ * because of an attacker's flood: the attacker can only fill buckets the
+ * attacker's own requests are charged to. That is the property the Owner's
+ * acceptance test states, and it holds by construction rather than by luck:
  *
  *   ยิง flood ลายเซ็นผิด แล้ว webhook ลายเซ็นถูกยังผ่าน
+ *
+ * ---------------------------------------------------------------------------
+ * WHAT CHANGED IN P3C, AND THE DEFECT IT REMOVES (independent review, HIGH)
+ * ---------------------------------------------------------------------------
+ * The previous revision charged the route backstop with EVERY request BEFORE
+ * the signature was verified, and refused a request that exceeded it at that
+ * point. A refusal decided before the verdict cannot distinguish an attacker's
+ * junk from Stripe's own delivery, so an unauthenticated flood could exhaust
+ * the shared bucket and a correctly-signed delivery arriving in the same window
+ * was then refused 429 — the original LOW-2 defect, merely moved from a
+ * 60-request threshold to a 1000-request one. It was reproduced: with the
+ * documented defaults, 1062 forged requests from one source returned 60 x 401
+ * and 1002 x 429, and the correctly-signed delivery that followed was refused
+ * 429. The threshold was never a resource-saturation measurement; it was a
+ * counter an outsider could fill by design.
+ *
+ * The repair is to move the backstop behind the verdict and to charge it only
+ * with traffic that is NOT a real delivery:
+ *
+ *   * no refusal is decided before the signature verdict, so no bucket a
+ *     correctly-signed delivery could be refused by is even reachable for it;
+ *   * the backstop still bounds the non-valid traffic this process processes
+ *     per window — including the no-secret state, where every request is
+ *     unjudgeable and already answered 503 by the handler;
+ *   * the per-source bucket still refuses a forged flood after
+ *     `WEBHOOK_RATE_LIMIT_MAX` wrong-signature requests per window.
+ *
+ * WHAT THIS COSTS, STATED PLAINLY: verification now runs before any counting,
+ * so the HMAC work is spent on whatever reaches the middleware and is capped in
+ * this process by nothing but the arrival rate — an in-process counter cannot
+ * bound work it must pay for before it can count. That work is cheap (one HMAC
+ * over a small body per request) and it is NOT a bound this file can claim. An
+ * edge / reverse-proxy / WAF request limit is what stands in front of it, and
+ * `docs/CURRENT_STATUS.md`, the delivered deployment manual and
+ * the vendor's FU-RATELIMIT.md record (not delivered) all say so. The alternative — refusing
+ * before verifying — is the defect above, and refusing a real payment delivery
+ * is the worse failure.
  *
  * ---------------------------------------------------------------------------
  * THE PER-SOURCE KEY, AND THE LIMITS OF IT
@@ -83,52 +122,55 @@
  * its own bucket key.
  *
  * ---------------------------------------------------------------------------
- * THE BACKSTOP, AND THE RESIDUAL IT CANNOT COVER
+ * THE BACKSTOP, AND WHAT IT IS NOW
  * ---------------------------------------------------------------------------
- * Step 2 costs HMAC work, and step 2 runs BEFORE the tight per-source limit, so
- * a flood now costs HMAC work that the previous ordering avoided. That is the
- * deliberate trade: bounded real work in exchange for never refusing a real
- * delivery. The backstop is what bounds it — a fixed-window bucket charged with
- * every request that reaches the route, whatever its signature.
+ * Verification costs an HMAC, and it runs before any counting, so a flood now
+ * costs HMAC work that the pre-P3A ordering avoided. That is the deliberate
+ * trade: bounded real work in exchange for never refusing a real delivery.
+ *
+ * The backstop no longer runs ahead of the verdict (see the P3C section above).
+ * It is now charged with every request that is NOT a real delivery, so it bounds
+ * the non-valid traffic this process will process per window — a forged flood
+ * that has exhausted its own per-source bucket, and the no-secret state where
+ * every request is unjudgeable. A correctly-signed delivery is charged to
+ * neither the backstop nor any per-source bucket.
  *
  * It must be materially larger than the per-source limit or it would simply
- * become the old route-wide limit again (it would refuse a legitimate Stripe
- * burst at the same point). Its default is
+ * become a route-wide limit again for non-valid traffic (it would refuse a
+ * legitimate Stripe burst at the same point). Its default is
  * `WEBHOOK_RATE_LIMIT_DEFAULT_BACKSTOP_MAX` = 1000 requests per window, i.e.
  * ~16.7 requests/second over the default 60 s window: far above any plausible
- * legitimate delivery rate for one endpoint, and cheap to serve — 1000 HMACs
- * per minute is negligible work for one process.
+ * legitimate rate for one endpoint, and cheap to serve.
  *
- * THE RESIDUAL, stated plainly: a flood large enough to exhaust the backstop
- * (more than 1000 requests in one window, by default) IS refused, and while it
- * lasts, a real delivery arriving in that window would be refused too. The
- * redesign narrows that to "the endpoint is saturated", from the previous
- * "60 junk requests a minute are enough", but it does not remove it, and it
- * cannot: a per-process counter cannot tell a saturated endpoint from a
- * legitimate burst without knowing who is calling, and the caller is only known
- * after the verification the backstop exists to bound. Two further limits are
- * inherent and also stated:
+ * WHAT IT IS NOT, stated plainly: it is not a bound on total process work, and
+ * this file does not claim it is. The work a request costs is paid before the
+ * verdict is known, so an in-process counter cannot bound it — only a limit
+ * that stands in FRONT of this process can, which is the edge/proxy/WAF layer.
+ * What the backstop bounds is how much non-valid traffic reaches the handler
+ * and how long a forged flood keeps being served after its own allowance is
+ * gone. Two further limits are inherent and also stated:
  *
  *   * the counter is THIS PROCESS's memory only (`webhookRateLimitStore`), so
  *     N instances multiply every limit by N;
  *   * the whole mechanism is a backstop for the process, not a quota for the
  *     caller.
  *
- * An edge/reverse-proxy/WAF limit is still the real answer for a deployment
- * that must survive a determined flood, exactly as `docs/CURRENT_STATUS.md`
- * and `docs/house-swarm-7/WU5-DEPLOY.md` already say. This file does not
- * pretend otherwise, in code or in this comment.
+ * An edge/reverse-proxy/WAF limit is the real answer for a deployment that must
+ * survive a determined flood, exactly as `docs/CURRENT_STATUS.md` and
+ * `docs/product/WU5-DEPLOY.md` already say. This file does not pretend
+ * otherwise, in code or in this comment.
  *
  * ---------------------------------------------------------------------------
- * WHEN THE SECRET IS ABSENT: NOT COUNTED, AND WHY
+ * WHEN THE SECRET IS ABSENT: COUNTED BY THE BACKSTOP, NOT PER SOURCE, AND WHY
  * ---------------------------------------------------------------------------
- * Step 2 needs `STRIPE_WEBHOOK_SECRET`. When it is unset, no signature can be
- * judged — and this endpoint already refuses EVERY request with 503 (the
+ * Verification needs `STRIPE_WEBHOOK_SECRET`. When it is unset, no signature
+ * can be judged — and this endpoint already refuses EVERY request with 503 (the
  * handler's own gate, asserted by the suite), so there is no real delivery to
  * protect and nothing a per-source counter could usefully separate. The
- * middleware therefore keeps the backstop armed (work stays bounded) and
- * charges no per-source bucket, letting the handler answer its documented 503
- * unchanged. A wrong count is not better than no count.
+ * middleware therefore charges the BACKSTOP (the unjudgeable traffic is exactly
+ * what it bounds) and charges no per-source bucket, letting the handler answer
+ * its documented 503 unchanged. A wrong per-source count is not better than no
+ * count; the backstop count is not wrong, it is the honest one.
  *
  * ---------------------------------------------------------------------------
  * MISCONFIGURATION: CLAMPED, NEVER DISABLED
@@ -470,8 +512,24 @@ export function createWebhookRateLimitMiddleware(
     next: NextFunction
   ): Promise<void> {
     try {
-      // Step 1 — the coarse backstop, charged with every request, so the HMAC
-      // work below is bounded even when every request is forged.
+      // Step 1 — VERIFY FIRST. Nothing is refused before the verdict, because a
+      // refusal decided without it cannot tell an attacker's junk from a real
+      // Stripe delivery: that is the HIGH defect this order removes (see the
+      // file header, P3C). The verdict is the only thing that decides which
+      // buckets a request may be charged to.
+      const verdict = await classifySignature(req);
+
+      // A real delivery is never charged to ANY bucket — not the backstop, not
+      // a per-source one — so no flood can make it refuse.
+      if (verdict === 'valid') {
+        next();
+        return;
+      }
+
+      // Step 2 — the coarse backstop, charged with every request that reached
+      // the route and is NOT a real delivery: the requests whose signature is
+      // wrong, and (below) the unjudgeable ones. It bounds how much non-valid
+      // traffic this process serves per window.
       await limiter.checkOrThrow({
         key: WEBHOOK_RATE_LIMIT_KEY,
         limit: settings.backstopLimit,
@@ -479,18 +537,10 @@ export function createWebhookRateLimitMiddleware(
         now: now(),
       });
 
-      // Step 2 — verify, so that what follows can tell a real delivery from a
-      // forged one.
-      const verdict = await classifySignature(req);
-
-      // A real delivery is never counted against any bucket an attacker fills.
-      if (verdict === 'valid') {
-        next();
-        return;
-      }
-
       // No secret configured: the handler refuses every request with its own
-      // 503 gate, so there is nothing to separate. Leave the answer to it.
+      // 503 gate, so there is nothing to separate by source. The backstop above
+      // counted it (that is the honest bucket for unjudgeable traffic); no
+      // per-source bucket is charged, and the answer is left to the handler.
       if (verdict === 'unavailable') {
         next();
         return;

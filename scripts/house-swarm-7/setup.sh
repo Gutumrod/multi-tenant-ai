@@ -25,7 +25,7 @@
 #   * it does NOT write any file, so it cannot write a credential to one;
 #   * it does NOT set DEMO_AUTH (it refuses to run when DEMO_AUTH=true);
 #   * it does NOT read a file for configuration. This project has no dotenv:
-#     see docs/house-swarm-7/WU5-DEPLOY.md section 3.3. Values come from the
+#     see docs/product/WU5-DEPLOY.md section 3.3. Values come from the
 #     process environment, which is why nothing is persisted here.
 #
 # It is idempotent: every step is safe to run again.
@@ -173,40 +173,55 @@ npm run typecheck || die "typecheck failed; the source tree does not compile, so
 #    reports an un-migrated-but-reachable database as PENDING rather than
 #    pretending either way. An unreachable database is a real failure.
 #
-#    HOW THE VERDICT IS REACHED. db-check.mjs exits 0 only when every check
-#    passed; any failure makes it exit non-zero. The exit code is therefore the
-#    verdict and it decides this branch FIRST, before any wording is matched:
+#    HOW THE VERDICT IS REACHED. db-check.mjs carries the state in its EXIT CODE,
+#    and that code is what this branch reads first:
 #
 #      exit 0        -> passed, and nothing else needs to be inspected;
-#      exit non-zero -> failed. The wording of db-check's output is then used
-#                       only to pick the right EXPLANATION for a failure that is
-#                       already established — the two recognised cases
-#                       (connection, migration schema) keep their helpful
-#                       messages, and any unrecognised failure is reported with
-#                       its real exit code and db-check's own output, then stops
-#                       the script. A non-zero exit can never reach the pass
-#                       branch.
+#      exit 2        -> PENDING. The database is REACHABLE but the migration
+#                       schema is not created yet — a state db-check recognises
+#                       itself and reports with its own code. The server creates
+#                       the schema at boot, so this is not a failure. The
+#                       wording of db-check's output is NOT consulted to decide
+#                       this any more.
+#      anything else -> failed, and the wording is used only to pick the right
+#                       EXPLANATION for a failure that is already established:
+#                       the connection case keeps its helpful message, and any
+#                       other failure is reported with its real exit code and
+#                       db-check's own output, then stops the script. A non-zero
+#                       exit other than 2 can never reach a pass branch.
 #
-#    Matching the output text alone is what this replaces: any failure whose
-#    message was not one of the two exact sentences used to fall through to
-#    "passed" while the script still exited 0.
+#    WHY THE EXIT CODE AND NOT THE TEXT. Recognising PENDING by matching the
+#    output text is what this replaces. Any failure whose message was not one of
+#    the exact sentences used fell through to "passed" while the script still
+#    exited 0. A state that has its own exit code cannot be confused with a
+#    message, and db-check only ever emits that code when the connection
+#    succeeded and the ONLY failures were the two schema-shaped checks — so a
+#    check that fails for any other reason, including one added later, still
+#    stops the script.
 #
-#    THE TWO ARMS ARE MUTUALLY EXCLUSIVE, and that is a property of db-check,
+#    THE TWO ARMS REMAIN MUTUALLY EXCLUSIVE, and that is a property of db-check,
 #    not an assumption about wording. db-check emits `CHECK connection FAIL` for
 #    exactly one thing — a connection that could not be opened at all — and when
 #    that happens it skips every later check, so the line cannot appear next to
-#    a `CHECK migration-tables` line. Either order is therefore correct; the
-#    connection case is tested first because it is the one that stops the
-#    script. It is no longer an ordering workaround. It used to be one: on a
-#    reachable-but-unmigrated database db-check ran its seed-plan query against
-#    a `plans` table that did not exist yet, sent the resulting
-#    `relation "plans" does not exist` error to its single catch block, and
-#    printed it as `CHECK connection FAIL` directly underneath its own
-#    `CHECK connection PASS` line — telling the reader a reachable database had
-#    a connection problem. That is fixed in db-check.mjs, which now names every
-#    check after the step that actually ran (connection / migration-tables /
-#    seed-plans), does not run the seed-plan query before the tables it reads
-#    exist, and reports that check as not run instead.
+#    a `CHECK migration-tables` line. It also cannot produce the PENDING exit
+#    code, because that arm requires the connection check to have PASSED.
+#    It used to be an ordering workaround: on a reachable-but-unmigrated
+#    database db-check ran its seed-plan query against a `plans` table that did
+#    not exist yet, sent the resulting `relation "plans" does not exist` error to
+#    its single catch block, and printed it as `CHECK connection FAIL` directly
+#    underneath its own `CHECK connection PASS` line — telling the reader a
+#    reachable database had a connection problem. That is fixed in db-check.mjs,
+#    which now names every check after the step that actually ran (connection /
+#    migration-tables / seed-plans), does not run the seed-plan query before the
+#    tables it reads exist, and reports that check as not run instead.
+#
+#    WHY THERE IS NO DUPLICATE FAILURE LINE HERE. db-check prints one line per
+#    check and its own closing summary, and this script prints db-check's output
+#    verbatim. On a reachable-but-unmigrated database that output contains
+#    `CHECK migration-tables FAIL …` and `CHECK seed-plans FAIL not run: …` — the
+#    honest statement of what was not done — and this script adds only the
+#    PENDING sentence, so the reader sees the state named once and the individual
+#    checks once, never the same verdict twice in contradictory senses.
 #
 #    HOW THE FILE IS HANDED TO `node`. The path is RELATIVE to the repository
 #    root and never absolute. On Windows/Git-Bash the absolute path this script
@@ -216,7 +231,7 @@ npm run typecheck || die "typecheck failed; the source tree does not compile, so
 #    MODULE_NOT_FOUND — and then reported that failure as a pass. A relative
 #    path has no drive letter and no leading slash to mistranslate, so it
 #    resolves identically under Git-Bash on Windows and under POSIX sh on Linux.
-#    It is also exactly the command docs/house-swarm-7/WU5-DEPLOY.md §5 tells the
+#    It is also exactly the command docs/product/WU5-DEPLOY.md §5 tells the
 #    operator to run by hand, and db-check.mjs resolves its own location, so it
 #    does not care which directory it is started from.
 # ---------------------------------------------------------------------------
@@ -238,27 +253,27 @@ else
 
   if [ "$CHECK_STATUS" -eq 0 ]; then
     say "database checks passed (db-check exited 0)"
+  elif [ "$CHECK_STATUS" -eq 2 ]; then
+    # PENDING — db-check's own intermediate state, carried in its exit code.
+    # Intentional and documented (scripts/house-swarm-7/setup.md §3.3): the
+    # database is reachable, the migration schema is not created yet, and the
+    # server creates it at boot. db-check printed the two schema checks as FAIL
+    # above, which is the honest per-check record; the state is named ONCE here
+    # rather than repeated, and the script does not stop.
+    say "PENDING: the database is reachable, but the migration schema is not created yet."
+    say "The server creates it at boot. Do this next, then run this script again:"
+    say "    cd server && npm run start"
   else
     case "$CHECK_OUT" in
-      *"CHECK migration-tables FAIL"*)
-        # Intentional, documented outcome (scripts/house-swarm-7/setup.md §3.3):
-        # the database is reachable but the server has not run its migrations
-        # yet, and the server creates the schema at boot. Not a failure. The
-        # connection really was established — db-check prints its
-        # "CHECK connection PASS" line in this output — and the failing checks
-        # name the schema, not the connection.
-        say "PENDING: the database is reachable, but the migration schema is not created yet."
-        say "The server creates it at boot. Do this next, then run this script again:"
-        say "    cd server && npm run start"
-        ;;
       *"CHECK connection FAIL"*)
         # The connection could not be opened at all. db-check stops at that
-        # point, so this is the only failure it reported.
+        # point, so this is the only failure it reported, and it is the one
+        # explanation worth adding to db-check's own line.
         die "could not connect to the database in DATABASE_URL (db-check exited $CHECK_STATUS). Check the host, port, database name and credentials, then run this script again."
         ;;
       *)
-        # An unrecognised failure. The exit code is the verdict, so this is a
-        # failure; db-check's own output is printed verbatim above.
+        # Any other failure. The exit code is the verdict, so this is a failure;
+        # db-check's own output is printed verbatim above.
         die "the database check failed (db-check exited $CHECK_STATUS) and reported a result this script does not recognise. Read db-check's output printed above and fix it before deploying; this script will not treat it as a pass."
         ;;
     esac
@@ -274,5 +289,5 @@ say "Nothing was started and nothing was deployed."
 printf '\n'
 say "Start the server yourself with:"
 say "    cd server && npm run start"
-say "See docs/house-swarm-7/WU5-DEPLOY.md for the full manual, the verification checklist and the rollback steps."
+say "See docs/product/WU5-DEPLOY.md for the full manual, the verification checklist and the rollback steps."
 exit 0

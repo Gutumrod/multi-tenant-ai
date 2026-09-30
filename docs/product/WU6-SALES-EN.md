@@ -1,8 +1,8 @@
 # WU-6 Sales Document — Multi-Tenant AI Starter Kit (MT01) / เอกสารขาย WU-6 — Multi-Tenant AI Starter Kit (MT01)
 
-This is the English document. Its Thai counterpart is `docs/house-swarm-7/WU6-SALES-TH.md`.
+This is the English document. Its Thai counterpart is `docs/product/WU6-SALES-TH.md`.
 Every factual claim in both documents is mapped to named evidence, row by row, in
-`docs/house-swarm-7/WU6-CLAIMS-EVIDENCE.md`, and the claims a machine can check are
+`docs/product/WU6-CLAIMS-EVIDENCE.md`, and the claims a machine can check are
 re-checked by `server/scripts/proofs/wu6/claims-check.mjs`.
 
 ---
@@ -215,24 +215,24 @@ repository to copy.
   / **V3** — ออกด้วย 0 และไม่พิมพ์ type error
 - **V4** — `cd server && npm test`, in two cases, both observed:
   with `DATABASE_URL` **unset** → exits 0 with `Test Files 5 passed | 1 skipped (6)`
-  and `Tests 53 passed | 5 skipped (58)` (measured in this work unit); the five
+  and `Tests 57 passed | 5 skipped (62)` (measured in this work unit); the five
   skipped tests are `tests/postgres-persistence.test.ts`'s, which skips itself when
   no database is configured;
   with `DATABASE_URL` **set** → exits 0 with `Test Files 6 passed (6)` and
-  `Tests 58 passed (58)` (measured in this work unit). So: the database-backed test
+  `Tests 62 passed (62)` (measured in this work unit). So: the database-backed test
   file only runs when `DATABASE_URL` is set, and the full-suite figures hold **only**
   under that condition; and the suite is **repeatable** — it deletes the rows it
   created, so the same database can be used run after run. These are the same two
-  observations stated in section 6 and in `docs/house-swarm-7/WU5-DEPLOY.md` §6.1.
+  observations stated in section 6 and in `docs/product/WU5-DEPLOY.md` §6.1.
   / **V4** — `cd server && npm test` ในสองกรณี ซึ่งเห็นจริงทั้งสอง: ไม่ตั้ง
   `DATABASE_URL` → ออกด้วย 0 ด้วย `Test Files 5 passed | 1 skipped (6)` และ
-  `Tests 53 passed | 5 skipped (58)` (วัดในใบงานนี้) โดยห้าเทสต์ที่ข้ามคือของ
+  `Tests 57 passed | 5 skipped (62)` (วัดในใบงานนี้) โดยห้าเทสต์ที่ข้ามคือของ
   `tests/postgres-persistence.test.ts` ซึ่งข้ามตัวเองเมื่อไม่มีฐานข้อมูล;
   ตั้ง `DATABASE_URL` → ออกด้วย 0 ด้วย `Test Files 6 passed (6)` และ
-  `Tests 58 passed (58)` (วัดในใบงานนี้) สรุป: ไฟล์เทสต์ที่ใช้ฐานข้อมูลจะรันก็ต่อเมื่อ
+  `Tests 62 passed (62)` (วัดในใบงานนี้) สรุป: ไฟล์เทสต์ที่ใช้ฐานข้อมูลจะรันก็ต่อเมื่อ
   ตั้ง `DATABASE_URL` และตัวเลขครบชุดเกิด**เฉพาะ**เมื่อมีเงื่อนไขนั้น และชุดเทสต์นี้
   **รันซ้ำได้** — มันลบแถวที่ตัวเองสร้างทิ้ง ใช้ฐานข้อมูลเดิมซ้ำได้ทุกรอบ
-  นี่คือการสังเกตสองข้อเดียวกับที่ระบุในข้อ 6 และใน `docs/house-swarm-7/WU5-DEPLOY.md` §6.1
+  นี่คือการสังเกตสองข้อเดียวกับที่ระบุในข้อ 6 และใน `docs/product/WU5-DEPLOY.md` §6.1
 - **V5** — `cd server && DATABASE_URL='<your own connection string>' npm run start`,
   then `curl -s http://127.0.0.1:3003/health` → `{"ok":true}`, and
   `curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:3003/` → `200` (the
@@ -358,10 +358,10 @@ cleaned up, and the suite is repeatable.**
 configured, and **it deletes exactly the rows it created again before it exits**, so
 repeated runs against one database leave nothing behind. Measured on the author's local
 test database: three consecutive full-suite runs each reported `Test Files 6 passed (6)`
-and `Tests 58 passed (58)`, and the row counts after all three runs were `subscriptions`
+and `Tests 62 passed (62)`, and the row counts after all three runs were `subscriptions`
 0 and `billing_event_ledger` 0. Pointing a test suite at a scratch database rather than a
 production one is still the right habit, but this suite is **repeatable**: the same
-database can be used run after run. `docs/house-swarm-7/WU5-DEPLOY.md` §6.1 states the
+database can be used run after run. `docs/product/WU5-DEPLOY.md` §6.1 states the
 same position with the same figures.
 
 **History, so that an older copy does not mislead you.** An earlier version of
@@ -373,7 +373,7 @@ the file's two billing-event ids are fixed (`evt_apply_1`, `evt_replay_1`) and t
 ledger's `event_id` is its primary key — a row left from an earlier run made the
 redelivery dedupe, so the subscription never reached `cancelled`. That was a defect in
 the suite; **it is fixed**, and the run that used to fail now passes with
-`Test Files 6 passed (6)` and `Tests 58 passed (58)`. The obsolete warning said the row
+`Test Files 6 passed (6)` and `Tests 62 passed (62)`. The obsolete warning said the row
 counts went from 5 subscriptions and 3 ledger rows to 7 and 3, and that the suite was
 not repeatable against the same database; **both statements are superseded and no longer
 true.** If you find that row-leak warning in another copy of this document set, or in any
@@ -383,10 +383,10 @@ document written before this one, **that warning is obsolete.**
 
 `npm test` เขียนแถว subscription และแถว ledger ลงในฐานข้อมูลที่ตั้งไว้ และ**มันลบแถวที่
 ตัวเองสร้างทิ้งก่อนจบ** การรันซ้ำบนฐานข้อมูลเดิมจึงไม่ทิ้งอะไรไว้ วัดบนฐานข้อมูลทดสอบในเครื่อง
-ผู้เขียน: สามรอบรันติดกันรายงาน `Test Files 6 passed (6)` และ `Tests 58 passed (58)` ทุกรอบ
+ผู้เขียน: สามรอบรันติดกันรายงาน `Test Files 6 passed (6)` และ `Tests 62 passed (62)` ทุกรอบ
 และจำนวนแถวหลังทั้งสามรอบคือ `subscriptions` 0 และ `billing_event_ledger` 0 การชี้ชุดเทสต์
 ไปที่ฐานข้อมูลทดสอบแทน production ยังเป็นนิสัยที่ถูก แต่ชุดเทสต์นี้**รันซ้ำได้**: ใช้ฐานข้อมูล
-เดิมซ้ำได้ทุกรอบ `docs/house-swarm-7/WU5-DEPLOY.md` §6.1 ระบุสถานะเดียวกันด้วยตัวเลขเดียวกัน
+เดิมซ้ำได้ทุกรอบ `docs/product/WU5-DEPLOY.md` §6.1 ระบุสถานะเดียวกันด้วยตัวเลขเดียวกัน
 
 **ประวัติ เพื่อไม่ให้สำเนาเก่าทำให้คุณเข้าใจผิด** `server/tests/webhook.test.ts` เวอร์ชันก่อน
 **ไม่**ลบอะไรเลย การรันหนึ่งครั้งจึงทิ้งแถวจริงไว้ใน `subscriptions` และ
@@ -395,7 +395,7 @@ document written before this one, **that warning is obsolete.**
 billing event สองตัวของไฟล์นี้คงที่ (`evt_apply_1`, `evt_replay_1`) และ `event_id` ของ ledger
 เป็น primary key — แถวที่ค้างจากรอบก่อนทำให้การส่งซ้ำถูก dedupe subscription จึงไม่ถึงสถานะ
 `cancelled` นั่นเป็น defect ของชุดเทสต์ และ**แก้แล้ว** รอบที่เคยล้มเหลวตอนนี้ผ่านด้วย
-`Test Files 6 passed (6)` และ `Tests 58 passed (58)` คำเตือนที่ล้าสมัยระบุว่าจำนวนแถวเปลี่ยนจาก
+`Test Files 6 passed (6)` และ `Tests 62 passed (62)` คำเตือนที่ล้าสมัยระบุว่าจำนวนแถวเปลี่ยนจาก
 subscription 5 แถว และ ledger 3 แถว เป็น 7 แถว และ 3 แถว และระบุว่าชุดเทสต์รันซ้ำกับฐานข้อมูล
 เดิมไม่ได้ **ทั้งสองข้อความถูกล้มเลิกและไม่จริงอีกต่อไป** ถ้าคุณพบคำเตือนเรื่องแถวค้างนั้น
 ในสำเนาอื่นของเอกสารชุดนี้ หรือในเอกสารใดที่เขียนก่อนหน้านี้ **คำเตือนนั้นล้าสมัยแล้ว**

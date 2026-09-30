@@ -16,7 +16,7 @@ Files changed by this work unit:
 - `server/scripts/proofs/wu6/claims-check.mjs` — CHECK 3 rewritten (lines 212–530;
   lines 1–211 and 531-end are untouched, so the other seven checks did not move)
 - `server/scripts/proofs/fu/supabase-claims-fixtures.mjs` — NEW
-- `docs/house-swarm-7/WU6-CLAIMS-EVIDENCE.md` — C49, C52, C59, §8 constraint 1, X2
+- `docs/product/WU6-CLAIMS-EVIDENCE.md` — C49, C52, C59, §8 constraint 1, X2
 - this file
 
 ---
@@ -228,7 +228,7 @@ deliverable and were not touched by this work unit):
 
 ## 6. The ledger
 
-`docs/house-swarm-7/WU6-CLAIMS-EVIDENCE.md`:
+`docs/product/WU6-CLAIMS-EVIDENCE.md`:
 
 - **C49 (Q3)** — was "PostgreSQL 16 or newer, **or your own Supabase Postgres
   connection string**"; now: a PostgreSQL 16 database, PostgreSQL 16 tested,
@@ -258,7 +258,7 @@ is never presented as the buyer's configuration) is untouched.
 
 ## 7. Not done, and why
 
-`docs/house-swarm-7/WU5-DEPLOY.md` and `docs/house-swarm-7/WU6-SALES-*.md` are
+`docs/product/WU5-DEPLOY.md` and `docs/house-swarm-7/WU6-SALES-*.md` are
 FU-1's deliverable and were not edited. The new rule passes on the wording as
 FU-1 left it, so no sentence had to be reported back — the two mismatches in §5
 are in the work unit's own pattern literals, not in the delivered text. This file

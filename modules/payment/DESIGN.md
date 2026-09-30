@@ -628,7 +628,7 @@ The following features are **explicitly out of scope** for v0.1.0 of the Payment
 
 A Stage 4 Reviewer MUST verify all of the following criteria before approving the module design & implementation:
 
-1. [ ] **File Location:** Deliverable exists at `D:\AI-Workspace\projects\modules-hub\modules\payment\DESIGN.md`.
+1. [ ] **File Location:** Deliverable exists at `modules-hub@<source-commit>/modules/payment\DESIGN.md`.
 2. [ ] **Layered Abstraction:** Business Project interacts strictly through `PaymentCore` abstraction; zero direct calls to Stripe SDK scattered in business logic.
 3. [ ] **Minor Units Amount Enforcement:** Amounts are strictly positive integers (e.g. `10000` = `100.00 THB`). Floating-point numbers throw `INVALID_AMOUNT`.
 4. [ ] **Normalized States:** All provider-specific statuses map accurately to the 7 normalized states (`pending`, `requires_action`, `processing`, `succeeded`, `failed`, `refunded`, `cancelled`).

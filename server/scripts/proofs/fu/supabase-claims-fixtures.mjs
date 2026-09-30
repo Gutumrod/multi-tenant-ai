@@ -47,7 +47,7 @@
  *      and an affirmative welded onto that same line is not separated from it.
  *      Case b is the same sentence standing on its own line, which the rule
  *      does flag. The limitation is written up in
- *      docs/house-swarm-7/FU-REVIEW-FIX-2.md rather than left unstated — a
+ *      `FU-REVIEW-FIX-2.md` (vendor-internal, not delivered) rather than left unstated — a
  *      fixture list that only contains cases that pass proves less than it
  *      appears to.
  *
@@ -66,7 +66,7 @@ import { spawnSync } from 'node:child_process';
 const HERE = dirname(fileURLToPath(import.meta.url));
 const SERVER_DIR = join(HERE, '../../..');
 const REPO_DIR = join(SERVER_DIR, '..');
-const DOCS_DIR = join(REPO_DIR, 'docs/house-swarm-7');
+const DOCS_DIR = join(REPO_DIR, 'docs/product');
 const CHECK_REL = 'scripts/proofs/wu6/claims-check.mjs';
 const CHECK_NAME = 'no-supabase-tested-claim';
 const DOC_FILES = ['WU6-SALES-EN.md', 'WU6-SALES-TH.md', 'WU6-CLAIMS-EVIDENCE.md'];
@@ -208,7 +208,7 @@ const CASES = [
     // required; the new rule catches the same sentence when it stands on its own
     // line (case b). Splitting an affirmative appended to a negated line into
     // two lines is left to a human reviewer; what the rule does and does not
-    // cover is written up in docs/house-swarm-7/FU-REVIEW-FIX-2.md rather than
+    // cover is written up in `FU-REVIEW-FIX-2.md` (vendor-internal, not delivered) rather than
     // hidden by a missing case.
     name: 'h2-appended-to-an-already-negated-line-is-not-separated',
     expect: 'pass',

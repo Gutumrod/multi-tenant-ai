@@ -53,7 +53,7 @@ const REPO_DIR = join(SERVER_DIR, '..');
 
 const DOCS_DIR = process.env.CLAIMS_DOCS_DIR
   ? process.env.CLAIMS_DOCS_DIR
-  : join(REPO_DIR, 'docs/house-swarm-7');
+  : join(REPO_DIR, 'docs/product');
 
 const SALES_EN_PATH = join(DOCS_DIR, 'WU6-SALES-EN.md');
 const SALES_TH_PATH = join(DOCS_DIR, 'WU6-SALES-TH.md');
@@ -400,7 +400,7 @@ const SALES = [
    * more asterisks). That is a formatting tolerance, not a relaxation: it matches
    * the plain "not been tested with Supabase" as well, so nothing the literal
    * caught is now allowed through. The delivered sentence and the exact literal
-   * are both recorded in docs/house-swarm-7/FU-REVIEW-FIX-2.md.
+   * are both recorded in the vendor's FU-REVIEW-FIX-2.md record (not delivered).
    */
   const REQUIRED = [
     { id: 'the kit has been tested with PostgreSQL 16', pattern: /PostgreSQL 16/ },
@@ -483,7 +483,7 @@ const SALES = [
       // welded onto a line that ALREADY carries a marker ("…has not been
       // tested… works with Supabase") is not separated from it and passes.
       // Fixture case b flags that same sentence on its own line; case h2 records
-      // this limitation. See docs/house-swarm-7/FU-REVIEW-FIX-2.md.
+      // this limitation. See the vendor's FU-REVIEW-FIX-2.md record (not delivered).
       const negated = NEGATION.some((pattern) => pattern.test(line));
 
       const affirmative = BAN.some((entry) => entry.pattern.test(line));
@@ -523,7 +523,7 @@ const SALES = [
     'no-supabase-tested-claim',
     problems.length === 0,
     problems.length === 0
-      ? `rule: BAN, per line and unless that line carries a negation or disclaimer marker in either language (not / never / no / none / neither / nor / without / untested / unverified / unsupported / ไม่), any affirmative construction that attaches a capability or a test result to Supabase — EN: ${banList(true)} — TH: ${banList(false)} — and REQUIRE, in BOTH documents, the honest statements: ${requireList}. The earlier rule is superseded: it REQUIRED the sentence "a buyer's own Supabase Postgres connection string works" and could not flag it, so a copy whose EN N4 said "…connection string works with Supabase." still PASSED. This rule fails that copy, fails the Thai ใช้ได้ forms, and still passes the delivered documents, whose required statements are themselves denials. Proven by server/scripts/proofs/fu/supabase-claims-fixtures.mjs (9 cases), and written up in docs/house-swarm-7/FU-REVIEW-FIX-2.md`
+      ? `rule: BAN, per line and unless that line carries a negation or disclaimer marker in either language (not / never / no / none / neither / nor / without / untested / unverified / unsupported / ไม่), any affirmative construction that attaches a capability or a test result to Supabase — EN: ${banList(true)} — TH: ${banList(false)} — and REQUIRE, in BOTH documents, the honest statements: ${requireList}. The earlier rule is superseded: it REQUIRED the sentence "a buyer's own Supabase Postgres connection string works" and could not flag it, so a copy whose EN N4 said "…connection string works with Supabase." still PASSED. This rule fails that copy, fails the Thai ใช้ได้ forms, and still passes the delivered documents, whose required statements are themselves denials. Proven by server/scripts/proofs/fu/supabase-claims-fixtures.mjs (9 cases), and written up in the vendor's FU-REVIEW-FIX-2.md record (not delivered)`
       : problems.join('; ')
   );
 }
@@ -620,7 +620,7 @@ const SALES = [
 //     `**R1 — …**`, `**B1 — …**`, `**V4** — …`, and so on, one label per claim,
 //     inside the prose. THAT form is what the documents carry and therefore what
 //     this check reads.
-//   * The evidence map docs/house-swarm-7/WU6-CLAIMS-EVIDENCE.md carries one row
+//   * The evidence map docs/product/WU6-CLAIMS-EVIDENCE.md carries one row
 //     per claim id C1..C64, and each of those rows names the group label the
 //     document uses (e.g. "R3 — five test files", "V4 — …") in its claim cell.
 //
@@ -748,7 +748,7 @@ const SALES = [
    * summary uses (`N passed` / `N skipped` / `N failed` immediately before
    * `(T)`), so a bare `6 passed (6)` outside a `Test Files` / `Tests` label is
    * still read as the file total it is, and the old
-   * `docs/house-swarm-7/WU6-SALES-TH.md` wording, which wrote that figure with
+   * `docs/product/WU6-SALES-TH.md` wording, which wrote that figure with
    * no label at all, cannot be misread as a `tests` total. The TH document's
    * English counterpart was corrected too, so both languages now state the two
    * labelled figures.

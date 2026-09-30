@@ -29,7 +29,7 @@
  *   b. a sales-document figure reverted to the old `46`/`(5)` file total -> FAIL
  *      (TH V4's set-database file total goes back to `(5)`)
  *   c. the ledger's LIVE figure changed, documents untouched     -> check FAIL
- *      (C39's claim cell loses the live `Tests 58 passed (58)` total)
+ *      (C39's claim cell loses the live `Tests 62 passed (62)` total)
  *   d. the delivered documents, unmutated                        -> check PASS, exit 0
  *
  * It reads files only, starts no server, opens no database, contacts no host and
@@ -47,7 +47,7 @@ import { spawnSync } from 'node:child_process';
 const HERE = dirname(fileURLToPath(import.meta.url));
 const SERVER_DIR = join(HERE, '../../..');
 const REPO_DIR = join(SERVER_DIR, '..');
-const DOCS_DIR = join(REPO_DIR, 'docs/house-swarm-7');
+const DOCS_DIR = join(REPO_DIR, 'docs/product');
 const CHECK_REL = 'scripts/proofs/wu6/claims-check.mjs';
 const CHECK_NAME = 'sales-numbers-agree-with-ledger';
 const DOC_FILES = ['WU6-SALES-EN.md', 'WU6-SALES-TH.md', 'WU6-CLAIMS-EVIDENCE.md'];
@@ -124,13 +124,32 @@ const CASES = [
   {
     name: 'c-ledger-live-figure-changed-documents-untouched',
     expect: 'fail',
-    mutation: `${LEDGER} C39 claim cell: the live test total is changed to \`Tests 57 passed (57)\` while both sales documents still state tests(58)`,
+    mutation: `${LEDGER} C39 claim cell: the live test total is changed to \`Tests 59 passed (59)\` while both sales documents still state tests(62)`,
     mutate: (dir) =>
       replaceOnce(
         dir,
         LEDGER,
-        '`Tests 58 passed (58)`. / ตั้ง DATABASE_URL แล้วได้ 6 passed (6)',
-        '`Tests 57 passed (57)`. / ตั้ง DATABASE_URL แล้วได้ 6 passed (6)'
+        '`Tests 62 passed (62)`. / ตั้ง DATABASE_URL แล้วได้ 6 passed (6)',
+        '`Tests 59 passed (59)`. / ตั้ง DATABASE_URL แล้วได้ 6 passed (6)'
+      ),
+  },
+  {
+    // SUPERSEDED-FIGURE CASE (MT01-PRESALE-P3C). The 58 this lane's predecessor
+    // shipped was correct when it was measured and is stale now, exactly as 51
+    // was before it. A document reverted to it must go red: without this case the
+    // fixture set would prove only that the OLDEST figures are caught, not that
+    // the figure this revision replaced is.
+    name: 'e-sales-document-figure-reverted-to-the-superseded-58-test-total',
+    expect: 'fail',
+    mutation: `${EN} V4: the set-database test total is reverted to the superseded \`(58)\` — \`Tests 62 passed (62)\` becomes \`Tests 58 passed (58)\`, while the ledger still states tests(62)`,
+    mutate: (dir) =>
+      replaceOnce(
+        dir,
+        EN,
+        // Anchored on the V4 claim's own line, so it appears exactly once even
+        // though the figure itself is stated in several places in the document.
+        '`Tests 62 passed (62)` (measured in this work unit). So: the database-backed test',
+        '`Tests 58 passed (58)` (measured in this work unit). So: the database-backed test'
       ),
   },
   {

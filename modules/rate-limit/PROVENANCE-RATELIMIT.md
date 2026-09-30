@@ -96,7 +96,7 @@ router paths). That host code is:
   **after** `express.raw()` and before the handler (re-ordered in the MT01 pre-sale
   cleanup, lane P3b; the limiter needs the raw body because it verifies the signature
   itself).
-- `docs/house-swarm-7/FU-RATELIMIT.md` — the wiring, key choice, environment
+- the vendor's FU-RATELIMIT.md record (not delivered) — the wiring, key choice, environment
   variables, failure mode and limitation, in writing.
 
 ## Notes / limits

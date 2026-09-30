@@ -33,7 +33,7 @@ const REPO_DIR = join(SERVER_DIR, '..');
 const ENV_EXAMPLE = join(SERVER_DIR, '.env.example');
 const SRC_DIR = join(SERVER_DIR, 'src');
 const MIGRATIONS_DIR = join(SERVER_DIR, 'migrations');
-const MANUAL = join(REPO_DIR, 'docs/house-swarm-7/WU5-DEPLOY.md');
+const MANUAL = join(REPO_DIR, 'docs/product/WU5-DEPLOY.md');
 const SETUP_SH = join(REPO_DIR, 'scripts/house-swarm-7/setup.sh');
 const SETUP_MD = join(REPO_DIR, 'scripts/house-swarm-7/setup.md');
 const WEB_DIR = join(REPO_DIR, 'web');
@@ -229,7 +229,7 @@ function rel(path) {
 
   const manual = readOrNull(MANUAL);
   if (manual === null) {
-    problems.push('the manual docs/house-swarm-7/WU5-DEPLOY.md is missing');
+    problems.push('the manual docs/product/WU5-DEPLOY.md is missing');
   } else {
     if (!/must never be enabled in production/i.test(manual)) {
       problems.push('the manual does not state that DEMO_AUTH must never be enabled in production');
@@ -268,7 +268,7 @@ function rel(path) {
 
   const manual = readOrNull(MANUAL);
   if (manual === null) {
-    problems.push('the manual docs/house-swarm-7/WU5-DEPLOY.md is missing');
+    problems.push('the manual docs/product/WU5-DEPLOY.md is missing');
   } else if (files.length > 0) {
     const unlisted = files.filter((name) => !manual.includes(name));
     if (unlisted.length > 0) problems.push(`the manual does not name: ${unlisted.join(', ')}`);
@@ -351,7 +351,7 @@ function rel(path) {
   const problems = [];
 
   if (manual === null) {
-    problems.push('the manual docs/house-swarm-7/WU5-DEPLOY.md is missing');
+    problems.push('the manual docs/product/WU5-DEPLOY.md is missing');
   } else {
     const appSource = readOrNull(APP_TS) ?? '';
     const literalRoutes = [...appSource.matchAll(/app\.(?:get|post|put|delete|use)\(\s*'([^']+)'/g)].map(
@@ -408,7 +408,7 @@ function rel(path) {
   const manual = readOrNull(MANUAL);
 
   if (manual === null) {
-    record('manual-has-no-invented-output', false, 'the manual docs/house-swarm-7/WU5-DEPLOY.md is missing');
+    record('manual-has-no-invented-output', false, 'the manual docs/product/WU5-DEPLOY.md is missing');
   } else {
     const lines = manual.split(/\r?\n/);
     const blockPatterns = [

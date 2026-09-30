@@ -135,10 +135,14 @@ const MSYS_PATH_WRITERS = { MSYS_NO_PATHCONV: '1', MSYS2_ARG_CONV_EXCL: '*' };
 /** The stand-in db-check responses. Exit codes and text are the point. */
 const STUB_MODES = {
   nonstandard: {
-    exitCode: 2,
+    // NOTE the exit code: NOT 2. `2` is now db-check's own PENDING code, so a
+    // body like this one carried on exit 2 would (correctly) be read as PENDING
+    // and this case would prove nothing. `3` is a failure code that is neither
+    // "passed" nor "not migrated yet", which is what an unrecognised failure is.
+    exitCode: 3,
     body:
       'CHECK something-unexpected FAIL boom\n',
-    what: 'a failure whose message is not one of the two recognised sentences, exit 2',
+    what: 'a failure whose message is not one of the recognised sentences and whose exit code is neither 0 nor 2 (PENDING), exit 3',
   },
   connection: {
     exitCode: 1,
@@ -148,15 +152,29 @@ const STUB_MODES = {
     what: 'the recognised connection failure, exit 1',
   },
   migration: {
+    exitCode: 2,
+    body:
+      'CHECK database-url-present PASS set, value not printed\n' +
+      'CHECK connection PASS connected to the database in DATABASE_URL\n' +
+      'CHECK migration-tables FAIL missing: tenants, plans; start the server once so the migrations run\n',
+    what: 'a reachable-but-unmigrated run in its MINIMAL shape — only the migration failure is present, with no seed-plan line at all — carrying db-check\'s PENDING exit code 2',
+  },
+  // THE DECISIVE CASE FOR "THE EXIT CODE DECIDES, NOT THE TEXT". This body is a
+  // byte-identical copy of the PENDING shape above but exits 1 — i.e. what a
+  // broken db-check WOULD print if it forgot to set the PENDING code. Reading
+  // the text would call this PENDING and let setup.sh continue; reading the exit
+  // code calls it a failure. This is the case that fails if anyone re-introduces
+  // text matching.
+  pendingTextButFailureCode: {
     exitCode: 1,
     body:
       'CHECK database-url-present PASS set, value not printed\n' +
       'CHECK connection PASS connected to the database in DATABASE_URL\n' +
       'CHECK migration-tables FAIL missing: tenants, plans; start the server once so the migrations run\n',
-    what: 'a reachable-but-unmigrated run in its MINIMAL shape — only the migration failure is present, with no seed-plan line at all',
+    what: 'a PENDING-shaped message with a FAILURE exit code — the exit code must decide, so setup.sh must stop',
   },
   unmigrated: {
-    exitCode: 1,
+    exitCode: 2,
     // Byte-for-byte what scripts/house-swarm-7/db-check.mjs really prints
     // against a REACHABLE but UNMIGRATED database AFTER the diagnostic repair
     // (observed on a real empty database — `mt01_presale_empty`).
@@ -172,8 +190,8 @@ const STUB_MODES = {
       'CHECK connection PASS connected to the database in DATABASE_URL\n' +
       'CHECK migration-tables FAIL missing: billing_event_ledger, plans, schema_migrations, subscriptions, tenants, usage_counters; start the server once so the migrations run\n' +
       'CHECK seed-plans FAIL not run: the schema is not created yet, so there is no plans table to read; start the server once so the migrations run\n' +
-      'db-check: 2 of 4 checks FAILED\n',
-    what: 'the real post-repair shape of a reachable-but-unmigrated run: connection PASS, migration FAIL, seed-plans FAIL as not-run — no check named "connection" fails, exit 1',
+      'db-check: PENDING — the database is reachable but 2 schema check(s) not done yet (migration-tables, seed-plans); the server creates the schema at boot\n',
+    what: 'the real post-repair shape of a reachable-but-unmigrated run: connection PASS, migration FAIL, seed-plans FAIL as not-run — no check named "connection" fails, exit 2 (db-check\'s own PENDING code)',
   },
 };
 
@@ -219,6 +237,22 @@ function moduleNotFound(text) {
 /** True when the database step claimed the checks passed, however worded. */
 function claimedDatabasePass(text) {
   return /database checks passed|database checks PASSED/i.test(text);
+}
+
+/**
+ * Whether a run's exit code may be used as an OBSERVATION at all.
+ *
+ * `spawnSync` reports `status: null` when the child never produced an exit code:
+ * it was killed by a signal, it could not be spawned, or (on Windows) the shell
+ * shim it was launched through did not propagate one. A null exit is NOT an exit
+ * code, so no case may conclude anything from it — least of all a refusal case,
+ * which would otherwise pass because "the code was not 0". Every case below
+ * asserts `spawn_ok` for exactly this reason, and the whole-run check
+ * `every-case-produced-an-exit-code` makes a null exit a FAILURE of the harness
+ * rather than a silent detail.
+ */
+function spawnedWithExitCode(run) {
+  return run.error === null && run.signal === null && typeof run.exitCode === 'number';
 }
 
 /**
@@ -363,17 +397,20 @@ try {
   const executed = dbCheckExecuted(normal.output);
   const notFound = moduleNotFound(normal.output);
 
+  const normalSpawned = spawnedWithExitCode(normal);
+
   record(
     'setup-really-executes-db-check',
-    executed && !notFound,
-    `db_check_line_present=${executed} module_not_found=${notFound} ` +
+    executed && !notFound && normalSpawned,
+    `db_check_line_present=${executed} module_not_found=${notFound} spawn_ok=${normalSpawned} ` +
+      `spawn_error=${normal.error ? normal.error.message : '(none)'} signal=${normal.signal ?? '(none)'} ` +
       `(observed_exit_code=${normal.exitCode}; the old absolute POSIX path produced MODULE_NOT_FOUND here and setup.sh still exited 0)`
   );
 
   record(
     'setup-exits-zero-with-a-fully-migrated-database',
-    normal.exitCode === 0,
-    `observed_exit_code=${normal.exitCode} — needs a reachable database whose migration schema and seed plans exist`
+    normalSpawned && normal.exitCode === 0,
+    `observed_exit_code=${normal.exitCode} spawn_ok=${normalSpawned} — needs a reachable database whose migration schema and seed plans exist`
   );
 
   // --- case 3 & 4: an unrecognised failure is never a pass -------------------
@@ -390,16 +427,20 @@ try {
   );
   observation(`nonstandard run, database step: ${JSON.stringify(databaseStepLines(nonstandard.output))}`);
 
+  const nonstandardSpawned = spawnedWithExitCode(nonstandard);
+
   record(
     'unrecognised-dbcheck-failure-makes-setup-exit-non-zero',
-    nonstandard.exitCode !== 0,
-    `observed_exit_code=${nonstandard.exitCode} (a db-check exiting 2 with an unrecognised message used to give this 0)`
+    nonstandardSpawned && nonstandard.exitCode !== 0,
+    `observed_exit_code=${nonstandard.exitCode} spawn_ok=${nonstandardSpawned} ` +
+      `spawn_error=${nonstandard.error ? nonstandard.error.message : '(none)'} signal=${nonstandard.signal ?? '(none)'} ` +
+      '(a db-check exiting 3 with an unrecognised message used to give this 0; exit 2 is PENDING, so a failure must not borrow it, and a null exit code is never a refusal)'
   );
 
   record(
     'no-pass-claimed-when-dbcheck-failed',
-    !claimedDatabasePass(nonstandard.output),
-    `claimed_a_pass=${claimedDatabasePass(nonstandard.output)} (the old pass branch printed "database checks passed (exit 2)")`
+    nonstandardSpawned && !claimedDatabasePass(nonstandard.output),
+    `claimed_a_pass=${claimedDatabasePass(nonstandard.output)} spawn_ok=${nonstandardSpawned} (the old pass branch printed "database checks passed (exit 2)")`
   );
 
   // --- case 5: the recognised connection failure keeps its message ----------
@@ -416,11 +457,14 @@ try {
   const connectionFailLine = /CHECK connection FAIL\s+\S/.test(connection.output);
   const connectionNamed = /could not connect to the database/.test(connection.output);
 
+  const connectionSpawned = spawnedWithExitCode(connection);
+
   record(
     'recognised-connection-failure-still-named',
-    connection.exitCode !== 0 && connectionFailLine && connectionNamed,
-    `observed_exit_code=${connection.exitCode} check_connection_FAIL_line=${connectionFailLine} ` +
-      `named_the_connection_case=${connectionNamed} (an unreachable database must still be reported as one)`
+    connectionSpawned && connection.exitCode !== 0 && connectionFailLine && connectionNamed,
+    `observed_exit_code=${connection.exitCode} spawn_ok=${connectionSpawned} ` +
+      `check_connection_FAIL_line=${connectionFailLine} named_the_connection_case=${connectionNamed} ` +
+      '(an unreachable database must still be reported as one)'
   );
 
   // --- case 6: the intentional PENDING outcome is preserved -----------------
@@ -431,10 +475,12 @@ try {
   );
   observation(`migration run, database step: ${JSON.stringify(databaseStepLines(migration.output))}`);
 
+  const migrationSpawned = spawnedWithExitCode(migration);
+
   record(
     'reachable-but-unmigrated-still-reported-pending',
-    migration.exitCode === 0 && /PENDING: the database is reachable/.test(migration.output),
-    `observed_exit_code=${migration.exitCode} printed_pending=${/PENDING: the database is reachable/.test(
+    migrationSpawned && migration.exitCode === 0 && /PENDING: the database is reachable/.test(migration.output),
+    `observed_exit_code=${migration.exitCode} spawn_ok=${migrationSpawned} printed_pending=${/PENDING: the database is reachable/.test(
       migration.output
     )} (intentional: the server creates the schema at boot)`
   );
@@ -460,19 +506,51 @@ try {
     /^CHECK connection PASS\b/.test(line)
   ).length;
 
+  const unmigratedSpawned = spawnedWithExitCode(unmigrated);
+
   record(
     'unmigrated-output-names-no-connection-failure',
-    unmigrated.exitCode === 0 && unmigratedPending && !unmigratedCalledUnreachable,
-    `observed_exit_code=${unmigrated.exitCode} printed_pending=${unmigratedPending} ` +
+    unmigratedSpawned && unmigrated.exitCode === 0 && unmigratedPending && !unmigratedCalledUnreachable,
+    `observed_exit_code=${unmigrated.exitCode} spawn_ok=${unmigratedSpawned} printed_pending=${unmigratedPending} ` +
       `claims_a_connection_failure=${unmigratedCalledUnreachable} connection_PASS_lines=${unmigratedPassLines} ` +
       '(the Owner\'s requirement: on the un-migrated output there must be no "CHECK connection FAIL" line)'
   );
 
   record(
     'real-unmigrated-output-is-pending-not-unreachable',
-    unmigrated.exitCode === 0 && unmigratedPending && !unmigratedCalledUnreachable,
-    `observed_exit_code=${unmigrated.exitCode} printed_pending=${unmigratedPending} ` +
+    unmigratedSpawned && unmigrated.exitCode === 0 && unmigratedPending && !unmigratedCalledUnreachable,
+    `observed_exit_code=${unmigrated.exitCode} spawn_ok=${unmigratedSpawned} printed_pending=${unmigratedPending} ` +
       `called_unreachable=${unmigratedCalledUnreachable} (db-check\'s real post-repair output — connection PASS, migration FAIL, seed-plans not run — must reach the PENDING arm and never the unreachable one)`
+  );
+
+  // --- case 6c: THE EXIT CODE DECIDES, NOT THE TEXT -------------------------
+  // A byte-identical PENDING-shaped body that carries a FAILURE exit code. Text
+  // matching would call this PENDING and let the script continue; the exit code
+  // calls it a failure. This is the case that catches a re-introduction of text
+  // matching, and it is the mirror of case 6 (a PENDING code with a minimal body,
+  // which must be PENDING because the code says so).
+  observation(`case pendingTextButFailureCode: ${STUB_MODES.pendingTextButFailureCode.what}`);
+  const textOnlyPending = runSetup(tree, {
+    shimDir,
+    stubMode: 'pendingTextButFailureCode',
+    env: { DATABASE_URL },
+  });
+  observation(
+    `pendingTextButFailureCode run: setup.sh exit code = ${textOnlyPending.exitCode} (signal=${textOnlyPending.signal ?? '(none)'})`
+  );
+  observation(
+    `pendingTextButFailureCode run, database step: ${JSON.stringify(databaseStepLines(textOnlyPending.output))}`
+  );
+
+  const textOnlyPendingSpawned = spawnedWithExitCode(textOnlyPending);
+  const textOnlyClaimedPending = /PENDING: the database is reachable/.test(textOnlyPending.output);
+
+  record(
+    'pending-shaped-text-with-a-failure-exit-code-does-not-continue',
+    textOnlyPendingSpawned && textOnlyPending.exitCode !== 0 && !textOnlyClaimedPending,
+    `observed_exit_code=${textOnlyPending.exitCode} spawn_ok=${textOnlyPendingSpawned} ` +
+      `called_it_pending=${textOnlyClaimedPending} (the body is the PENDING shape but the exit code is a failure: ` +
+      'the code must decide, so the script must stop and must not print PENDING)'
   );
 
   // --- case 7: the two environment refusals are untouched -------------------
@@ -481,16 +559,19 @@ try {
   const noUrl = runSetup(tree, { env: { DATABASE_URL: '' } });
   observation(`DATABASE_URL unset run: setup.sh exit code = ${noUrl.exitCode}`);
 
+  const demoAuthSpawned = spawnedWithExitCode(demoAuth);
+  const noUrlSpawned = spawnedWithExitCode(noUrl);
+
   const demoAuthRefused =
-    demoAuth.exitCode !== 0 && /DEMO_AUTH=true is set/.test(demoAuth.output);
+    demoAuthSpawned && demoAuth.exitCode !== 0 && /DEMO_AUTH=true is set/.test(demoAuth.output);
   const databaseUrlRefused =
-    noUrl.exitCode !== 0 && /DATABASE_URL is not set/.test(noUrl.output);
+    noUrlSpawned && noUrl.exitCode !== 0 && /DATABASE_URL is not set/.test(noUrl.output);
 
   record(
     'demo-auth-refusal-and-database-url-refusal-intact',
     demoAuthRefused && databaseUrlRefused,
-    `DEMO_AUTH=true observed_exit_code=${demoAuth.exitCode} refused=${demoAuthRefused}; ` +
-      `unset DATABASE_URL observed_exit_code=${noUrl.exitCode} refused=${databaseUrlRefused}`
+    `DEMO_AUTH=true observed_exit_code=${demoAuth.exitCode} spawn_ok=${demoAuthSpawned} refused=${demoAuthRefused}; ` +
+      `unset DATABASE_URL observed_exit_code=${noUrl.exitCode} spawn_ok=${noUrlSpawned} refused=${databaseUrlRefused}`
   );
 } catch (error) {
   record('harness', false, `unexpected_error=${error.message}`);

@@ -18,7 +18,7 @@ import { runMigrations } from './persistence/migrate.js';
 import { createPostgresRepositories } from './persistence/pg-repositories.js';
 
 // Feature keys for the paid resources this reference server consumes. The route
-// inventory (docs/house-swarm-7/WU3-PAID-ROUTE-INVENTORY.md) maps each paid
+// inventory (docs/product/WU3-PAID-ROUTE-INVENTORY.md) maps each paid
 // route to one of these.
 export const AI_REQUESTS_PER_MONTH = 'ai_requests_per_month';
 export const PAYMENTS_PER_MONTH = 'payments_per_month';

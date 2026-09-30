@@ -53,9 +53,9 @@ host was contacted for any of this.
 `git diff --stat` over the change set:
 
 ```
-docs/house-swarm-7/WU6-CLAIMS-EVIDENCE.md  |   2 +-
-docs/house-swarm-7/WU6-SALES-EN.md         | 119 ++++---
-docs/house-swarm-7/WU6-SALES-TH.md         |  87 +++--
+docs/product/WU6-CLAIMS-EVIDENCE.md  |   2 +-
+docs/product/WU6-SALES-EN.md         | 119 ++++---
+docs/product/WU6-SALES-TH.md         |  87 +++--
 server/scripts/proofs/wu6/claims-check.mjs | 488 ++++++++++++++++++++++++++++-
 4 files changed, 611 insertions(+), 85 deletions(-)
 ```
@@ -85,7 +85,7 @@ seen event.
 **New:** the suite "**deletes exactly the rows it created again before it exits**", three
 consecutive runs each `Test Files 6 passed (6)` / `Tests 58 passed (58)`, row counts after all
 three `subscriptions` 0 and `billing_event_ledger` 0, and the suite is **repeatable** — the
-same position `docs/house-swarm-7/WU5-DEPLOY.md` §6.1 already stated. A **History** paragraph
+same position `docs/product/WU5-DEPLOY.md` §6.1 already stated. A **History** paragraph
 is kept, so an older copy cannot mislead: an earlier version of `server/tests/webhook.test.ts`
 deleted nothing, re-running used to fail at `tests/webhook.test.ts:101` with
 `AssertionError: expected 'active' to be 'cancelled'` because the file's fixed event ids
@@ -267,7 +267,7 @@ self-report. The worker's `STATE:` lines remain self-reports, as the skill requi
 
 Nothing under `server/src/`, `server/tests/`, `modules/`, `web/`, `scripts/`,
 `server/package.json`, `server/package-lock.json`, `docs/CURRENT_STATUS.md`,
-`docs/house-swarm-7/WU5-DEPLOY.md`, `docs/house-swarm-7/FU-*.md` or
+`docs/product/WU5-DEPLOY.md`, `docs/house-swarm-7/FU-*.md` or
 `06-Agent-Logs/WSTERA-House/STATUS-HOUSE.md` was modified — the controller's
 `p1-bnd-code-not-touched`, `p1-bnd-current-status-not-touched`, `p1-bnd-hub-not-modified` and
 `p1-reg-package-unchanged` checks pass. No commit was made. No process was left running and no

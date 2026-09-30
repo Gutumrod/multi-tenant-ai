@@ -3,10 +3,10 @@
 # สคริปต์ตั้งค่า WU-5 — `scripts/house-swarm-7/setup.sh`
 
 A short description of the script that sits next to the deployment manual. The
-manual is `docs/house-swarm-7/WU5-DEPLOY.md`; this file only describes the script.
+manual is `docs/product/WU5-DEPLOY.md`; this file only describes the script.
 
 คำอธิบายสั้น ๆ ของสคริปต์ที่วางอยู่ข้างคู่มือ deploy คู่มือคือ
-`docs/house-swarm-7/WU5-DEPLOY.md` ส่วนไฟล์นี้อธิบายเฉพาะสคริปต์
+`docs/product/WU5-DEPLOY.md` ส่วนไฟล์นี้อธิบายเฉพาะสคริปต์
 
 ---
 
@@ -106,9 +106,9 @@ This list matters as much as the one above.
   โฮสต์สำรอง ตัวแปรที่จำเป็นหายไปคือการปฏิเสธ ไม่ใช่ค่าเริ่มต้น
 - **It does not read a `.env` file.** This project has no dotenv and nothing reads
   a `.env` file, so such a file would have no effect. See
-  `docs/house-swarm-7/WU5-DEPLOY.md` section 3.3. / **ไม่อ่านไฟล์ `.env`** โปรเจกต์นี้
+  `docs/product/WU5-DEPLOY.md` section 3.3. / **ไม่อ่านไฟล์ `.env`** โปรเจกต์นี้
   ไม่มี dotenv และไม่มีอะไรอ่านไฟล์ `.env` ไฟล์นั้นจึงไม่มีผล ดู
-  `docs/house-swarm-7/WU5-DEPLOY.md` ข้อ 3.3
+  `docs/product/WU5-DEPLOY.md` ข้อ 3.3
 - **It creates no container and no cloud configuration.** It is a shell script
   that installs dependencies and checks two things. / **ไม่สร้าง container และไม่สร้าง
   คอนฟิกคลาวด์** มันเป็นสคริปต์เชลล์ที่ติดตั้ง dependency และตรวจสองอย่าง
@@ -227,12 +227,12 @@ or not set, and its value is never printed.
 ## 5. What to do next / ทำอะไรต่อ
 
 The script stops after setup. To run the server, and to verify it, follow
-`docs/house-swarm-7/WU5-DEPLOY.md` — section 3.4 to start it, section 6 for the
+`docs/product/WU5-DEPLOY.md` — section 3.4 to start it, section 6 for the
 verification checklist, section 7 for rollback and section 8 for the security
 rules you must not skip.
 
 สคริปต์หยุดหลังตั้งค่าเสร็จ การรันเซิร์ฟเวอร์และการตรวจสอบให้ทำตาม
-`docs/house-swarm-7/WU5-DEPLOY.md` — ข้อ 3.4 สำหรับการสตาร์ท ข้อ 6 สำหรับรายการ
+`docs/product/WU5-DEPLOY.md` — ข้อ 3.4 สำหรับการสตาร์ท ข้อ 6 สำหรับรายการ
 ตรวจสอบ ข้อ 7 สำหรับการย้อนกลับ และข้อ 8 สำหรับกฎความปลอดภัยที่ห้ามข้าม
 
 This script has **not** been validated by a different agent on a fresh folder,
