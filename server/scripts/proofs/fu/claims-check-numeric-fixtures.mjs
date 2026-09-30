@@ -5,6 +5,13 @@
  * (`sales-numbers-agree-with-ledger`) really goes red on both directions of the
  * defect it exists to catch, and stays green on the delivered documents.
  *
+ * EXTENDED in MT01-PRESALE-R2B-A to prove the same for the tenth check,
+ * `buyer-facing-documents-are-cited-under-docs-product`: a copy of a delivered
+ * document whose buyer-facing citation is restored to the vendor's
+ * working-record folder must make that check go FAIL, and the delivered
+ * documents must make it PASS. Both checks are judged on the child process's
+ * EXIT CODE and on the named `CHECK …` line.
+ *
  * WHY THIS EXISTS. The check was added because the sales documents kept
  * `51`-totalled test figures after the ledger had moved to `58`, and nothing
  * compared the two files. A gate is only worth what it catches, so every
@@ -18,8 +25,9 @@
  * applies exactly one mutation to that copy, and runs the REAL
  * `claims-check.mjs` as a child process with `CLAIMS_DOCS_DIR` pointed at the
  * copy. It then reads back the child's exit code and its
- * `CHECK sales-numbers-agree-with-ledger PASS|FAIL` line. The delivered documents
- * themselves are never edited, and the temp directory is removed afterwards.
+ * `CHECK <name> PASS|FAIL` line for the check that case targets. The delivered
+ * documents themselves are never edited, and the temp directory is removed
+ * afterwards.
  *
  * THE CASES:
  *
@@ -30,7 +38,11 @@
  *      (TH V4's set-database file total goes back to `(5)`)
  *   c. the ledger's LIVE figure changed, documents untouched     -> check FAIL
  *      (C39's claim cell loses the live `Tests 62 passed (62)` total)
- *   d. the delivered documents, unmutated                        -> check PASS, exit 0
+ *   e. a sales-document figure reverted to the superseded `58` total -> FAIL
+ *   f. a buyer-facing citation restored to the working-record folder -> CHECK 10 FAIL
+ *      (EN's "Also in the tree" line cites the vendor folder again)
+ *   g. the delivered documents, unmutated                         -> CHECK 10 PASS, exit 0
+ *   d. the delivered documents, unmutated                         -> check PASS, exit 0
  *
  * It reads files only, starts no server, opens no database, contacts no host and
  * loads nothing beyond Node's own stdlib (`node:fs`, `node:os`, `node:path`,
@@ -50,6 +62,7 @@ const REPO_DIR = join(SERVER_DIR, '..');
 const DOCS_DIR = join(REPO_DIR, 'docs/product');
 const CHECK_REL = 'scripts/proofs/wu6/claims-check.mjs';
 const CHECK_NAME = 'sales-numbers-agree-with-ledger';
+const CITATION_CHECK_NAME = 'buyer-facing-documents-are-cited-under-docs-product';
 const DOC_FILES = ['WU6-SALES-EN.md', 'WU6-SALES-TH.md', 'WU6-CLAIMS-EVIDENCE.md'];
 
 const EN = 'WU6-SALES-EN.md';
@@ -155,13 +168,45 @@ const CASES = [
   {
     name: 'd-delivered-documents-are-pass',
     expect: 'pass',
+    check: CHECK_NAME,
+    mutation: 'none — the delivered documents, copied unmutated',
+    mutate: null,
+  },
+  {
+    // CHECK 10 (added in MT01-PRESALE-R2B-A). The reviewed defect: a
+    // buyer-facing document locating itself under the vendor's working-record
+    // folder. The mutation restores the wrong folder on a line that names a
+    // buyer-facing filename in the SAME line (the TH document's "Also in the
+    // tree" line, where the directory token and `WU3-PAID-ROUTE-INVENTORY.md`
+    // are not wrapped apart) — CHECK 10 is line-based, so a case must target a
+    // same-line site. The wrong folder token is assembled from parts (the same
+    // self-reference reason the delivery gate's fixtures give), and the anchor
+    // is the delivered sentence, asserted to appear exactly once by replaceOnce.
+    name: 'f-buyer-facing-citation-restored-to-the-working-record-folder',
+    expect: 'fail',
+    check: CITATION_CHECK_NAME,
+    mutation: `${TH}'s "Also in the tree" line cites the operating documents under the working-record folder again, on the line that also names WU3-PAID-ROUTE-INVENTORY.md`,
+    mutate: (dir) => {
+      const wrongDir = 'docs/' + 'house-swarm-7' + '/';
+      replaceOnce(
+        dir,
+        TH,
+        'เอกสารปฏิบัติงานใต้ `docs/product/`',
+        'เอกสารปฏิบัติงานใต้ `' + wrongDir + '`'
+      );
+    },
+  },
+  {
+    name: 'g-buyer-facing-citation-on-the-delivered-documents-is-pass',
+    expect: 'pass',
+    check: CITATION_CHECK_NAME,
     mutation: 'none — the delivered documents, copied unmutated',
     mutate: null,
   },
 ];
 
-/** Run the real claims-check against a documents directory. */
-function runCheck(dir) {
+/** Run the real claims-check against a documents directory, reading back one named check. */
+function runCheck(dir, checkName) {
   const run = spawnSync(process.execPath, [CHECK_REL], {
     cwd: SERVER_DIR,
     env: { ...process.env, CLAIMS_DOCS_DIR: dir },
@@ -170,7 +215,7 @@ function runCheck(dir) {
   const output = `${run.stdout ?? ''}\n${run.stderr ?? ''}`;
   const line = output
     .split(/\r?\n/)
-    .find((candidate) => candidate.startsWith(`CHECK ${CHECK_NAME} `));
+    .find((candidate) => candidate.startsWith(`CHECK ${checkName} `));
   return {
     exitCode: run.status,
     checkLine: line ?? null,
@@ -199,7 +244,7 @@ try {
           writeFileSync(join(dir, name), SOURCE.get(name));
         }
         if (testCase.mutate !== null) testCase.mutate(dir);
-        return runCheck(dir);
+        return runCheck(dir, testCase.check ?? CHECK_NAME);
       } catch (error) {
         return { exitCode: null, checkLine: null, checkPassed: false, error: error.message };
       }
@@ -212,6 +257,7 @@ try {
       run.checkPassed === (testCase.expect === 'pass') &&
       (testCase.expect === 'pass' ? run.exitCode === 0 : run.exitCode !== 0);
 
+    observation(`case ${testCase.name}: targets CHECK ${testCase.check ?? CHECK_NAME}`);
     observation(`case ${testCase.name}: mutation = ${testCase.mutation}`);
     observation(`case ${testCase.name}: expected ${testCase.expect} (exit ${expectedExit})`);
     observation(`case ${testCase.name}: observed exit code = ${run.exitCode}`);

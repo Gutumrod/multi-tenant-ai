@@ -27,7 +27,13 @@
  *   * a DELIVERED file grows an internal machine path;
  *   * a DELIVERED file is left pointing at a file that is not delivered;
  *   * a not-delivered file loses its own NOT-DELIVERED marker, or disappears;
- *   * a declared path residual goes stale (see `delivered-path-residuals-...`).
+ *   * a DELIVERED file CITES a path that does not exist — either an explicit
+ *     `docs/…` path token that is not a path in the tree, or a directory token
+ *     immediately followed by a parenthesised list of bare filenames whose join
+ *     is missing while a file with that basename lives elsewhere in the tree
+ *     (see `no-citation-to-a-path-that-does-not-exist`). This is the semantic
+ *     rule the earlier line-based checks missed, because these citations wrap
+ *     across lines in the bilingual documents.
  *
  * It reads files only. It starts no server, binds no port, opens no database,
  * contacts no host, reads no credential, and loads nothing beyond Node's stdlib.
@@ -537,6 +543,139 @@ const treeFiles = repoFiles(REPO_DIR);
 }
 
 // ---------------------------------------------------------------------------
+// CHECK 9 — no-citation-to-a-path-that-does-not-exist
+//
+// THE SEMANTIC RULE THE LINE-BASED CHECKS COULD NOT EXPRESS. The independent
+// review of the round-2 revision recorded it (a LOW finding): a DELIVERED
+// document named the vendor's working-record folder and then listed
+// buyer-facing filenames that no longer live there, and a `docs/…/…md`-shaped
+// citation was written outright. Check 7 above only fires on a not-delivered
+// path quoted WHOLE; these citations write a directory token and a bare
+// basename, or a path that is simply not in the tree, and the bilingual
+// documents WRAP them across lines — so a per-line scan provably misses them
+// (that is why the gate missed this in the first place).
+//
+// This check therefore works on a whitespace-flattened copy of each DELIVERED
+// file, with a line map back to the original, and fails a file when either rule
+// fires:
+//
+//   1. explicit-path rule — a token shaped `docs/<…>.<ext>` that is not a path
+//      in the tree. This is what catches a written-out `docs/…/…md` citation.
+//   2. directory-plus-filename rule — a directory token (one or more `name/`
+//      segments, with or without backticks) IMMEDIATELY followed by a
+//      parenthesised list of bare filenames, where joining the directory and a
+//      listed filename does not exist in the tree AND a file with that basename
+//      exists somewhere ELSE in the tree. The basename guard is what keeps
+//      ordinary prose like "a file called `foo.md`" from firing.
+//
+// `../`-relative and `http(s)://` tokens are skipped: they are not repository
+// paths. The scanned set is the DELIVERED classification — the same whole set
+// check 3 scans, with no exemptions and no residual list. Each hit names the
+// offending file, the line in the ORIGINAL, and both the cited and the real
+// location.
+// ---------------------------------------------------------------------------
+{
+  const hits = [];
+
+  if (!parsed) {
+    record('no-citation-to-a-path-that-does-not-exist', false, 'the manifest could not be parsed (see delivery-manifest-parsed)');
+  } else {
+    const treeSet = new Set(treeFiles);
+    /** basename -> the repository-relative paths that carry it. */
+    const basenameIndex = new Map();
+    for (const rel of treeFiles) {
+      const base = rel.split('/').pop();
+      if (!basenameIndex.has(base)) basenameIndex.set(base, []);
+      basenameIndex.get(base).push(rel);
+    }
+
+    /**
+     * Whitespace-flattened text (each line break becomes one space) with a map
+     * from every character index to the ORIGINAL line number it came from.
+     */
+    function flattenWithLineMap(text) {
+      const lines = text.split(/\r?\n/);
+      let flat = '';
+      const map = [];
+      for (let i = 0; i < lines.length; i += 1) {
+        flat += lines[i];
+        for (let c = 0; c < lines[i].length; c += 1) map.push(i + 1);
+        flat += ' ';
+        map.push(i + 1);
+      }
+      return { flat, map };
+    }
+
+    // Rule 1. The `/` in `docs/` is escaped in this source on purpose: written
+    // literally, this regex would itself be a path token in THIS delivered file
+    // and the check would fire on its own pattern — the same self-reference
+    // reason MACHINE_PATTERNS is assembled from parts.
+    const EXPLICIT_PATH = /docs\/[A-Za-z0-9_.\-]+(?:\/[A-Za-z0-9_.\-]+)*\.[A-Za-z0-9]+/g;
+    // Rule 2. A directory token immediately followed by a parenthesised list.
+    const DIR_THEN_LIST = /`?([A-Za-z0-9_.\-]+(?:\/[A-Za-z0-9_.\-]+)*\/)`?\s*\(([^)]*)\)/g;
+    const BARE_FILENAME = /^[A-Za-z0-9_.\-]+\.[A-Za-z0-9]+$/;
+    const notUrlOrRelative = (flat, index) => {
+      const before = flat[index - 1];
+      return before === undefined || !/[A-Za-z0-9_.\-\/]/.test(before);
+    };
+
+    for (const rel of [...delivered].sort()) {
+      const text = readOrNull(join(REPO_DIR, rel));
+      if (text === null) continue;
+      const { flat, map } = flattenWithLineMap(text);
+      const line = (index) => map[index] ?? 1;
+
+      let m;
+
+      // Rule 1 — an explicit docs path that is not in the tree.
+      EXPLICIT_PATH.lastIndex = 0;
+      while ((m = EXPLICIT_PATH.exec(flat)) !== null) {
+        const token = m[0];
+        if (!notUrlOrRelative(flat, m.index)) continue;
+        if (treeSet.has(token)) continue;
+        const base = token.split('/').pop();
+        const real = basenameIndex.get(base) ?? [];
+        hits.push(
+          `${rel}:${line(m.index)} cites ${token}, which is not a path in the tree` +
+            (real.length > 0
+              ? `; a file with that name is at ${real.join(', ')}`
+              : '; no file with that name exists anywhere in the tree')
+        );
+      }
+
+      // Rule 2 — a directory token followed by a parenthesised list of bare
+      // filenames whose join does not exist, while the basename lives elsewhere.
+      DIR_THEN_LIST.lastIndex = 0;
+      while ((m = DIR_THEN_LIST.exec(flat)) !== null) {
+        const dir = m[1];
+        if (dir.startsWith('../')) continue;
+        if (flat.slice(Math.max(0, m.index - 8), m.index).includes('://')) continue;
+        for (const rawName of m[2].split(',')) {
+          const name = rawName.trim().replace(/`/g, '').trim().replace(/[.,;:]+$/, '');
+          if (!BARE_FILENAME.test(name)) continue;
+          const joined = dir + name;
+          if (treeSet.has(joined)) continue;
+          const real = basenameIndex.get(name) ?? [];
+          if (real.length === 0) continue; // the guard: not a repository filename at all
+          hits.push(
+            `${rel}:${line(m.index)} cites ${dir} + ${name} but ${joined} does not exist; ` +
+              `the file is at ${real.join(', ')}`
+          );
+        }
+      }
+    }
+
+    record(
+      'no-citation-to-a-path-that-does-not-exist',
+      hits.length === 0,
+      hits.length === 0
+        ? `no DELIVERED file cites a path that does not exist: scanned ${delivered.size} delivered file(s) (the whole set, no exemptions) on a whitespace-flattened copy with a line map, for an explicit docs/ path token absent from the tree and for a directory token immediately followed by a parenthesised list of bare filenames whose join is missing while the basename lives elsewhere; ../-relative and http(s):// tokens are skipped`
+        : `${hits.length} dangling semantic citation(s) in the delivered set: ${hits.slice(0, 10).join('; ')}`
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Report
 // ---------------------------------------------------------------------------
 function report() {
@@ -593,7 +732,6 @@ function runChild(repoCopy) {
 
 if (process.argv.includes('--self-test')) {
   const firstNotDelivered = [...notDelivered].sort()[0] ?? null;
-  const firstResidual = [...residual].sort()[0] ?? null;
   const sampleDeliveredDoc = [...delivered].sort().find((rel) => rel.endsWith('.md') && rel.startsWith('docs/')) ?? null;
 
   /**
@@ -667,22 +805,23 @@ if (process.argv.includes('--self-test')) {
       },
     },
     {
-      name: 'g-a-declared-path-residual-is-no-longer-dirty',
-      expectName: 'recorded-path-residuals-are-live',
+      name: 'g-delivered-file-cites-a-directory-and-a-bare-filename-that-is-not-there',
+      expectName: 'no-citation-to-a-path-that-does-not-exist',
       expectFail: true,
-      mutation: `a declared path residual (${firstResidual}) is made path-clean in the copy, so the declaration goes stale`,
+      mutation: `a DELIVERED file (${sampleDeliveredDoc}) is made to cite a wrong directory plus a parenthesised list of bare filenames — the directory + bare-filenames form the gate previously missed`,
       mutate: (copy) => {
-        const path = join(copy, firstResidual);
-        let text = readFileSync(path, 'utf8');
-        // Same reason as fixture c: assembled from parts so this checker stays path-clean
-        // and does not fail its own rule.
-        const vendorWs = 'AI' + '-Workspace';
-        text = text.replace(
-          new RegExp('D:' + '\\\\' + vendorWs + '\\\\projects\\\\modules-hub', 'g'),
-          'the-upstream-module-tree'
+        // Assembled from parts, like MACHINE_PATTERNS and fixture c: this case
+        // EXISTS to write a dangling citation into a copy, so a literal path token
+        // here would make THIS file fail its own new rule. The basename is a real
+        // file in the tree (`${'WU4' + '-SAMPLE-UI.md'}` lives under `docs/product/`),
+        // which is what makes the join into the wrong folder a citation the rule
+        // must catch, and the folder token is a path that does not exist.
+        const wrongDir = 'docs/' + 'house-swarm-7' + '/';
+        const realBase = 'WU4' + '-SAMPLE-UI.md';
+        appendFileSync(
+          join(copy, sampleDeliveredDoc),
+          `\nThe commands are under ${'`'}${wrongDir}${'`'} (${'`'}${realBase}${'`'}).\n`
         );
-        text = text.replace(new RegExp(vendorWs, 'g'), 'AIWorkspace');
-        writeFileSync(path, text);
       },
     },
   ];

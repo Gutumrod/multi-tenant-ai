@@ -92,11 +92,11 @@ version.
   / **R7 — `server/scripts/proofs/`**: harness พิสูจน์ของชั้น WU-2 ถึง WU-6 และหน้า
   HTML ที่บันทึกไว้สิบไฟล์ใต้ `server/scripts/proofs/wu4/wu4-e2e/`
 
-Also in the tree: the operating documents under `docs/house-swarm-7/`
+Also in the tree: the operating documents under `docs/product/`
 (`WU3-PAID-ROUTE-INVENTORY.md`, `WU4-SAMPLE-UI.md`, `WU5-DEPLOY.md`, this document
 set), `BRIEF.md`, and `STAGE3_EVIDENCE_REPORT.md`.
 
-ในทรีเดียวกันยังมีเอกสารปฏิบัติงานใต้ `docs/house-swarm-7/` (`WU3-PAID-ROUTE-INVENTORY.md`,
+ในทรีเดียวกันยังมีเอกสารปฏิบัติงานใต้ `docs/product/` (`WU3-PAID-ROUTE-INVENTORY.md`,
 `WU4-SAMPLE-UI.md`, `WU5-DEPLOY.md`, ชุดเอกสารนี้), `BRIEF.md` และ `STAGE3_EVIDENCE_REPORT.md`
 
 ---

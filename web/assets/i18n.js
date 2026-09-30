@@ -84,7 +84,7 @@ export const DICT = {
       'DEMO_AUTH is off by default. While it is off, every paid endpoint sits behind the real authentication middleware and answers 503 "Auth not configured" until you point the server at your own Supabase project. When DEMO_AUTH=true, this UI can use a demo tenant id that you type, so the four screens are walkable against your local database. It is not authentication: no password, no user record, no token, and the server refuses to enable it when NODE_ENV=production.',
     'landing.start.title': 'Running it on a clean machine',
     'landing.start.body':
-      'Node 20 or newer with npm. Install once in server/, then start the server. With no DATABASE_URL the server keeps its in-memory repositories; with DATABASE_URL it uses PostgreSQL and applies the migrations at boot. The exact commands are in docs/house-swarm-7/WU4-SAMPLE-UI.md.',
+      'Node 20 or newer with npm. Install once in server/, then start the server. With no DATABASE_URL the server keeps its in-memory repositories; with DATABASE_URL it uses PostgreSQL and applies the migrations at boot. The exact commands are in docs/product/WU4-SAMPLE-UI.md.',
     'landing.honesty.title': 'What this UI is not',
     'landing.honesty.body':
       'No marketing copy, no testimonials, no invented metrics, no stock photos and no external requests of any kind. Every visible sentence comes from the locale dictionary in web/assets/i18n.js.',
@@ -256,7 +256,7 @@ export const DICT = {
       'DEMO_AUTH ปิดเป็นค่าเริ่มต้น ระหว่างที่ปิด ทุก endpoint ที่มีค่าใช้จ่ายอยู่หลัง auth middleware ตัวจริง และจะตอบ 503 "Auth not configured" จนกว่าจะชี้เซิร์ฟเวอร์ไปที่โปรเจกต์ Supabase ของคุณเอง เมื่อ DEMO_AUTH=true หน้าตัวอย่างนี้ใช้ demo tenant id ที่พิมพ์เองได้ เพื่อให้เดินครบทั้งสี่หน้าจอกับฐานข้อมูล local ได้ · นี่ไม่ใช่การยืนยันตัวตน: ไม่มีรหัสผ่าน ไม่มีบัญชีผู้ใช้ ไม่มีโทเคน และเซิร์ฟเวอร์จะปฏิเสธที่จะเปิดโหมดนี้เมื่อ NODE_ENV=production',
     'landing.start.title': 'รันบนเครื่องสะอาด',
     'landing.start.body':
-      'ต้องมี Node 20 ขึ้นไปพร้อม npm ติดตั้งครั้งเดียวในโฟลเดอร์ server/ แล้วสตาร์ทเซิร์ฟเวอร์ ถ้าไม่ตั้ง DATABASE_URL เซิร์ฟเวอร์จะใช้ repository ในหน่วยความจำ ถ้าตั้ง DATABASE_URL จะใช้ PostgreSQL และรัน migration ให้ตอนบูต คำสั่งทั้งหมดอยู่ใน docs/house-swarm-7/WU4-SAMPLE-UI.md',
+      'ต้องมี Node 20 ขึ้นไปพร้อม npm ติดตั้งครั้งเดียวในโฟลเดอร์ server/ แล้วสตาร์ทเซิร์ฟเวอร์ ถ้าไม่ตั้ง DATABASE_URL เซิร์ฟเวอร์จะใช้ repository ในหน่วยความจำ ถ้าตั้ง DATABASE_URL จะใช้ PostgreSQL และรัน migration ให้ตอนบูต คำสั่งทั้งหมดอยู่ใน docs/product/WU4-SAMPLE-UI.md',
     'landing.honesty.title': 'หน้าตัวอย่างนี้ไม่ใช่อะไร',
     'landing.honesty.body':
       'ไม่มีข้อความโฆษณา ไม่มีคำรับรองจากลูกค้า ไม่มีตัวเลขที่กุขึ้น ไม่มีรูปสต็อก และไม่มีการเรียกออกไปภายนอกเลย ทุกประโยคที่เห็นมาจาก dictionary ภาษาใน web/assets/i18n.js',

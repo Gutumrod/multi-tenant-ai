@@ -16,7 +16,8 @@
  *
  * and exits non-zero if any check fails.
  *
- * The nine check names are fixed by the work unit:
+ * The check names are fixed by the work unit, and a later repair adds to the
+ * list without renaming or removing any of them:
  *
  *   sales-docs-bilingual-headings
  *   no-price-or-licence-in-sales-docs
@@ -27,13 +28,14 @@
  *   node-version-stated-22
  *   ui-evidence-described-as-http-html
  *   sales-numbers-agree-with-ledger   (added in MT01-PRESALE-P1)
+ *   buyer-facing-documents-are-cited-under-docs-product   (added in MT01-PRESALE-R2B-A)
  *
  * Every check here is written so that it CAN fail, and every one of them was
  * observed failing against a mutated copy of the documents before this harness was
  * handed over — a check that cannot fail is worse than no check at all. The
  * `CLAIMS_DOCS_DIR` environment variable exists for exactly that demonstration: it
  * repoints the document lookups at a mutated copy so a reviewer can watch a check
- * go red on demand. It defaults to this repository's `docs/house-swarm-7`, and the
+ * go red on demand. It defaults to this repository's `docs/product` folder, and the
  * delivered documents are the ones under that default.
  *
  * Usage:  node server/scripts/proofs/wu6/claims-check.mjs
@@ -1429,6 +1431,72 @@ const SALES = [
   );
 }
 
+// ---------------------------------------------------------------------------
+// CHECK 10 — buyer-facing-documents-are-cited-under-docs-product
+//        (added in MT01-PRESALE-R2B-A)
+//
+// Rule enforced: a line of any of the three buyer-facing documents that names
+// one of the six buyer-facing document filenames must not locate it under a
+// `docs/…` directory token other than `docs/product/`. A buyer-facing document
+// must cite a buyer-facing document under `docs/product/`; naming the vendor's
+// working-record folder as the location of a delivered document is the defect
+// this check exists to catch. A line that names a document without any `docs/…`
+// token at all is allowed — that is how the documents NAME the vendor's own
+// papers without claiming to be located there.
+//
+// It reads only the three documents this harness already reads. The
+// deliverable-set statement is printed verbatim, the way the other nine checks
+// state their rule.
+// ---------------------------------------------------------------------------
+{
+  const BUYER_FACING_DOCS = [
+    'WU3-PAID-ROUTE-INVENTORY.md',
+    'WU4-SAMPLE-UI.md',
+    'WU5-DEPLOY.md',
+    'WU6-CLAIMS-EVIDENCE.md',
+    'WU6-SALES-EN.md',
+    'WU6-SALES-TH.md',
+  ];
+  // A `docs/…` directory token: `docs/` plus one or more `segment/` parts. The
+  // `/` after `docs` is escaped so this pattern is not itself a path token in
+  // this file (the same self-reference reason the delivery gate assembles its
+  // patterns from parts).
+  const DOCS_DIRECTORY_TOKEN = /docs\/[A-Za-z0-9_.\-]+(?:\/[A-Za-z0-9_.\-]+)*\//g;
+  const RULE_TEXT =
+    'rule: a line that names one of the six buyer-facing document filenames ' +
+    `(${BUYER_FACING_DOCS.join(', ')}) must not locate it under a docs/ directory token other than docs/product/; ` +
+    'citing a buyer-facing document under the vendor working-record folder is forbidden, and a line that names a document with no docs/ token is allowed';
+
+  const problems = [];
+  for (const doc of [SALES[0], SALES[1], { label: 'WU6-CLAIMS-EVIDENCE.md', text: CLAIMS_MAP }]) {
+    if (doc.text === null) {
+      problems.push(`${doc.label} is missing`);
+      continue;
+    }
+    const lines = doc.text.split(/\r?\n/);
+    for (let i = 0; i < lines.length; i += 1) {
+      const line = lines[i];
+      const named = BUYER_FACING_DOCS.filter((name) => line.includes(name));
+      if (named.length === 0) continue;
+      DOCS_DIRECTORY_TOKEN.lastIndex = 0;
+      const tokens = [...line.matchAll(DOCS_DIRECTORY_TOKEN)].map((match) => match[0]);
+      const wrong = tokens.filter((token) => token !== 'docs/product/');
+      if (wrong.length > 0) {
+        problems.push(
+          `${doc.label}:${i + 1} names ${named.join(', ')} together with the docs/ directory token(s) ` +
+            `${wrong.join(', ')}; a buyer-facing document is delivered under docs/product/`
+        );
+      }
+    }
+  }
+
+  record(
+    'buyer-facing-documents-are-cited-under-docs-product',
+    problems.length === 0,
+    problems.length === 0 ? `${RULE_TEXT}; checked 3 document(s), no buyer-facing document filename is located under a non-product docs/ token` : problems.join('; ')
+  );
+}
+
 // --------------------------------------------------------------------- summary --
 const failed = results.filter((result) => !result.passed);
 console.log(
@@ -1447,6 +1515,7 @@ const EXPECTED_NAMES = [
   'node-version-stated-22',
   'ui-evidence-described-as-http-html',
   'sales-numbers-agree-with-ledger',
+  'buyer-facing-documents-are-cited-under-docs-product',
 ];
 const missingNames = EXPECTED_NAMES.filter(
   (name) => !results.some((result) => result.name === name)
@@ -1467,7 +1536,7 @@ if (missingNames.length > 0) {
 // It is OFF BY DEFAULT and never runs on a normal invocation: nothing above this
 // point opens a database connection. Set CLAIMS_ROW_PROBE=1 together with
 // DATABASE_URL to run it. It is READ-ONLY (SELECT only), it prints no connection
-// string, and it does not affect the nine checks or the exit code above, which
+// string, and it does not affect the ten checks or the exit code above, which
 // have already been decided by the time it runs.
 // ---------------------------------------------------------------------------
 if (process.env.CLAIMS_ROW_PROBE === '1') {

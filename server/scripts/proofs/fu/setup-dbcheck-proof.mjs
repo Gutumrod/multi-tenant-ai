@@ -49,31 +49,66 @@
  * itself now names every check after the step that ran it, and does not run the
  * seed-plan query before the tables it reads exist.
  *
- * WHAT IT ASSERTS. Nine cases, each an independent check, each reporting the
- * exit code it actually observed. Cases 1–7 are the two repairs above; case 8
- * is the Owner's requirement on the diagnostic wording itself, and case 9
- * pins the real post-repair output shape of a reachable-but-unmigrated database
- * so the PENDING recognition cannot regress when that shape changes:
+ * THE FOURTH DEFECT THIS NOW ALSO CATCHES — the shell-resolution defect. This
+ * harness resolved its own child shell through the PATH it was about to mutate:
+ * `spawnSync('sh', …, shell:false)` asked the OS to find `sh` on the ambient
+ * PATH, and then prepended the stand-in directory to that same PATH. On Windows
+ * `sh` is not a system shell — it comes from Git for Windows — and an ambient
+ * PATH in POSIX form (exactly what native `node.exe` receives when it is started
+ * from Git-Bash with `MSYS_NO_PATHCONV`/`MSYS2_ARG_CONV_EXCL` set, i.e. this
+ * harness' own environment) contains no entry that supplies `sh.exe`: the loader
+ * tries `<entry>/sh.exe` for each entry, the entry that used to hold it
+ * (`C:\Program Files\Git\usr\bin`) is no longer an entry but a *component* of
+ * one, and the spawn fails with `spawnSync sh ENOENT`. `spawnSync` reports that
+ * as `status: null`, so EVERY case that launches the child went to
+ * `observed_exit_code=null` at once and `setup.sh` never ran. Observed by the
+ * reviewer as `SUMMARY checks=11 passed=4 failed=7` with `spawn_ok=false` /
+ * `spawn_error=spawnSync sh ENOENT` on the seven shim cases. The shell is now
+ * resolved by ABSOLUTE PATH on Windows (see `resolveShell`) and the child PATH
+ * is built with `node:path`'s `delimiter`, so neither the lookup nor the
+ * separator depends on the ambient PATH or on its shape. Do NOT put `sh` back on
+ * a PATH lookup and do NOT put a literal `:` back in the child PATH: with either
+ * one restored, an ambient POSIX PATH makes every case null again, and a null
+ * exit is not an exit code — no case may read it as anything, least of all a
+ * refusal.
  *
- *   1. `setup-really-executes-db-check` — a normal run against a real database
+ * WHAT IT ASSERTS. Twelve cases, each an independent check, each reporting the
+ * exit code it actually observed. Case 0 is the prerequisite gate added in this
+ * repair: cases 2–7 are the repairs above, case 8 is the Owner's requirement on
+ * the diagnostic wording itself, case 9 pins the real post-repair output shape of
+ * a reachable-but-unmigrated database, and case 10 pins the exit-code-decides
+ * rule, so the PENDING recognition cannot regress when that shape changes:
+ *
+ *   0. `child-shell-has-required-prerequisites` — the POSIX shell the harness is
+ *      about to run really resolves `dirname`, `cat`, `printf`, `pwd`, `node` and
+ *      `npm`. Without them setup.sh cannot reach its database step at all, so a
+ *      missing one is reported by name with the concrete remedy and the remaining
+ *      cases are NOT run. This is the case that turns the old silent `4/11` into a
+ *      named failure instead of a partial pass.
+ *   1. `copy-is-complete` — the temp copy really holds setup.sh and
+ *      server/package.json; without them nothing below can run.
+ *   2. `setup-really-executes-db-check` — a normal run against a real database
  *      really runs db-check (a `CHECK ` line is printed) and does not die with
- *      MODULE_NOT_FOUND. Forced with MSYS_NO_PATHCONV=1 and
- *      MSYS2_ARG_CONV_EXCL='*' so the run reproduces the Windows/Git-Bash
- *      environment in which defect 2 was observed. THIS IS THE DEFECT-2 CHECK: a
- *      script that silently skips or cannot resolve db-check fails it.
- *   2. `setup-exits-zero-with-a-fully-migrated-database` — and the run exits 0.
- *   3. `unrecognised-dbcheck-failure-makes-setup-exit-non-zero` — a db-check that
- *      exits 2 with an unrecognised message makes setup.sh exit non-zero.
- *      THIS IS THE DEFECT-1 CHECK.
- *   4. `no-pass-claimed-when-dbcheck-failed` — that same run does not claim the
- *      database passed.
- *   5. `recognised-connection-failure-still-named` — the connection case keeps
+ *      MODULE_NOT_FOUND, AND the database step was actually reached. Forced with
+ *      MSYS_NO_PATHCONV=1 and MSYS2_ARG_CONV_EXCL='*' so the run reproduces the
+ *      Windows/Git-Bash environment in which defect 2 was observed. THIS IS THE
+ *      DEFECT-2 CHECK: a script that silently skips or cannot resolve db-check
+ *      fails it.
+ *   3. `setup-exits-zero-with-a-fully-migrated-database` — and that same run exits
+ *      0, with the database step reached. Needs a database that is ALREADY
+ *      migrated; against a reachable-but-un-migrated one this case passes
+ *      through the PENDING arm instead, which is a weaker observation and is
+ *      reported as such rather than claimed as "fully migrated".
+ *   4. `unrecognised-dbcheck-failure-makes-setup-exit-non-zero` — a db-check that
+ *      exits 3 with an unrecognised message makes setup.sh exit non-zero, AND the
+ *      database step was actually reached. THIS IS THE DEFECT-1 CHECK.
+ *   5. `no-pass-claimed-when-dbcheck-failed` — that same run does not claim the
+ *      database passed, AND the database step was actually reached.
+ *   6. `recognised-connection-failure-still-named` — the connection case keeps
  *      its helpful message and still stops the script.
- *   6. `reachable-but-unmigrated-still-reported-pending` — the PENDING outcome is
+ *   7. `reachable-but-unmigrated-still-reported-pending` — the PENDING outcome is
  *      still exit 0, because the server creates the schema at boot. This is
  *      intentional and documented (`scripts/house-swarm-7/setup.md` §3.3).
- *   7. `demo-auth-refusal-and-database-url-refusal-intact` — the two environment
- *      refusals still behave.
  *   8. `unmigrated-output-names-no-connection-failure` — THE OWNER'S REQUIREMENT.
  *      On the real un-migrated output (stub mode `unmigrated`), setup.sh must
  *      print `PENDING` and its whole output must contain NO line claiming a
@@ -84,6 +119,21 @@
  *   9. `real-unmigrated-output-is-pending-not-unreachable` — the same run, from
  *      the other side: db-check's real post-repair output shape still lands in
  *      the PENDING arm rather than in the unrecognised-failure arm.
+ *  10. `pending-shaped-text-with-a-failure-exit-code-does-not-continue` — a
+ *      byte-identical PENDING-shaped body carrying a FAILURE exit code must make
+ *      setup.sh stop, because the exit code decides and not the wording. THIS IS
+ *      THE CHECK THAT CATCHES A RE-INTRODUCTION OF TEXT MATCHING.
+ *  11. `both-environment-refusals-cite-their-own-gate` — the two environment
+ *      refusals still behave, each named by its own gate and explicitly NOT by a
+ *      prerequisite failure (these two are decided before the database step by
+ *      design, so a database step is not required of them).
+ *
+ * WHY EVERY DATABASE-STEP CASE NOW CARRIES `database_step_reached`. Several of
+ * these cases assert a NEGATIVE — "exits non-zero", "did not claim a pass". A run
+ * that dies in prerequisite resolution satisfies both while never touching the
+ * database, which is how the stub cases passed vacuously before this repair. Each
+ * stub case therefore reports and requires `database_step_reached=true`; when it
+ * is false the case FAILS rather than passing on an unrelated exit code.
  *
  * HOW IT DRIVES A FAILING db-check WITHOUT TOUCHING IT. The database step is
  * exercised by a stand-in `node` placed EARLIER ON PATH inside the temp copy: it
@@ -107,17 +157,218 @@
  * that database is not reachable, case 2 fails with the observed output rather
  * than reporting a pass.
  *
+ * WHERE THIS WAS PROVEN — AND WHERE IT WAS NOT. Every green result this harness
+ * produced was measured on Windows with Git for Windows supplying the POSIX shell
+ * AND the coreutils the child needs (`dirname`, `cat`, `printf`, `pwd`). The
+ * `process.platform !== 'win32'` branch of `resolveShell` — the bare-name `sh`
+ * path a real POSIX host takes — and this whole suite have NOT been measured on a
+ * real POSIX host (Linux, macOS, WSL). Do not report this suite as "the ambient
+ * environment passes everywhere": report which prerequisites were found, in the
+ * environment that was actually run.
+ *
+ * THE PREREQUISITE PREFLIGHT (fifth defect this catches). `setup.sh` is a POSIX
+ * sh script and it calls external coreutils — `dirname` on its very first
+ * resolution step. On a host whose shell can be found but whose coreutils are not
+ * on the child's PATH, `setup.sh` dies at that first step, BEFORE the database
+ * step exists. The suite then reported `checks=11 passed=4 failed=7` with the
+ * refusal checks passing vacuously: they matched "non-zero exit" and "no pass
+ * claimed" on a run that never reached the database at all. That is a silent
+ * partial pass and it is worse than a failure. This harness now (a) PROBES the
+ * prerequisites through the very shell it will use and (b) reports a missing
+ * prerequisite as a single named FAILURE naming exactly what is missing and how
+ * to supply it, and (c) refuses to run the cases at all in that state, so no case
+ * can pass for a reason that has nothing to do with what it asserts. It does NOT
+ * repair the environment it tests: it never prepends a Git directory (or any
+ * other) to the child PATH. The one entry it does add is the stand-in `node`
+ * directory, and only for the stub cases that declare it.
+ *
  * Usage:  node server/scripts/proofs/fu/setup-dbcheck-proof.mjs
  */
 import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync, chmodSync } from 'node:fs';
 import { cpSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { dirname, join } from 'node:path';
+import { delimiter, dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO_DIR = join(HERE, '../../../..');
+
+/**
+ * The shell this harness runs the child through — resolved ONCE, by absolute
+ * path on Windows, and never by a lookup on the PATH it is about to mutate.
+ *
+ * WHY THIS EXISTS (the fourth defect, see the header). `spawnSync('sh', …)`
+ * resolves `sh` through the ambient PATH. On Windows `sh.exe` is supplied by Git
+ * for Windows; when the ambient PATH arrives in POSIX form — which is exactly
+ * what native `node.exe` is handed when it is started from Git-Bash with the
+ * path-conversion variables this harness sets — no entry supplies `sh.exe` any
+ * more (the Git directory is a *component* of an entry, not an entry), and every
+ * child launch fails with `spawnSync sh ENOENT`, i.e. `status: null` on every
+ * case. So on Windows the shell is looked up by absolute path among the
+ * Git-for-Windows locations that actually exist on this machine, and the bare
+ * name `sh` is only a last resort when NONE of them is present. On POSIX the
+ * bare name is correct and is used directly.
+ *
+ * If no shell is found at all this harness must stop: it must NOT fall back to
+ * running `setup.sh` directly (that would execute a `sh` script under a
+ * different interpreter and prove nothing), and it must NOT let the resulting
+ * null exit read as a refusal. `resolveShell` returns null in that case and the
+ * caller fails loudly naming every candidate it looked for.
+ */
+const WINDOWS_SHELL_CANDIDATES = [
+  'C:/Program Files/Git/usr/bin/sh.exe',
+  'C:/Program Files/Git/bin/sh.exe',
+  'C:/Program Files/Git/usr/local/bin/sh.exe',
+  'C:/Program Files/Git/mingw64/bin/sh.exe',
+];
+
+function resolveShell() {
+  if (process.platform !== 'win32') {
+    return { command: 'sh', candidates: [], probed: false, how: 'by name (POSIX platform)' };
+  }
+  const found = WINDOWS_SHELL_CANDIDATES.find((candidate) => {
+    try {
+      return existsSync(candidate);
+    } catch {
+      return false;
+    }
+  });
+  if (found) {
+    return {
+      command: found,
+      candidates: WINDOWS_SHELL_CANDIDATES,
+      probed: true,
+      how: 'by absolute path (Windows: Git-for-Windows shell)',
+    };
+  }
+  return {
+    command: null,
+    candidates: WINDOWS_SHELL_CANDIDATES,
+    probed: true,
+    how: 'no absolute Git-for-Windows shell existed in any probed location',
+  };
+}
+
+const SHELL = resolveShell();
+
+/**
+ * The external commands `setup.sh` needs before it can reach its database step.
+ *
+ * `dirname` is the load-bearing one: it is called on the FIRST line of
+ * repository resolution, so without it `setup.sh` dies before the database step
+ * is ever reached, and every refusal case below would then pass on a run that
+ * never touched the database. `cat` is called by `usage()`, `printf` by `say`/
+ * `warn`/`die`, and `pwd` by the repository-root resolution. `command -v` and
+ * `cd` are shell builtins and need no external binary.
+ *
+ * These are NOT installed or supplied by this harness — the harness only checks
+ * for them and reports exactly which are missing. Git for Windows puts them in
+ * `<Git>/usr/bin` (and `<Git>/bin`); a POSIX host has them in `/bin` and
+ * `/usr/bin`. The harness never edits PATH to make them appear.
+ */
+const REQUIRED_CHILD_COMMANDS = [
+  { name: 'dirname', why: 'repository-root resolution, setup.sh step 0 — the first external command it runs' },
+  { name: 'cat', why: 'the --help text in usage()' },
+  { name: 'printf', why: 'every say/warn/die message' },
+  { name: 'pwd', why: 'the repository-root resolution' },
+  { name: 'node', why: 'setup.sh step 1 (node --version) and every later step' },
+  { name: 'npm', why: 'setup.sh step 1 (npm --version) and the install/typecheck steps' },
+];
+
+/**
+ * The remedy text is deliberately concrete and names the environment the harness
+ * was actually proven on. It instructs the OPERATOR to supply the prerequisite;
+ * the harness will not do it for them, because a green suite on a PATH the
+ * harness patched is not evidence about the environment the operator has.
+ */
+const PREREQUISITE_REMEDY =
+  'Supply the missing command(s) on the PATH the POSIX shell sees, then re-run. ' +
+  'On Windows with Git for Windows, add its POSIX tool directories to PATH — for example ' +
+  '"C:\\Program Files\\Git\\usr\\bin" (coreutils and sh) plus "C:\\Program Files\\Git\\bin" — ' +
+  'before the Windows directories, e.g. in Git-Bash: ' +
+  "export PATH='/c/Program Files/Git/usr/bin:/c/Program Files/Git/bin':$PATH. " +
+  'On a POSIX host these live in /bin and /usr/bin. ' +
+  'This harness will NOT patch PATH for you: a suite that repairs the environment it measures ' +
+  'proves nothing about the environment you have. ' +
+  'Note this suite has only ever been proven on Windows with Git for Windows coreutils; ' +
+  'a real POSIX host (Linux/macOS/WSL) has not been measured.';
+
+/**
+ * Probe the prerequisites THROUGH the shell that will actually run setup.sh, so
+ * the answer describes the child environment and not the ambient one. Uses
+ * `command -v` per name and parses only its exit status — the resolved path is
+ * echoed back for the report but is never used as a command.
+ */
+function probeChildPrerequisites() {
+  const missing = [];
+  const found = [];
+  if (SHELL.command === null) {
+    return {
+      ok: false,
+      missing: REQUIRED_CHILD_COMMANDS.map((c) => c.name),
+      found: [],
+      detail:
+        'no POSIX shell could be resolved, so the prerequisites could not be probed at all. ' +
+        `Probed for: ${SHELL.candidates.join(', ')} (on Windows) and the bare name "sh" (on POSIX).`,
+      probeError: null,
+    };
+  }
+  for (const { name, why } of REQUIRED_CHILD_COMMANDS) {
+    let result;
+    try {
+      result = spawnSync(SHELL.command, ['-c', `command -v ${name}`], {
+        encoding: 'utf8',
+        shell: false,
+        timeout: 30 * 1000,
+      });
+    } catch (error) {
+      result = { status: null, error, stdout: '', stderr: '' };
+    }
+    if (result.error || result.status !== 0) {
+      missing.push(`${name} (${why})`);
+    } else {
+      found.push({ name, resolved: String(result.stdout ?? '').trim() });
+    }
+  }
+  return {
+    ok: missing.length === 0,
+    missing,
+    found,
+    detail:
+      missing.length === 0
+        ? `all ${REQUIRED_CHILD_COMMANDS.length} prerequisite commands resolved through ${SHELL.command}`
+        : `missing through ${SHELL.command}: ${missing.join('; ')}`,
+    probeError: null,
+  };
+}
+
+const PREREQUISITES = probeChildPrerequisites();
+
+/**
+ * The stand-in `node` directory is the only PATH entry this harness ever adds,
+ * and only for the cases that explicitly request it (`shimDir`). Asserting that
+ * property keeps the harness honest about not patching the environment: if a
+ * future edit prepends anything else, this fails the run instead of quietly
+ * measuring a PATH nobody has.
+ */
+function assertOnlyShimIsPrepended(childPath, shimDir) {
+  if (shimDir === null) return;
+  const [first, ...rest] = childPath.split(delimiter);
+  if (first !== shimDir) {
+    throw new Error(
+      `the child PATH does not begin with the stand-in node directory; found ${JSON.stringify(first)}. ` +
+        'This harness must not patch the environment it measures.'
+    );
+  }
+  const ambient = (process.env.PATH ?? '').split(delimiter).filter((entry) => entry !== '');
+  if (rest.join(delimiter) !== ambient.join(delimiter)) {
+    throw new Error(
+      'the child PATH is not the ambient PATH with the stand-in node directory prepended; ' +
+        'this harness must not patch the environment it measures.'
+    );
+  }
+}
 
 const DATABASE_URL =
   process.env.SETUP_DBCHECK_PROOF_DATABASE_URL ?? 'postgres://postgres@127.0.0.1:55432/mt01_fu3';
@@ -281,17 +532,53 @@ if (extraArgs.length > 0) {
 /**
  * Run setup.sh once. `shimDir` (or null) goes first on PATH; every entry in
  * `env` is added to the child environment; `args` are appended to the command.
+ *
+ * `shellCommand` exists ONLY so the fail-before reproduction can demonstrate the
+ * old defect on an unmodified copy; every real caller uses SHELL (the absolute
+ * shell resolved above).
+ *
+ * The child PATH is joined with `node:path`'s `delimiter` and NOT with a literal
+ * `:`. `delimiter` is `;` on Windows and `:` on POSIX, and it follows the HOST
+ * the child process runs on — which is correct even when the ambient PATH value
+ * itself arrived in POSIX form, because the loader that resolves the child's
+ * `node` (and any other executable) is the native Windows one. A literal `:`
+ * here was the delimiter half of the defect: on Windows it produced a single
+ * PATH entry containing `/`-separated fragments, so the stand-in directory was
+ * never actually on the child's PATH.
  */
-function runSetup(tree, { shimDir = null, stubMode = null, env = {}, args = [] } = {}) {
+function runSetup(
+  tree,
+  { shimDir = null, stubMode = null, env = {}, args = [], shellCommand = SHELL.command } = {}
+) {
   const childEnv = { ...process.env, NODE_ENV: 'production', ...MSYS_PATH_WRITERS, ...env };
+  let childEnvironment = 'ambient (the harness adds NO PATH entry for this run)';
   if (shimDir !== null) {
-    childEnv.PATH = `${shimDir}:${process.env.PATH ?? ''}`;
+    childEnv.PATH = `${shimDir}${delimiter}${process.env.PATH ?? ''}`;
+    assertOnlyShimIsPrepended(childEnv.PATH, shimDir);
     childEnv.STUB_DBCHECK_MODE = stubMode;
+    childEnvironment = `ambient with the stand-in node directory prepended: ${shimDir}`;
   } else {
     delete childEnv.STUB_DBCHECK_MODE;
   }
 
-  const run = spawnSync('sh', [SETUP_REL, ...args], {
+  // No shell was resolvable: fail loudly and name what was looked for. Running
+  // setup.sh any other way would not be the same execution, and a null exit must
+  // never be allowed to read as a refusal.
+  if (shellCommand === null) {
+    return {
+      exitCode: null,
+      signal: null,
+      error: new Error(
+        'no POSIX shell could be resolved; setup.sh was NOT run. Probed for: ' +
+          `${SHELL.candidates.join(', ')} (on Windows) and the bare name "sh" (on POSIX). ` +
+          'Install Git for Windows, or run this harness on a POSIX host, so the real setup.sh is executed.'
+      ),
+      output: '',
+      childEnvironment,
+    };
+  }
+
+  const run = spawnSync(shellCommand, [SETUP_REL, ...args], {
     cwd: tree,
     env: childEnv,
     encoding: 'utf8',
@@ -304,8 +591,52 @@ function runSetup(tree, { shimDir = null, stubMode = null, env = {}, args = [] }
     signal: run.signal ?? null,
     error: run.error ?? null,
     output: `${run.stdout ?? ''}\n${run.stderr ?? ''}`,
+    childEnvironment,
   };
 }
+
+/**
+ * Did this run actually reach the DATABASE STEP and did the stub get USED?
+ *
+ * THE POINT OF THIS FUNCTION (sixth defect this catches). Several cases below
+ * assert a NEGATIVE: "setup.sh exits non-zero" and "setup.sh did not claim the
+ * database passed". Both are true of a run that died in prerequisite resolution
+ * long before the database step — the refusal cases passed that way, on a
+ * database step that never ran, which is a vacuous pass. A negative assertion
+ * about the database step is only meaningful when the database step HAPPENED, so
+ * every case with a stub reports and requires `database_step_reached=true`.
+ *
+ * Two facts are required together, and either one alone is not enough:
+ *   1. the DATABASE-STEP BLOCK IS NON-EMPTY — `databaseStepLines` slices from the
+ *      `[setup] verifying the database: node …` line setup.sh prints immediately
+ *      before invoking db-check, so a non-empty block proves setup.sh reached
+ *      its database step instead of dying earlier;
+ *   2. THE STUB ACTUALLY ANSWERED — a `CHECK ` line is present in the child's own
+ *      output, which only the stand-in emits for the stub modes. This is what
+ *      makes "the stub DB step was really invoked" a fact rather than an
+ *      inference from the absence of a failure.
+ */
+function databaseStepWasReached(run) {
+  const output = run.output ?? '';
+  const stepLines = databaseStepLines(output);
+  if (stepLines.length === 0) return false;
+  return /^CHECK /m.test(output);
+}
+
+/**
+ * True when the run died in setup.sh's own prerequisite/environment checks, i.e.
+ * before the database step. Used to make "did not reach the database" explicit
+ * rather than implied, and to keep the refusal cases honest.
+ */
+function prerequisiteFailure(text) {
+  return (
+    /command not found/i.test(text) ||
+    /was not found on PATH/i.test(text) ||
+    /could not read a numeric Node\.js version/i.test(text) ||
+    /Node\.js 22 or newer is required/i.test(text)
+  );
+}
+
 
 /** Write the stand-in `node` that answers db-check and forwards everything else. */
 function writeShim(shimDir) {
@@ -357,6 +688,42 @@ try {
       .map(([k, v]) => `${k}=${v}`)
       .join(' ')} (either one made the old absolute POSIX path unresolvable)`
   );
+  observation(
+    `child shell resolved ${SHELL.how}: ${SHELL.command ?? '(none found — every case would fail loudly)'}` +
+      (SHELL.probed ? ` [probed: ${SHELL.candidates.join(', ')}]` : '')
+  );
+  observation(
+    `measured on this host only: ${process.platform} / ${process.arch} — a real POSIX host (Linux/macOS/WSL) has NOT been measured`
+  );
+  for (const entry of PREREQUISITES.found) {
+    observation(`prerequisite found: ${entry.name} -> ${entry.resolved}`);
+  }
+  for (const entry of PREREQUISITES.missing) {
+    observation(`prerequisite MISSING: ${entry}`);
+  }
+
+  // --- the prerequisite gate (fifth defect) --------------------------------
+  // This runs BEFORE any case. Without these commands setup.sh cannot even
+  // resolve its own repository root, so every case below would report an exit
+  // code produced by a run that never reached the database step — including the
+  // refusal cases, which would pass on it. A missing prerequisite is therefore
+  // reported once, by name, with the remedy, and the cases are NOT run: a suite
+  // that cannot reach the thing it asserts must say so instead of scoring 4/11.
+  record(
+    'child-shell-has-required-prerequisites',
+    PREREQUISITES.ok,
+    PREREQUISITES.ok
+      ? `${PREREQUISITES.detail}; measured on ${process.platform} with ${SHELL.command}`
+      : `MISSING: ${PREREQUISITES.missing.join('; ')}. ${PREREQUISITE_REMEDY} ` +
+        'No case was run, because every case below depends on setup.sh reaching its database step.'
+  );
+  if (!PREREQUISITES.ok) {
+    throw new Error(
+      `setup.sh cannot run on this host: the POSIX shell at ${SHELL.command} cannot resolve ` +
+        `${PREREQUISITES.missing.length} required command(s) — ${PREREQUISITES.missing.join('; ')}. ` +
+        PREREQUISITE_REMEDY
+    );
+  }
 
   // --- the copy ------------------------------------------------------------
   tempRoot = mkdtempSync(join(tmpdir(), 'h7fu4-setup-dbcheck-'));
@@ -398,19 +765,21 @@ try {
   const notFound = moduleNotFound(normal.output);
 
   const normalSpawned = spawnedWithExitCode(normal);
+  const normalReachedDb = databaseStepWasReached(normal);
 
   record(
     'setup-really-executes-db-check',
-    executed && !notFound && normalSpawned,
+    executed && !notFound && normalSpawned && normalReachedDb,
     `db_check_line_present=${executed} module_not_found=${notFound} spawn_ok=${normalSpawned} ` +
+      `database_step_reached=${normalReachedDb} ` +
       `spawn_error=${normal.error ? normal.error.message : '(none)'} signal=${normal.signal ?? '(none)'} ` +
       `(observed_exit_code=${normal.exitCode}; the old absolute POSIX path produced MODULE_NOT_FOUND here and setup.sh still exited 0)`
   );
 
   record(
     'setup-exits-zero-with-a-fully-migrated-database',
-    normalSpawned && normal.exitCode === 0,
-    `observed_exit_code=${normal.exitCode} spawn_ok=${normalSpawned} — needs a reachable database whose migration schema and seed plans exist`
+    normalSpawned && normalReachedDb && normal.exitCode === 0,
+    `observed_exit_code=${normal.exitCode} spawn_ok=${normalSpawned} database_step_reached=${normalReachedDb} — needs a reachable database whose migration schema and seed plans exist`
   );
 
   // --- case 3 & 4: an unrecognised failure is never a pass -------------------
@@ -428,19 +797,22 @@ try {
   observation(`nonstandard run, database step: ${JSON.stringify(databaseStepLines(nonstandard.output))}`);
 
   const nonstandardSpawned = spawnedWithExitCode(nonstandard);
+  const nonstandardReachedDb = databaseStepWasReached(nonstandard);
 
   record(
     'unrecognised-dbcheck-failure-makes-setup-exit-non-zero',
-    nonstandardSpawned && nonstandard.exitCode !== 0,
+    nonstandardSpawned && nonstandardReachedDb && nonstandard.exitCode !== 0,
     `observed_exit_code=${nonstandard.exitCode} spawn_ok=${nonstandardSpawned} ` +
+      `database_step_reached=${nonstandardReachedDb} ` +
       `spawn_error=${nonstandard.error ? nonstandard.error.message : '(none)'} signal=${nonstandard.signal ?? '(none)'} ` +
       '(a db-check exiting 3 with an unrecognised message used to give this 0; exit 2 is PENDING, so a failure must not borrow it, and a null exit code is never a refusal)'
   );
 
   record(
     'no-pass-claimed-when-dbcheck-failed',
-    nonstandardSpawned && !claimedDatabasePass(nonstandard.output),
-    `claimed_a_pass=${claimedDatabasePass(nonstandard.output)} spawn_ok=${nonstandardSpawned} (the old pass branch printed "database checks passed (exit 2)")`
+    nonstandardSpawned && nonstandardReachedDb && !claimedDatabasePass(nonstandard.output),
+    `claimed_a_pass=${claimedDatabasePass(nonstandard.output)} spawn_ok=${nonstandardSpawned} ` +
+      `database_step_reached=${nonstandardReachedDb} (the old pass branch printed "database checks passed (exit 2)")`
   );
 
   // --- case 5: the recognised connection failure keeps its message ----------
@@ -458,11 +830,17 @@ try {
   const connectionNamed = /could not connect to the database/.test(connection.output);
 
   const connectionSpawned = spawnedWithExitCode(connection);
+  const connectionReachedDb = databaseStepWasReached(connection);
 
   record(
     'recognised-connection-failure-still-named',
-    connectionSpawned && connection.exitCode !== 0 && connectionFailLine && connectionNamed,
+    connectionSpawned &&
+      connectionReachedDb &&
+      connection.exitCode !== 0 &&
+      connectionFailLine &&
+      connectionNamed,
     `observed_exit_code=${connection.exitCode} spawn_ok=${connectionSpawned} ` +
+      `database_step_reached=${connectionReachedDb} ` +
       `check_connection_FAIL_line=${connectionFailLine} named_the_connection_case=${connectionNamed} ` +
       '(an unreachable database must still be reported as one)'
   );
@@ -476,13 +854,18 @@ try {
   observation(`migration run, database step: ${JSON.stringify(databaseStepLines(migration.output))}`);
 
   const migrationSpawned = spawnedWithExitCode(migration);
+  const migrationReachedDb = databaseStepWasReached(migration);
 
   record(
     'reachable-but-unmigrated-still-reported-pending',
-    migrationSpawned && migration.exitCode === 0 && /PENDING: the database is reachable/.test(migration.output),
-    `observed_exit_code=${migration.exitCode} spawn_ok=${migrationSpawned} printed_pending=${/PENDING: the database is reachable/.test(
-      migration.output
-    )} (intentional: the server creates the schema at boot)`
+    migrationSpawned &&
+      migrationReachedDb &&
+      migration.exitCode === 0 &&
+      /PENDING: the database is reachable/.test(migration.output),
+    `observed_exit_code=${migration.exitCode} spawn_ok=${migrationSpawned} ` +
+      `database_step_reached=${migrationReachedDb} printed_pending=${/PENDING: the database is reachable/.test(
+        migration.output
+      )} (intentional: the server creates the schema at boot)`
   );
 
   // --- case 6b / 8: THE OWNER'S REQUIREMENT on the real un-migrated output --
@@ -507,19 +890,30 @@ try {
   ).length;
 
   const unmigratedSpawned = spawnedWithExitCode(unmigrated);
+  const unmigratedReachedDb = databaseStepWasReached(unmigrated);
 
   record(
     'unmigrated-output-names-no-connection-failure',
-    unmigratedSpawned && unmigrated.exitCode === 0 && unmigratedPending && !unmigratedCalledUnreachable,
-    `observed_exit_code=${unmigrated.exitCode} spawn_ok=${unmigratedSpawned} printed_pending=${unmigratedPending} ` +
+    unmigratedSpawned &&
+      unmigratedReachedDb &&
+      unmigrated.exitCode === 0 &&
+      unmigratedPending &&
+      !unmigratedCalledUnreachable,
+    `observed_exit_code=${unmigrated.exitCode} spawn_ok=${unmigratedSpawned} ` +
+      `database_step_reached=${unmigratedReachedDb} printed_pending=${unmigratedPending} ` +
       `claims_a_connection_failure=${unmigratedCalledUnreachable} connection_PASS_lines=${unmigratedPassLines} ` +
       '(the Owner\'s requirement: on the un-migrated output there must be no "CHECK connection FAIL" line)'
   );
 
   record(
     'real-unmigrated-output-is-pending-not-unreachable',
-    unmigratedSpawned && unmigrated.exitCode === 0 && unmigratedPending && !unmigratedCalledUnreachable,
-    `observed_exit_code=${unmigrated.exitCode} spawn_ok=${unmigratedSpawned} printed_pending=${unmigratedPending} ` +
+    unmigratedSpawned &&
+      unmigratedReachedDb &&
+      unmigrated.exitCode === 0 &&
+      unmigratedPending &&
+      !unmigratedCalledUnreachable,
+    `observed_exit_code=${unmigrated.exitCode} spawn_ok=${unmigratedSpawned} ` +
+      `database_step_reached=${unmigratedReachedDb} printed_pending=${unmigratedPending} ` +
       `called_unreachable=${unmigratedCalledUnreachable} (db-check\'s real post-repair output — connection PASS, migration FAIL, seed-plans not run — must reach the PENDING arm and never the unreachable one)`
   );
 
@@ -544,16 +938,26 @@ try {
 
   const textOnlyPendingSpawned = spawnedWithExitCode(textOnlyPending);
   const textOnlyClaimedPending = /PENDING: the database is reachable/.test(textOnlyPending.output);
+  const textOnlyPendingReachedDb = databaseStepWasReached(textOnlyPending);
 
   record(
     'pending-shaped-text-with-a-failure-exit-code-does-not-continue',
-    textOnlyPendingSpawned && textOnlyPending.exitCode !== 0 && !textOnlyClaimedPending,
+    textOnlyPendingSpawned &&
+      textOnlyPendingReachedDb &&
+      textOnlyPending.exitCode !== 0 &&
+      !textOnlyClaimedPending,
     `observed_exit_code=${textOnlyPending.exitCode} spawn_ok=${textOnlyPendingSpawned} ` +
+      `database_step_reached=${textOnlyPendingReachedDb} ` +
       `called_it_pending=${textOnlyClaimedPending} (the body is the PENDING shape but the exit code is a failure: ` +
       'the code must decide, so the script must stop and must not print PENDING)'
   );
 
   // --- case 7: the two environment refusals are untouched -------------------
+  // These two refusals are decided BEFORE the database step exists, so there is
+  // nothing to reach: they assert setup.sh's own environment gate, not a
+  // database-step verdict. What they must NOT do is pass on a run that died in
+  // prerequisite resolution, so the prerequisite failure signature is excluded
+  // explicitly and reported.
   const demoAuth = runSetup(tree, { env: { DATABASE_URL, DEMO_AUTH: 'true' } });
   observation(`DEMO_AUTH=true run: setup.sh exit code = ${demoAuth.exitCode}`);
   const noUrl = runSetup(tree, { env: { DATABASE_URL: '' } });
@@ -561,17 +965,34 @@ try {
 
   const demoAuthSpawned = spawnedWithExitCode(demoAuth);
   const noUrlSpawned = spawnedWithExitCode(noUrl);
+  const demoAuthPrereqFailure = prerequisiteFailure(demoAuth.output);
+  const noUrlPrereqFailure = prerequisiteFailure(noUrl.output);
 
   const demoAuthRefused =
-    demoAuthSpawned && demoAuth.exitCode !== 0 && /DEMO_AUTH=true is set/.test(demoAuth.output);
+    demoAuthSpawned &&
+    demoAuth.exitCode !== 0 &&
+    !demoAuthPrereqFailure &&
+    /DEMO_AUTH=true is set/.test(demoAuth.output);
   const databaseUrlRefused =
-    noUrlSpawned && noUrl.exitCode !== 0 && /DATABASE_URL is not set/.test(noUrl.output);
+    noUrlSpawned &&
+    noUrl.exitCode !== 0 &&
+    !noUrlPrereqFailure &&
+    /DATABASE_URL is not set/.test(noUrl.output);
 
+  // The two refusal paths are decided before the database step, so "the database
+  // step was reached" is NOT required here — the harness instead asserts that
+  // each refusal was decided by its own named gate and not by a prerequisite
+  // failure, which is the vacuity this repair closes.
   record(
-    'demo-auth-refusal-and-database-url-refusal-intact',
+    'both-environment-refusals-cite-their-own-gate',
     demoAuthRefused && databaseUrlRefused,
-    `DEMO_AUTH=true observed_exit_code=${demoAuth.exitCode} spawn_ok=${demoAuthSpawned} refused=${demoAuthRefused}; ` +
-      `unset DATABASE_URL observed_exit_code=${noUrl.exitCode} spawn_ok=${noUrlSpawned} refused=${databaseUrlRefused}`
+    `DEMO_AUTH=true: observed_exit_code=${demoAuth.exitCode} spawn_ok=${demoAuthSpawned} ` +
+      `named_its_own_gate=${/DEMO_AUTH=true is set/.test(demoAuth.output)} ` +
+      `prerequisite_failure=${demoAuthPrereqFailure}; ` +
+      `unset DATABASE_URL: observed_exit_code=${noUrl.exitCode} spawn_ok=${noUrlSpawned} ` +
+      `named_its_own_gate=${/DATABASE_URL is not set/.test(noUrl.output)} ` +
+      `prerequisite_failure=${noUrlPrereqFailure} ` +
+      '(these two are decided before the database step by design; each must be refused by its own gate, not by a missing prerequisite)'
   );
 } catch (error) {
   record('harness', false, `unexpected_error=${error.message}`);
