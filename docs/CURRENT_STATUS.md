@@ -58,7 +58,13 @@ and must not be published or quoted as a price.
 
 ## 4. Remaining gates before any sale listing
 
-- Dependency/runtime security remediation and a dedicated adversarial Security Assurance gate; known dependency findings must be resolved or explicitly dispositioned, and Critical/High shipped-runtime findings block sale
+**Phase A SECURITY-DEPS closed 2026-10-03:** dependency/runtime remediation is complete on the
+current Phase A branch. All nine package roots report zero npm-audit findings for both full and
+production-only scopes; the buyer-delivered secret scan is clean; module/server regressions and
+database-backed repeatability checks passed. This does **not** replace the dedicated adversarial
+Security Assurance phase.
+
+- Dedicated adversarial Security Assurance gate (Phase B), including auth/authorization/tenant-isolation negative controls; Critical/High shipped-runtime findings block sale
 - Verification against a real Supabase project for the buyer auth path, including tenant-isolation negative controls
 - A clean-install proof on a buyer-style environment with none of the internal dependencies, plus a second independent end-to-end pass over the corrected deployment manual
 - Owner review and legal sign-off on the DRAFT legal documents, and an explicit price/licence decision

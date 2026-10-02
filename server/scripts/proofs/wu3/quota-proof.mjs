@@ -408,6 +408,7 @@ async function main() {
     await serverPool.query('DELETE FROM subscriptions WHERE account_id = $1', [accountId]);
   }
 
+  await serverPool.end();
   globalThis.fetch = realFetch;
 
   const failed = results.filter((result) => !result.passed);

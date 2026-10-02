@@ -293,6 +293,8 @@ server/scripts/proofs/wu4/wu4-e2e/signup-en.html
 server/scripts/proofs/wu4/wu4-e2e/signup-th.html
 server/scripts/proofs/wu5/delivery-manifest-check.mjs
 server/scripts/proofs/wu5/deploy-preflight.mjs
+server/scripts/proofs/security/buyer-package-secret-scan.mjs
+server/scripts/proofs/security/dependency-audit.mjs
 server/scripts/proofs/wu6/claims-check.mjs
 server/src/app.ts
 server/src/index.ts
@@ -351,6 +353,7 @@ docs/house-swarm-7/PRESALE-CLEANUP-P3A.md
 docs/house-swarm-7/PRESALE-CLEANUP-P3B.md
 docs/house-swarm-7/PRESALE-CLEANUP-P4.md
 docs/house-swarm-7/PRESALE-RELEASE-MASTER-PLAN-2026-10-02.md
+docs/house-swarm-7/PRESALE-PHASE-A-SECURITY-2026-10-02.md
 ```
 
 ---

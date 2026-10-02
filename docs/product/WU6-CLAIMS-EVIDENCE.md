@@ -263,53 +263,53 @@ quoting them.
 **Applied in H7-REVIEW-FIX-THAI-PATHS:** the controller ruled on 2026-09-29 that
 the illustrative examples in §9b were to be replaced with generic placeholders
 rather than kept as residual, and that ruling has been carried out — §9b now
-records the substitution instead of a pending decision. §9a is unchanged: that
-group was not in the ruling.
+records the substitution instead of a pending decision. The path-residual decision in §9a
+is unchanged by that ruling; the later 2026-10-02 Phase A security refresh updates only the
+test-tool references/provenance truth described inside §9a.
 
 `git grep` reports tracked files only; every file below is tracked, so this is a
 complete list of tracked hits. No claim row (C1–C64), no X-table row and no other
 part of §8 was touched to add this section.
 
-### 9a. The seven vendored upstream documents — not edited, deliberately
+### 9a. The seven vendored upstream documents — provenance preserved; security-tooling references may be refreshed
 
 | file | hit line(s) | what the path is |
 |---|---|---|
-| `modules/auth-supabase/DESIGN.md` | 533 | upstream author's own deliverable location |
+| `modules/auth-supabase/DESIGN.md` | 538 | upstream author's own deliverable location |
 | `modules/auth-supabase/.agy-design-prompt.txt` | 4 | path in the upstream agent prompt |
-| `modules/payment/DESIGN.md` | 631 | upstream author's own deliverable location |
+| `modules/payment/DESIGN.md` | 632 | upstream author's own deliverable location |
 | `modules/payment/.agy-prompt.md` | 6 | path in the upstream agent prompt |
-| `modules/rate-limit/DESIGN.md` | 522 | upstream author's own deliverable location |
+| `modules/rate-limit/DESIGN.md` | 525 | upstream author's own deliverable location |
 | `modules/tenant-context/agy-prompt.md` | 6, 11, 39 | paths in the upstream agent prompt |
-| `modules/webhook-receiver/DESIGN.md` | 567 | upstream author's own deliverable location |
+| `modules/webhook-receiver/DESIGN.md` | 568 | upstream author's own deliverable location |
 
-**Reason each was left alone.** These are copies of `modules-hub` module documents,
-carried into MT01 by the Module Reuse Check together with a provenance record that
-asserts the copy identity. For the module whose provenance is written down —
-`modules/rate-limit/DESIGN.md` — the record (`modules/rate-limit/PROVENANCE-RATELIMIT.md`)
-states the file is a byte-identical copy of the staged upstream file, and that copy
-identity is a claim a reader can check. Editing the copy would make that record
-false, trading a verifiable provenance claim for cosmetic path hygiene. The same
-class of file is left alone for the other six, whose documents are the same kind of
-upstream vendored copy.
+**Provenance rule for this group.** These files entered MT01 through the
+Module Reuse Check, so the recorded source commit and the historical copy event stay
+authoritative. That does **not** mean the MT01 distribution must retain a vulnerable
+development-tool version forever. In the 2026-10-02 Phase A security pass, the package
+reference snippets in `auth-supabase/DESIGN.md`, `payment/DESIGN.md`,
+`rate-limit/DESIGN.md` and `webhook-receiver/DESIGN.md` were intentionally refreshed
+from the vulnerable Vitest 2 line to the audited MT01 test toolchain (Vite 6.4.3 /
+Vitest 5.0.3; the rate-limit coverage plugin moved with it). Runtime contracts and
+runtime source were not changed by that documentation/tooling refresh.
 
-Measured honesty about the copy identity, because it is not uniform today:
-`diff -q` against the vendor's own `modules-hub` checkout — the repository these
-records name as `source_repo`, whose location is deliberately not written down here
-— returns SAME for `modules/rate-limit/DESIGN.md` and
-`modules/tenant-context/agy-prompt.md`, and DIFFER for
-`modules/auth-supabase/DESIGN.md`, `modules/payment/DESIGN.md`,
-`modules/tenant-context/DESIGN.md` and `modules/webhook-receiver/DESIGN.md`; the two
-`.agy*.txt`/`*.md` prompt files do not exist at that path in `modules-hub` at all.
-So "byte-identical copy" is exactly true only for the module whose provenance
-record asserts it (the rate-limit module); for the rest it is the copy relationship
-the Module Reuse Check recorded, not a re-verifiable diff against today's hub. That
-is a second reason to leave them: they are the upstream author's own internal
-paths, in upstream-authored text, and rewriting upstream text inside MT01 is not
-this document set's call. The decision on this group belongs to the
-controller/owner, not to this work unit.
-/ **เหตุผลที่ไม่ได้แก้** ไฟล์กลุ่มนี้เป็นสำเนาเอกสารโมดูลของ `modules-hub` และมีบันทึก
-provenance ยืนยันตัวตนของสำเนา การแก้สำเนาจะทำให้บันทึกนั้นไม่จริง จึงบันทึกเป็นส่วนที่เหลือ
-และให้ผู้คุมเป็นผู้ตัดสิน
+For `modules/rate-limit/DESIGN.md` specifically,
+`modules/rate-limit/PROVENANCE-RATELIMIT.md` now time-scopes the old byte-identity
+statement correctly: the file **was** byte-identical at the H7 adoption point on
+2026-09-28, then intentionally diverged in Phase A so the delivered design no longer
+instructs a buyer to install the known-vulnerable historical test toolchain.
+`package.json` / `package-lock.json` record the same security refresh. The source
+commit remains the provenance of the adopted module; the current MT01 file hash is
+the authority for the distributed revision.
+
+The internal machine-path examples listed in the table remain historical upstream
+text and are not executable configuration. Delivery hygiene is enforced separately by
+`DELIVERY-MANIFEST.md` and its gate; the Phase A changes above were made for security
+truth, not to rewrite the provenance history.
+/ **กฎ provenance ของกลุ่มนี้** ยังคงแหล่งที่มาและเหตุการณ์ copy เดิมไว้ แต่การอัปเดต
+เครื่องมือทดสอบเพื่อปิดช่องโหว่เมื่อ 2026-10-02 เป็นการเปลี่ยนฝั่ง MT01 โดยเจตนา
+จึงไม่อ้างว่าไฟล์ปัจจุบันยัง byte-identical กับ snapshot เดิม หลังการอัปเดตนี้
+runtime contract/source ไม่ได้เปลี่ยน และไฟล์ package/provenance ระบุ divergence ไว้ตรง ๆ
 
 ### 9b. Two files the work unit did not name — illustrative examples, ruled on and substituted
 

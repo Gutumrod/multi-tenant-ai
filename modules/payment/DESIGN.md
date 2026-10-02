@@ -586,7 +586,8 @@ run();
   },
   "devDependencies": {
     "typescript": "^5.6.3",
-    "vitest": "^2.1.4"
+    "vite": "^6.4.3",
+    "vitest": "^5.0.3"
   }
 }
 ```

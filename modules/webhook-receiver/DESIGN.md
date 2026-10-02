@@ -478,7 +478,8 @@ Vitest test suites must validate the following behaviors:
   },
   "devDependencies": {
     "typescript": "5.6.3",
-    "vitest": "2.1.4"
+    "vite": "^6.4.3",
+    "vitest": "^5.0.3"
   }
 }
 ```
@@ -573,4 +574,4 @@ export default {
 7. Idempotency interface `IdempotencyStore` is defined and integrated without tying core to a specific DB.
 8. Errors are returned as structured `WebhookError` objects using standard codes in §7, never leaking secrets or internal signature details.
 9. Provider directory structure (`providers/`) supports adding adapters (HMAC, LINE, Stripe, GitHub) without modifying core files.
-10. `package.json` and `tsconfig.json` match project standards (ES2022, Bundler, Vitest 2.1.4, TS 5.6.3).
+10. `package.json` and `tsconfig.json` match the MT01 distribution standards (ES2022, Bundler, Vite 6.4.3, Vitest 5.0.3, TS 5.6.3).

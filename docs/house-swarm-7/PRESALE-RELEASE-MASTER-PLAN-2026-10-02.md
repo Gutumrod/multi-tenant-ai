@@ -500,7 +500,7 @@ For execution tracking, the five phases resolve to seven hard gates:
 
 | # | Gate | Phase | Current state on 2026-10-02 |
 |---|---|---|---|
-| 1 | SECURITY-DEPS | A | **OPEN** — audit findings exist |
+| 1 | SECURITY-DEPS | A | **PASS 2026-10-03** — 9 package roots audit clean; secret/package/runtime gates green; independent Mac recheck recorded in Phase A report |
 | 2 | SECURITY-ASSURANCE | B | **OPEN** — dedicated adversarial pass not yet run |
 | 3 | REAL-SUPABASE | C | **OPEN** — explicitly untested |
 | 4 | BUYER-CLEAN-INSTALL + FRESH-DEPLOY-MANUAL | C | **OPEN** |

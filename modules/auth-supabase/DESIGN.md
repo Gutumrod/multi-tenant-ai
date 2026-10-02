@@ -481,7 +481,7 @@ runExample();
 ```json
 {
   "name": "@module-hub/auth-supabase",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "type": "module",
   "main": "./index.ts",
   "exports": {
@@ -493,7 +493,8 @@ runExample();
   },
   "devDependencies": {
     "typescript": "^5.6.3",
-    "vitest": "^2.1.4"
+    "vite": "^6.4.3",
+    "vitest": "^5.0.3"
   }
 }
 ```

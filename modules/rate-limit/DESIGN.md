@@ -409,11 +409,14 @@ modules/rate-limit/
   },
   "scripts": {
     "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
+    "@vitest/coverage-v8": "^5.0.3",
     "typescript": "^5.6.3",
-    "vitest": "^2.1.4"
+    "vite": "^6.4.3",
+    "vitest": "^5.0.3"
   }
 }
 ```
