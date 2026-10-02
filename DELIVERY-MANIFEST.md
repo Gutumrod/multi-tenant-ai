@@ -350,6 +350,7 @@ docs/house-swarm-7/PRESALE-CLEANUP-P2.md
 docs/house-swarm-7/PRESALE-CLEANUP-P3A.md
 docs/house-swarm-7/PRESALE-CLEANUP-P3B.md
 docs/house-swarm-7/PRESALE-CLEANUP-P4.md
+docs/house-swarm-7/PRESALE-RELEASE-MASTER-PLAN-2026-10-02.md
 ```
 
 ---

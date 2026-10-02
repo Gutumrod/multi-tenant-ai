@@ -7,7 +7,7 @@ evidence keep their own authority.
 ยังคงมีอำนาจของตัวเอง
 
 **Prepared by:** HOUSE-SWARM-7 WU-6 · **Date:** 2026-09-28 · **Base:** `6010332`
-(`codex/house-swarm-7-wu1-20260927`)
+(`codex/house-swarm-7-wu1-20260927`) · **Last sale-gate update:** 2026-10-02 (Owner security requirement)
 
 ---
 
@@ -58,12 +58,13 @@ and must not be published or quoted as a price.
 
 ## 4. Remaining gates before any sale listing
 
+- Dependency/runtime security remediation and a dedicated adversarial Security Assurance gate; known dependency findings must be resolved or explicitly dispositioned, and Critical/High shipped-runtime findings block sale
+- Verification against a real Supabase project for the buyer auth path, including tenant-isolation negative controls
+- A clean-install proof on a buyer-style environment with none of the internal dependencies, plus a second independent end-to-end pass over the corrected deployment manual
 - Owner review and legal sign-off on the DRAFT legal documents, and an explicit price/licence decision
-- A second, independent pass over the deployment manual after the F1–F7 findings were closed — the manual has been corrected but **not yet re-tested end to end by a fresh agent since the corrections**
 - Fulfillment platform selection and integration
-- A clean-install proof on a buyer-style environment with none of the internal dependencies
-- A final immutable release artifact with regenerated PROVENANCE checksums
-- Verification against a real Supabase project, if the buyer's auth path is to be claimed
+- A final security regression on the actual buyer package, followed by an immutable release artifact with regenerated PROVENANCE checksums
+- Final release seal: the artifact delivered by fulfillment must be the same versioned, hashed artifact that passed the release/security gates
 
 ## 5. Evidence basis
 
