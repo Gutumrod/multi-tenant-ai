@@ -357,6 +357,7 @@ docs/house-swarm-7/PRESALE-CLEANUP-P4.md
 docs/house-swarm-7/PRESALE-RELEASE-MASTER-PLAN-2026-10-02.md
 docs/house-swarm-7/PRESALE-PHASE-A-SECURITY-2026-10-02.md
 docs/house-swarm-7/PRESALE-PHASE-B-REMEDIATION-PLAN-2026-10-03.md
+docs/house-swarm-7/PRESALE-PHASE-B-REMEDIATION-EVIDENCE-2026-10-03.md
 ```
 
 ---

@@ -272,8 +272,9 @@ Task: MT01-PHASE-B-SECURITY-REMEDIATION-20261003
 Workflow: WF-DEV-01 v1.4.0 / STANDARD
 Base: 0b849eefa23ed7c6d47abf494e84a8f711575a8d
 Branch: task/MT01-PHASE-B-security-remediation-20261003
-Current checkpoint: BRIEF LOCKED / PRIMARY IMPLEMENTATION READY
+Current checkpoint: REMEDIATION IMPLEMENTATION COMPLETE / READY FOR INDEPENDENT REVIEW
+Implementation commit: 64b7fb3580e7fd3ae30575427e3914140ab862ca
 Originating gate: SECURITY-ASSURANCE HOLD / STOP SALE
-Next checkpoint: R-B1 negative controls + bounded implementation
-Stop condition: READY FOR REVIEW on an exact commit SHA
+Next checkpoint: independent reviewer verification on the evidence-bound review revision
+Stop condition: reviewer verdict returned to WF-COUNCIL-01 / SECURITY-ASSURANCE
 ```
