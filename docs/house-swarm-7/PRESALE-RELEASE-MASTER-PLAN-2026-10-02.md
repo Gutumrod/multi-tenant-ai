@@ -170,7 +170,7 @@ A failure here blocks Phase B promotion.
 
 ---
 
-## Phase B — Full Security Assurance / Adversarial Review — IN PROGRESS 2026-10-03
+## ~~Phase B — Full Security Assurance / Adversarial Review~~ — PASS / CLOSED 2026-10-04
 
 ### Objective
 
@@ -178,6 +178,15 @@ Test MT01 as an attacker would. Passing normal functionality tests is not suffic
 
 This phase must contain executable negative controls and an independent review. Code reading
 alone cannot produce PASS.
+
+**Closure evidence (2026-10-04):** the exact implementation revision
+`f219968300130a1658d07055431f3a19d33c9633` completed the adversarial matrix and the final
+route-level cross-process webhook replay proof. A fresh independent reviewer returned
+`NO BLOCKING FINDINGS` and `PHASE B PASS/CLOSED IS SUPPORTED`. The final PostgreSQL-backed
+server regression was 99/99, dependency audit reported zero vulnerabilities across all checked
+roots, buyer secret scan reported zero findings across 261 delivered files, and delivery/preflight
+gates remained green. DB-less demonstration mode and process-local early-filter limitations remain
+documented nonblocking residuals; Phase C real-environment proof is still required.
 
 ### B1. Authentication
 
@@ -501,7 +510,7 @@ For execution tracking, the five phases resolve to seven hard gates:
 | # | Gate | Phase | Current state on 2026-10-02 |
 |---|---|---|---|
 | 1 | SECURITY-DEPS | A | **PASS 2026-10-03** — 9 package roots audit clean; secret/package/runtime gates green; independent Mac recheck recorded in Phase A report |
-| 2 | SECURITY-ASSURANCE | B | **IN PROGRESS 2026-10-03** — adversarial review found two High blockers; remediation is active under `WF-DEV-01` |
+| 2 | SECURITY-ASSURANCE | B | **PASS / CLOSED 2026-10-04** — exact reviewed implementation `f219968300130a1658d07055431f3a19d33c9633`; final independent review: NO BLOCKING FINDINGS / PASS-CLOSED supported |
 | 3 | REAL-SUPABASE | C | **OPEN** — explicitly untested |
 | 4 | BUYER-CLEAN-INSTALL + FRESH-DEPLOY-MANUAL | C | **OPEN** |
 | 5 | COMMERCIAL/LEGAL | D | **OPEN/PARTIAL** — drafts exist |

@@ -254,17 +254,14 @@ Retains final authority over any Medium residual acceptance and progression beyo
 ## 10. Current checkpoint
 
 ```text
-~~Phase A — SECURITY-DEPS~~      PASS / CLOSED
-Phase B — SECURITY-ASSURANCE   IN PROGRESS
-R1 tenant/entitlement fix      GREEN candidate; independent review still required
-R2 HTTP/provider hardening     GREEN candidate; independent review still required
-R3/R4 DB + quota hardening     GREEN candidate; independent review still required
-R5 migration startup race     GREEN candidate; independent review still required
-R6 durable webhook replay     GREEN candidate; independent review still required
-R7 actual webhook route replay GREEN candidate; fresh independent review required
-Sale/release                   HOLD / STOP SALE
-Phase C — REAL-SUPABASE        NOT AUTHORIZED YET
-Commercial release             NOT AUTHORIZED YET
+~~Phase A — SECURITY-DEPS~~       PASS / CLOSED
+~~Phase B — SECURITY-ASSURANCE~~  PASS / CLOSED 2026-10-04
+R1-R7 remediation/proofs          CLOSED
+Independent reviewed SHA          f219968300130a1658d07055431f3a19d33c9633
+Independent verdict               NO BLOCKING FINDINGS / PASS-CLOSED supported
+Sale/release                      HOLD
+Phase C — REAL-SUPABASE           OPEN / NEXT
+Commercial release                NOT AUTHORIZED YET
 ```
 
-Next execution priority: complete the remaining Phase B adversarial matrix and current-revision PostgreSQL proof, freeze the exact revision, then hand it to an independent reviewer. Do not advance to Phase C from an implementation-only GREEN result.
+Phase B is closed. The next plan step is Phase C real-environment proof; do not interpret Phase B closure as sale readiness or skip the remaining sale gates.
