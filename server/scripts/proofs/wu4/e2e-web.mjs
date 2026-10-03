@@ -74,7 +74,7 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import pg from 'pg';
-import { tsImport } from 'tsx/esm/api';
+import { register } from 'tsx/esm/api';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const SERVER_DIR = join(HERE, '../../..');
@@ -84,6 +84,7 @@ const DICTIONARY_FILE = join(REPO_DIR, 'web/assets/i18n.js');
 
 const DATABASE_URL = process.env.DATABASE_URL;
 const results = [];
+const tsxRegistration = register({ namespace: 'mt01-wu4-e2e-proof' });
 
 /**
  * The three AI provider key variables the handler reads
@@ -152,7 +153,7 @@ function info(line) {
 
 /** Loads a TypeScript module of the reference server from this .mjs harness. */
 function loadTs(relativePath) {
-  return tsImport(pathToFileURL(join(SERVER_DIR, relativePath)).href, import.meta.url);
+  return tsxRegistration.import(pathToFileURL(join(SERVER_DIR, relativePath)).href, import.meta.url);
 }
 
 /** The HTML escaping server/src/lib/web-pages.ts applies to dictionary values. */
@@ -468,34 +469,49 @@ async function main() {
   }
 
   // --- 3. plan-select-persists-to-database --------------------------------
+  // Phase B security boundary: the self-service route may persist the free plan,
+  // but a caller-selected paid plan must fail closed until a trusted billing/admin
+  // transition exists. This proof verifies both halves of that contract.
   try {
     const accountId = nextAccountId('plan');
-    const response = await subscribe(accountId, 'pro');
+    const response = await subscribe(accountId, 'free');
     const { rows } = await pool.query(
       'SELECT id, account_id, plan_id, status FROM subscriptions WHERE account_id = $1',
       [accountId]
     );
     const row = rows[0];
-    // The plans screen treats a second attempt as "already subscribed" (409).
-    const repeat = await subscribe(accountId, 'pro');
+    // The plans screen treats a second free-plan attempt as "already subscribed" (409).
+    const repeat = await subscribe(accountId, 'free');
+
+    const paidAccountId = nextAccountId('paid-plan-denied');
+    const paidAttempt = await subscribe(paidAccountId, 'pro');
+    const paidRows = await pool.query(
+      'SELECT id, account_id, plan_id, status FROM subscriptions WHERE account_id = $1',
+      [paidAccountId]
+    );
 
     const ok =
       response.status === 201 &&
-      response.payload?.planId === 'pro' &&
+      response.payload?.planId === 'free' &&
       rows.length === 1 &&
-      row?.plan_id === 'pro' &&
+      row?.plan_id === 'free' &&
       row?.status === 'active' &&
       repeat.status === 409 &&
-      repeat.payload?.code === 'SUBSCRIPTION_ALREADY_EXISTS';
+      repeat.payload?.code === 'SUBSCRIPTION_ALREADY_EXISTS' &&
+      paidAttempt.status === 403 &&
+      paidAttempt.payload?.code === 'PAID_PLAN_REQUIRES_BILLING' &&
+      paidRows.rows.length === 0;
 
     record(
       'plan-select-persists-to-database',
       ok,
-      `request=POST /subscription/subscribe {"planId":"pro"} x-tenant-id=<id> x-demo-account=<id> ` +
+      `self_service_request=POST /subscription/subscribe {"planId":"free"} ` +
         `response_status=${response.status} response_plan_id=${response.payload?.planId} ` +
-        `response_subscription_id=${response.payload?.id} ` +
-        `database_row=${JSON.stringify(row)} repeat_select_status=${repeat.status} ` +
-        `repeat_code=${repeat.payload?.code} plans_page_saved=${pages['plans-th'].file}`
+        `response_subscription_id=${response.payload?.id} database_row=${JSON.stringify(row)} ` +
+        `repeat_select_status=${repeat.status} repeat_code=${repeat.payload?.code} ` +
+        `paid_request={"planId":"pro"} paid_status=${paidAttempt.status} ` +
+        `paid_code=${paidAttempt.payload?.code} paid_rows=${paidRows.rows.length} ` +
+        `plans_page_saved=${pages['plans-th'].file}`
     );
   } catch (error) {
     record('plan-select-persists-to-database', false, `error=${error.message}`);
@@ -794,10 +810,16 @@ try {
   }
 
   if (server) {
+    // Undici/fetch may keep an HTTP/1.1 socket alive after the final assertion.
+    // Close proof-only sockets explicitly so a green E2E run returns control to
+    // the caller instead of hanging after printing its summary.
+    server.closeIdleConnections?.();
+    server.closeAllConnections?.();
     await new Promise((resolve) => server.close(resolve));
   }
   if (pool && !pool.ended) await pool.end();
   if (serverPool && !serverPool.ended) await serverPool.end();
+  await tsxRegistration.unregister();
 
   const failed = results.filter((result) => !result.passed);
   console.log(
