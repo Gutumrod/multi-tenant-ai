@@ -258,7 +258,8 @@ Retains final authority over any Medium residual acceptance and progression beyo
 Phase B — SECURITY-ASSURANCE   IN PROGRESS
 R1 tenant/entitlement fix      GREEN candidate; independent review still required
 R2 HTTP/provider hardening     GREEN candidate; independent review still required
-DB-backed Phase B proof        IN PROGRESS / Mac PostgreSQL 16.4 verifier available; current-revision 5/5 DB suite PASS
+R3/R4 DB + quota hardening     GREEN candidate; independent review still required
+R5 migration startup race     REMEDIATED / fresh independent review required
 Sale/release                   HOLD / STOP SALE
 Phase C — REAL-SUPABASE        NOT AUTHORIZED YET
 Commercial release             NOT AUTHORIZED YET
