@@ -412,6 +412,34 @@ export class PostgresUsageCounterRepository implements UsageCounterRepository {
   }
 
   /**
+   * Atomically consume only when the resulting count is <= `limit`.
+   *
+   * The INSERT path is guarded by a SELECT predicate and the conflict UPDATE has
+   * its own WHERE predicate. PostgreSQL serializes conflicting rows, so concurrent
+   * callers racing for the final unit cannot all pass a stale pre-check.
+   */
+  async tryIncrementWithinLimit(
+    accountId: string,
+    featureKey: string,
+    periodStart: Date,
+    limit: number,
+    by: number = 1
+  ): Promise<number | null> {
+    const { rows } = await this.pool.query<{ usage_count: number }>(
+      `INSERT INTO usage_counters (account_id, feature_key, period_start, usage_count, updated_at)
+       SELECT $1::text, $2::text, $3::timestamptz, $4::integer, now()
+       WHERE $4::integer <= $5::integer
+       ON CONFLICT (account_id, feature_key, period_start)
+       DO UPDATE SET usage_count = usage_counters.usage_count + EXCLUDED.usage_count,
+                     updated_at = now()
+       WHERE usage_counters.usage_count + EXCLUDED.usage_count <= $5::integer
+       RETURNING usage_count`,
+      [accountId, featureKey, periodStart, by, limit]
+    );
+    return rows.length > 0 ? Number(rows[0].usage_count) : null;
+  }
+
+  /**
    * Single atomic compensating statement for the rollback path (a consumed unit
    * is given back when the downstream paid call fails). Returns the counter
    * value after the decrement.

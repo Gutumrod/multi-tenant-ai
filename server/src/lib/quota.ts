@@ -13,15 +13,11 @@
  *   - usage already at/above the limit           -> QUOTA_EXCEEDED
  *   - `null` limit with an entitlement present   -> unlimited (consume, allow)
  *
- * The counter is consumed only when the request is allowed. The consume itself
- * is one atomic statement in the repository implementation (see
- * PostgresUsageCounterRepository.increment): the read used for the limit
- * comparison and the increment are separate statements, so two concurrent
- * requests can both observe "usage = limit - 1" and both be allowed. That
- * residual race is documented here rather than hidden: the counter can never
- * lose a write, but the check is a snapshot, not a compare-and-set. Closing it
- * needs a conditional single statement ("increment ... WHERE usage_count <
- * limit") which is deliberately not part of this work unit's declared design.
+ * Finite quota consumption is a single atomic compare-and-consume operation in
+ * the repository (`tryIncrementWithinLimit`). The limit check and increment are
+ * therefore one store operation: concurrent callers racing for the final unit
+ * cannot all pass a stale read. Unlimited quotas still use the ordinary atomic
+ * increment path.
  *
  * Local, MT01-side addition: this file is NOT part of upstream modules-hub (see
  * modules/subscription/PROVENANCE-WU3.md).
@@ -199,12 +195,27 @@ export function createQuotaGate(deps: QuotaGateDeps): QuotaGate {
         return { allowed: true, accountId, featureKey, periodStart, usage: consumed, limit: null };
       }
 
-      const check = await subscriptions.checkUsage({ accountId, featureKey, currentUsage: usage });
-      if (!check.allowed) {
-        return { allowed: false, reason: 'QUOTA_EXCEEDED', limit, ...base };
+      const consumed = await usageCounters.tryIncrementWithinLimit(
+        accountId,
+        featureKey,
+        periodStart,
+        limit
+      );
+      if (consumed === null) {
+        // Re-read only to report the authoritative current value. The decision
+        // itself was already made atomically by tryIncrementWithinLimit.
+        const currentUsage = await usageCounters.getUsage(accountId, featureKey, periodStart);
+        return {
+          allowed: false,
+          reason: 'QUOTA_EXCEEDED',
+          accountId,
+          featureKey,
+          periodStart,
+          usage: currentUsage,
+          limit,
+        };
       }
 
-      const consumed = await usageCounters.increment(accountId, featureKey, periodStart);
       return { allowed: true, accountId, featureKey, periodStart, usage: consumed, limit };
     },
 

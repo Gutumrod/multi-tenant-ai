@@ -26,14 +26,22 @@ export interface PlanRepository {
  * start of the billing period the counter belongs to, so each period starts at
  * zero without any reset job.
  *
- * `increment`/`decrement` MUST be single atomic statements on a durable store
- * (an upsert against the (accountId, featureKey, periodStart) key) and MUST
- * return the counter value after the operation: quota enforcement reads the
- * counter, and a read-then-write increment would lose writes under concurrency.
+ * `increment`/`decrement` MUST be single atomic statements on a durable store.
+ * Finite quota enforcement MUST use `tryIncrementWithinLimit`, which combines
+ * the limit check and increment in the same atomic store operation so concurrent
+ * callers cannot over-consume the final unit.
  * Implementations MUST NOT let the counter go below zero.
  */
 export interface UsageCounterRepository {
   getUsage(accountId: string, featureKey: string, periodStart: Date): Promise<number>;
   increment(accountId: string, featureKey: string, periodStart: Date, by?: number): Promise<number>;
+  /** Returns the post-consume count, or null when the requested increment would exceed limit. */
+  tryIncrementWithinLimit(
+    accountId: string,
+    featureKey: string,
+    periodStart: Date,
+    limit: number,
+    by?: number
+  ): Promise<number | null>;
   decrement(accountId: string, featureKey: string, periodStart: Date, by?: number): Promise<number>;
 }

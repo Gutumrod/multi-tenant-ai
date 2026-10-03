@@ -25,8 +25,21 @@ export const tenantAuthorizationMiddleware = (
   }
 
   try {
-    const tenantId = req.tenantContext?.tenantId ?? '';
-    requireTenantMembership(req.authContext, tenantId);
+    const requestedTenantId = req.tenantContext?.tenantId ?? '';
+    requireTenantMembership(req.authContext, requestedTenantId);
+
+    // Business handlers consume only the trusted principal's tenant id. The
+    // header-derived tenant remains a selector/audit context and is never the
+    // business-authority field after this boundary.
+    const trustedTenantId = req.authContext.tenantId;
+    if (!trustedTenantId) {
+      res.status(403).json({
+        error: 'Authenticated principal has no tenant context',
+        code: 'TENANT_ACCESS_DENIED',
+      });
+      return;
+    }
+    req.authorizedTenantId = trustedTenantId;
     next();
   } catch (error: unknown) {
     if (error instanceof AuthError) {

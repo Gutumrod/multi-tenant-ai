@@ -112,7 +112,7 @@ export const demoChargeHandler = async (
     return;
   }
 
-  const accountId = req.tenantContext?.tenantId;
+  const accountId = req.authorizedTenantId;
   if (!accountId) {
     res.status(400).json({ error: 'Missing tenant context' });
     return;
@@ -142,7 +142,7 @@ export const demoChargeHandler = async (
 
   const idempotencyKey = crypto.randomUUID();
   const referenceId = `demo_charge_${crypto.randomUUID()}`;
-  const tenantId = req.tenantContext?.tenantId;
+  const tenantId = req.authorizedTenantId;
 
   /**
    * The Stripe call itself failed (thrown, or a non-success result): release the

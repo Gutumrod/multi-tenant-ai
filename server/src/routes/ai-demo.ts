@@ -28,7 +28,7 @@ export const aiDemoHandler = async (
     return;
   }
 
-  const accountId = req.tenantContext?.tenantId;
+  const accountId = req.authorizedTenantId;
   if (!accountId) {
     res.status(400).json({ error: 'Missing tenant context' });
     return;

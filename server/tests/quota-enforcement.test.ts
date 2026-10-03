@@ -58,6 +58,7 @@ function makeReq(body: unknown, tenantId: string) {
     body,
     headers: {},
     tenantContext: { tenantId, metadata: { resolvedVia: 'test' } },
+    authorizedTenantId: tenantId,
   } as any;
 }
 

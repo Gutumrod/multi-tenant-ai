@@ -5,7 +5,10 @@ import { HeaderTenantResolver } from '../../../modules/tenant-context/adapters/h
 declare global {
   namespace Express {
     interface Request {
+      /** Caller-requested tenant selector; untrusted until tenant authorization succeeds. */
       tenantContext?: TenantContext;
+      /** Trusted effective tenant established only after authenticated membership authorization. */
+      authorizedTenantId?: string;
     }
   }
 }

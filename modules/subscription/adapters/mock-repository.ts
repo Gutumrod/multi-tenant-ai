@@ -86,6 +86,20 @@ export function createMockUsageCounterRepository(
       store.set(k, next);
       return next;
     },
+    async tryIncrementWithinLimit(
+      accountId: string,
+      featureKey: string,
+      periodStart: Date,
+      limit: number,
+      by: number = 1
+    ): Promise<number | null> {
+      const k = key(accountId, featureKey, periodStart);
+      const current = store.get(k) ?? 0;
+      const next = current + by;
+      if (next > limit) return null;
+      store.set(k, next);
+      return next;
+    },
     async decrement(
       accountId: string,
       featureKey: string,

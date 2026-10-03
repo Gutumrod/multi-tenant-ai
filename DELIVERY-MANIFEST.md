@@ -319,6 +319,7 @@ server/tests/auth-input-boundary.test.ts
 server/tests/demo-auth-gate.test.ts
 server/tests/phase-b-db-security.test.ts
 server/tests/phase-b-high-security.test.ts
+server/tests/phase-b-quota-race.test.ts
 server/tests/phase-b-surface-security.test.ts
 server/tests/postgres-persistence.test.ts
 server/tests/quota-enforcement.test.ts
