@@ -587,7 +587,7 @@ own port if you did not use `3003`.
 |---|---|---|
 | 1 | `node --version` | `v22.` or higher. / `v22.` ขึ้นไป |
 | 2 | `cd server && npm ci` then `npm run typecheck` (do **not** run this with `NODE_ENV=production` set — use `npm ci --include=dev` if you must, or the devDependencies `tsc`/`tsx` will be missing, §3.2) | exits 0 and prints no type error. / ออกด้วย 0 และไม่พิมพ์ type error |
-| 3 | `cd server && npm test` — read §6.1 first: it gives the `DATABASE_URL` prerequisite and states what the suite does to your database | with `DATABASE_URL` **set against a fresh database** it exits 0 with every test file passing: `Test Files 6 passed (6)` and `Tests 62 passed (62)`. With `DATABASE_URL` **unset** it exits 0 with `Test Files 5 passed \| 1 skipped (6)` and `Tests 57 passed \| 5 skipped (62)`. / ออกด้วย 0 โดยไฟล์เทสต์ทั้งหมดผ่าน อ่าน §6.1 ก่อน เพราะมีเงื่อนไข `DATABASE_URL` และระบุว่าชุดเทสต์แตะฐานข้อมูลของคุณอย่างไร |
+| 3 | `cd server && npm test` — read §6.1 first: it gives the `DATABASE_URL` prerequisite and states what the suite does to your database | with `DATABASE_URL` **set against a fresh database** it exits 0 with every test file passing: `Test Files 7 passed (7)` and `Tests 71 passed (71)`. With `DATABASE_URL` **unset** it exits 0 with `Test Files 6 passed \| 1 skipped (7)` and `Tests 66 passed \| 5 skipped (71)`. / ออกด้วย 0 โดยไฟล์เทสต์ทั้งหมดผ่าน อ่าน §6.1 ก่อน เพราะมีเงื่อนไข `DATABASE_URL` และระบุว่าชุดเทสต์แตะฐานข้อมูลของคุณอย่างไร |
 | 4 | start with `DATABASE_URL` unset / สตาร์ทโดยไม่ตั้ง `DATABASE_URL` | logs `persistent=false` then `Server listening on port 3003`. / พิมพ์ `persistent=false` แล้ว `Server listening on port 3003` |
 | 5 | `curl -s http://127.0.0.1:3003/health` | `{"ok":true}` / เหมือนกัน |
 | 6 | `curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:3003/` | `200` — the sample UI landing page is served. / `200` — หน้าแรกของ UI ตัวอย่างถูกเสิร์ฟ |
@@ -599,20 +599,20 @@ own port if you did not use `3003`.
 ### 6.1 `npm test` in detail — the `DATABASE_URL` prerequisite and what the suite does to your database / รายละเอียดของ `npm test` — เงื่อนไข `DATABASE_URL` และสิ่งที่ชุดเทสต์ทำกับฐานข้อมูลของคุณ
 
 **Prerequisite: `DATABASE_URL` changes what you observe.** The first observation
-in checklist item 3 — `Test Files 6 passed (6)` and `Tests 62 passed (62)` — holds
+in checklist item 3 — `Test Files 7 passed (7)` and `Tests 71 passed (71)` — holds
 **only when `DATABASE_URL` is set**. `server/tests/postgres-persistence.test.ts`
 is an integration suite that skips itself when no database is configured. With
 `DATABASE_URL` **unset** the same command still exits 0, but the observed result
-is `Test Files 5 passed | 1 skipped (6)` and `Tests 57 passed | 5 skipped (62)`,
+is `Test Files 6 passed | 1 skipped (7)` and `Tests 66 passed | 5 skipped (71)`,
 and the five skipped tests are that file's. Both results are a pass; they are
 different observations of the same suite, and the condition is the database.
 `server/tests/` holds six test files; with `DATABASE_URL` set all six run.
 
-**เงื่อนไข: `DATABASE_URL` เปลี่ยนสิ่งที่คุณเห็น** ผลแรกในข้อ 3 — `Test Files 6 passed (6)`
-และ `Tests 62 passed (62)` — เกิด**เฉพาะเมื่อตั้ง `DATABASE_URL`** ไฟล์
+**เงื่อนไข: `DATABASE_URL` เปลี่ยนสิ่งที่คุณเห็น** ผลแรกในข้อ 3 — `Test Files 7 passed (7)`
+และ `Tests 71 passed (71)` — เกิด**เฉพาะเมื่อตั้ง `DATABASE_URL`** ไฟล์
 `server/tests/postgres-persistence.test.ts` เป็นชุด integration ที่ข้ามตัวเองเมื่อไม่มี
 ฐานข้อมูล ถ้า**ไม่ตั้ง** `DATABASE_URL` คำสั่งเดิมยังออกด้วย 0 แต่ผลที่เห็นคือ
-`Test Files 5 passed | 1 skipped (6)` และ `Tests 57 passed | 5 skipped (62)` โดยห้าเทสต์
+`Test Files 6 passed | 1 skipped (7)` และ `Tests 66 passed | 5 skipped (71)` โดยห้าเทสต์
 ที่ข้ามคือของไฟล์นั้น ทั้งสองผลถือว่าผ่าน เป็นการสังเกตชุดเดียวกันต่างเงื่อนไข และเงื่อนไขคือฐานข้อมูล
 `server/tests/` มีไฟล์เทสต์หกไฟล์ เมื่อตั้ง `DATABASE_URL` ทั้งหกไฟล์จะรัน
 
@@ -621,7 +621,7 @@ With `DATABASE_URL` set, `npm test` writes subscription and ledger rows into
 whatever database is configured, and **it deletes exactly the rows it created
 again before it exits**, so repeated runs against one database leave nothing
 behind. Measured on the author's local test database: three consecutive
-full-suite runs each reported `Test Files 6 passed (6)` and `Tests 62 passed (62)`,
+full-suite runs each reported `Test Files 7 passed (7)` and `Tests 71 passed (71)`,
 and the row counts after all three runs were `subscriptions` 0 and
 `billing_event_ledger` 0. Pointing a test suite at a scratch database rather than
 a production one is still the right habit, but this suite is **repeatable**: the
@@ -654,8 +654,8 @@ before this one, that warning is obsolete.**
 **การตั้ง `DATABASE_URL` หมายถึงอะไรกับฐานข้อมูลของคุณ — แถวถูกลบให้เรียบร้อย**
 เมื่อตั้ง `DATABASE_URL` แล้ว `npm test` จะเขียนแถวของ subscription และ ledger ลงฐานข้อมูล
 ที่ถูกตั้งไว้ และ **มันลบแถวที่ตัวเองสร้างทิ้งก่อนจบ** การรันซ้ำบนฐานข้อมูลเดิมจึงไม่ทิ้งอะไรไว้
-วัดบนฐานข้อมูลทดสอบในเครื่องผู้เขียน: สามรอบรันติดกันรายงาน `Test Files 6 passed (6)` และ
-`Tests 62 passed (62)` ทุกรอบ และจำนวนแถวหลังทั้งสามรอบคือ `subscriptions` 0 และ
+วัดบนฐานข้อมูลทดสอบในเครื่องผู้เขียน: สามรอบรันติดกันรายงาน `Test Files 7 passed (7)` และ
+`Tests 71 passed (71)` ทุกรอบ และจำนวนแถวหลังทั้งสามรอบคือ `subscriptions` 0 และ
 `billing_event_ledger` 0 การชี้ชุดเทสต์ไปที่ฐานข้อมูลทดสอบแทน production ยังเป็นนิสัยที่ถูก
 แต่ชุดเทสต์นี้**รันซ้ำได้**: ใช้ฐานข้อมูลเดิมซ้ำได้ทุกรอบ แถวเหล่านั้นมาจากไฟล์เทสต์สองไฟล์ และ
 ทั้งสองไฟล์เก็บกวาดของตัวเอง:
@@ -699,7 +699,7 @@ in `server/src/lib/web-pages.ts`. Nothing else is routed.
 | GET | `/whoami` | Echoes the resolved tenant context. / สะท้อน tenant context ที่ resolve แล้ว |
 | GET | `/me` | Identity endpoint. / เส้นทางตัวตน |
 | POST | `/ai/demo` | Quota-gated AI call. / เรียก AI ซึ่งผ่านโควตาก็ |
-| POST | `/subscription/subscribe` | Creates a subscription. / สร้าง subscription |
+| POST | `/subscription/subscribe` | Self-service creates an explicitly free subscription only; paid plans require trusted billing/admin activation. / self-service สร้าง subscription ได้เฉพาะแพ็กเกจที่ระบุชัดว่า free; แพ็กเกจเสียเงินต้องผ่านเส้นทาง billing/admin ที่เชื่อถือได้ |
 | GET | `/subscription/status` | Reads subscription and entitlement. / อ่าน subscription และ entitlement |
 | POST | `/payment/demo-charge` | Quota-gated payment call. / เรียก payment ซึ่งผ่านโควตาก็ |
 
@@ -720,7 +720,7 @@ output looks like — they are **not** a claim about your machine or your host.
   database (with `DATABASE_URL` unset the same command gives
   `5 passed | 1 skipped (6)` and `57 passed | 5 skipped (62)`; see §6.1)
 - `npm test` with `DATABASE_URL` set left **no** rows behind: three consecutive
-  runs against one database each reported `6 passed (6)` / `62 passed (62)`, and
+  runs against one database each reported `7 passed (7)` / `71 passed (71)`, and
   the row counts afterwards were `subscriptions` 0 and `billing_event_ledger` 0 —
   the suite deletes the rows it creates; see §6.1
 - start without `DATABASE_URL` → `persistent=false subscriptions=Object usageCounters=Object`

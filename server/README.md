@@ -48,7 +48,7 @@ npm run test
 | `GET` | `/whoami` | Tenant-Gated | Validates `x-tenant-id` header and returns resolved tenant context. |
 | `GET` | `/me` | Tenant + Auth | Returns tenant context and authenticated user profile from Supabase JWT. |
 | `POST` | `/ai/demo` | Tenant + Auth | Executes text generation prompt with the configured AI provider, protected by `CircuitBreaker` and traced via `MemoryTracer`. |
-| `POST` | `/subscription/subscribe` | Tenant + Auth | Creates a subscription for the tenant on a chosen plan (`free` or `pro`). |
+| `POST` | `/subscription/subscribe` | Tenant + Auth + Membership | Self-service subscription creation for an explicitly free plan only. Paid plans require a trusted billing/admin activation path. |
 | `GET` | `/subscription/status` | Tenant + Auth | Retrieves active subscription status, feature access flags, and monthly quotas. |
 | `POST` | `/payment/demo-charge` | Tenant + Auth | Creates a Stripe charge using integer minor currency units (cents) and unique idempotency keys. |
 

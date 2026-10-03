@@ -7,14 +7,17 @@
 ## 1. What this is / หน้าตัวอย่างนี้คืออะไร
 
 Five static pages served by the same Express app as the API, so a buyer can see
-the starter kit working end to end: enter a demo tenant id, choose a plan, use
-the AI, and see the quota the server enforces. There is no build step, no
+the starter kit working end to end: enter a demo tenant id, activate the explicitly
+free plan, use the AI, and see the quota the server enforces. Paid plans remain
+visible in the catalogue but direct self-service activation is refused until a
+trusted billing/admin integration establishes them. There is no build step, no
 front-end framework, no CDN, no web font and no stock photo. Every visible
 sentence comes from one bilingual dictionary.
 
 หน้าตัวอย่างนี้คือหน้า static 5 หน้าที่เสิร์ฟโดย Express app ตัวเดียวกับ API เพื่อให้ผู้ซื้อเห็นว่า
-สตาร์ทเตอร์คิททำงานได้ครบเส้นทางจริง: ใส่ demo tenant id → เลือกแพ็กเกจ → ใช้ AI → เห็นโควตาที่
-เซิร์ฟเวอร์บังคับใช้จริง ไม่มีขั้นตอน build ไม่มีเฟรมเวิร์กฝั่งหน้าเว็บ ไม่มี CDN ไม่มีฟอนต์เว็บ
+สตาร์ทเตอร์คิททำงานได้ครบเส้นทางจริง: ใส่ demo tenant id → เปิดใช้แพ็กเกจ free ที่ระบุชัดว่าไม่มีราคา
+→ ใช้ AI → เห็นโควตาที่เซิร์ฟเวอร์บังคับใช้จริง ส่วนแพ็กเกจเสียเงินยังแสดงใน catalogue แต่ self-service
+จะถูกปฏิเสธจนกว่าจะมี billing/admin integration ที่เชื่อถือได้ ไม่มีขั้นตอน build ไม่มีเฟรมเวิร์กฝั่งหน้าเว็บ ไม่มี CDN ไม่มีฟอนต์เว็บ
 และไม่มีรูปสต็อก ทุกประโยคที่เห็นมาจาก dictionary สองภาษาชุดเดียว
 
 The pages are static files under `web/`; the server renders the shared shell
@@ -73,13 +76,15 @@ Exact commands, from the repository root:
 Use your own database. Migrations in `server/migrations/` are applied
 automatically at boot and are safe to run repeatedly, and the two seed plans
 (`free`, `pro`) are upserted before the first request is served. With
-`DATABASE_URL` the plan you choose on the "choose a plan" screen is written to
-the `subscriptions` table of that database.
+`DATABASE_URL`, direct self-service activation writes only the explicitly free
+plan to the `subscriptions` table. A direct `pro` attempt is refused with
+`403 PAID_PLAN_REQUIRES_TRUSTED_ACTIVATION` and writes no subscription row.
 
 ใช้ฐานข้อมูลของคุณเอง migration ใน `server/migrations/` จะถูกรันอัตโนมัติตอนบูต
 และรันซ้ำได้ปลอดภัย ส่วนแพ็กเกจ seed สองตัว (`free`, `pro`) จะถูก upsert ก่อนเสิร์ฟคำขอแรก
-เมื่อตั้ง `DATABASE_URL` แพ็กเกจที่เลือกในหน้า "เลือกแพ็กเกจ" จะถูกเขียนลงตาราง
-`subscriptions` ของฐานข้อมูลนั้น
+เมื่อตั้ง `DATABASE_URL` self-service จะเขียน subscription ได้เฉพาะแพ็กเกจ free ที่ระบุราคาเป็น 0
+ส่วนการเลือก `pro` โดยตรงจะได้ `403 PAID_PLAN_REQUIRES_TRUSTED_ACTIVATION` และไม่สร้าง row ใน
+`subscriptions`
 
 The demo-auth gate is OFF unless you set `DEMO_AUTH=true`. The commands above
 set it on the same line as the server command so it applies to that process
@@ -133,7 +138,7 @@ harness e2e จะปฏิเสธไม่รันถ้าฐานข้�
 | 1 | Landing / หน้าแรก | `/` | Explains what the sample UI is, shows the four-step flow, the demonstration-mode section, and the full not-implemented list. Carries the language switch. / อธิบายว่าหน้าตัวอย่างนี้คืออะไร แสดงเส้นทาง 4 ขั้น ส่วนโหมดสาธิต และรายการ "ยังไม่ได้ทำ" ครบถ้วน พร้อมปุ่มสลับภาษา |
 | 2 | Sign up / สมัคร | `/signup` | Enter or generate a demo tenant id, and see the plans the server actually has (read from the plan table). Creates no account and no subscription. / ใส่หรือกดสร้าง demo tenant id และดูแพ็กเกจที่เซิร์ฟเวอร์มีจริง (อ่านจากตาราง plan) หน้านี้ไม่สร้างบัญชีและไม่สร้าง subscription |
 | 3 | Log in / เข้าสู่ระบบ | `/login` | Enter the same demo tenant id again. There is no password and no verification; this screen only tells the sample UI which id to send. / ใส่ demo tenant id เดิมอีกครั้ง ไม่มีรหัสผ่านและไม่มีการตรวจสอบ หน้านี้แค่บอกหน้าตัวอย่างว่าจะส่ง id ตัวไหน |
-| 4 | Choose a plan / เลือกแพ็กเกจ | `/plans` | Shows the plan catalogue with each plan's `ai_requests_per_month` and `payments_per_month` limits, and writes your choice to the `subscriptions` table. A second attempt on the same account gets the server's own 409. / แสดงรายการแพ็กเกจพร้อมเพดาน `ai_requests_per_month` และ `payments_per_month` ของแต่ละแพ็กเกจ และเขียนตัวเลือกของคุณลงตาราง `subscriptions` ถ้าลองซ้ำบัญชีเดิมจะได้ 409 จากเซิร์ฟเวอร์เอง |
+| 4 | Choose a plan / เลือกแพ็กเกจ | `/plans` | Shows the plan catalogue with each plan's `ai_requests_per_month` and `payments_per_month` limits. Direct self-service can persist only the explicitly free plan; a paid-plan attempt is refused until trusted billing/admin activation exists. A second allowed attempt on the same account gets the server's own 409. / แสดงรายการแพ็กเกจพร้อมเพดาน `ai_requests_per_month` และ `payments_per_month` ของแต่ละแพ็กเกจ โดย self-service เขียนได้เฉพาะแพ็กเกจ free ที่ระบุราคาเป็น 0 ส่วนแพ็กเกจเสียเงินจะถูกปฏิเสธจนกว่าจะผ่าน billing/admin ที่เชื่อถือได้ ถ้าลองสร้างแพ็กเกจ free ซ้ำบัญชีเดิมจะได้ 409 จากเซิร์ฟเวอร์เอง |
 | 5 | Use the AI / ใช้ AI | `/app` | Reads `GET /me` and reports whether the server answered with a demonstration identity or the real auth path; shows the plan, the usage counter and the limit; sends `POST /ai/demo` and prints the server's response body verbatim, including 402 `QUOTA_NOT_ENTITLED` and 429 `QUOTA_EXCEEDED`. / อ่าน `GET /me` แล้วรายงานว่าเซิร์ฟเวอร์ตอบด้วยตัวตนสาธิตหรือเส้นทาง auth จริง แสดงแพ็กเกจ ตัวนับการใช้ และเพดาน ส่ง `POST /ai/demo` แล้วพิมพ์คำตอบของเซิร์ฟเวอร์ตามจริง รวมทั้ง 402 `QUOTA_NOT_ENTITLED` และ 429 `QUOTA_EXCEEDED` |
 
 Language switch / การสลับภาษา: every page has a switch in the header. It is a
@@ -176,11 +181,11 @@ also kept in `localStorage` for the next page.
   and nothing is looked up. / **ไม่มีรหัสผ่าน ไม่มีบัญชีผู้ใช้ ไม่มีโทเคน ไม่มีลายเซ็น**
   ไม่มีการตรวจสอบใด ๆ และไม่มีการค้นหาข้อมูลใด ๆ
 - **No privilege.** Every other check in the system still runs: it has no
-  subscription until you choose a plan on the plan screen, and the quota gate
-  refuses it with the real 402/429 shapes exactly as it would refuse any other
-  account. / **ไม่ได้ให้สิทธิ์ใด ๆ** การตรวจสอบอื่นทั้งหมดในระบบยังทำงานตามเดิม
-  มันไม่มี subscription จนกว่าจะเลือกแพ็กเกจในหน้าเลือกแพ็กเกจ และโควตาก็ตจะปฏิเสธ
-  ด้วยรูปแบบ 402/429 จริงเหมือนที่ปฏิเสธบัญชีอื่นทุกบัญชี
+  subscription until the explicitly free plan is activated, and a direct paid-plan
+  request is refused. The quota gate then enforces the real 402/429 shapes exactly
+  as it would for any other account. / **ไม่ได้ให้สิทธิ์ใด ๆ** การตรวจสอบอื่นทั้งหมดในระบบยังทำงานตามเดิม
+  มันไม่มี subscription จนกว่าจะเปิดใช้แพ็กเกจ free ที่ระบุราคาเป็น 0 และการขอแพ็กเกจเสียเงินโดยตรง
+  จะถูกปฏิเสธ จากนั้นโควตายังคงบังคับใช้รูปแบบ 402/429 จริงเหมือนบัญชีอื่นทุกบัญชี
 - **Never active in production.** With `DEMO_AUTH=true` and
   `NODE_ENV=production` the server refuses to mount the gate and answers 503 with
   code `DEMO_AUTH_REFUSED_IN_PRODUCTION`, and logs one line beginning

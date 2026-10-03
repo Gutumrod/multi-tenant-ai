@@ -70,7 +70,16 @@ function makeRes() {
 }
 
 function makeReq(body, tenantId) {
-  return { body, headers: {}, tenantContext: { tenantId, metadata: { resolvedVia: 'proof' } } };
+  // This harness invokes the protected handler directly rather than Express's
+  // auth + tenant-authorization chain, so model the post-authorization request
+  // contract explicitly. Cross-tenant denial itself is covered by the Phase B
+  // HTTP negative-control suite.
+  return {
+    body,
+    headers: {},
+    tenantContext: { tenantId, metadata: { resolvedVia: 'proof' } },
+    effectiveTenantId: tenantId,
+  };
 }
 
 /** Provider fetch stub: counts calls and always fails, like an unreachable provider. */

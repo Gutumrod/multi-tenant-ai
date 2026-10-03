@@ -112,9 +112,12 @@ export const demoChargeHandler = async (
     return;
   }
 
-  const accountId = req.tenantContext?.tenantId;
+  const accountId = req.effectiveTenantId;
   if (!accountId) {
-    res.status(400).json({ error: 'Missing tenant context' });
+    res.status(403).json({
+      error: 'Effective tenant authorization required',
+      code: 'TENANT_ACCESS_DENIED',
+    });
     return;
   }
 
@@ -142,7 +145,7 @@ export const demoChargeHandler = async (
 
   const idempotencyKey = crypto.randomUUID();
   const referenceId = `demo_charge_${crypto.randomUUID()}`;
-  const tenantId = req.tenantContext?.tenantId;
+  const tenantId = accountId;
 
   /**
    * The Stripe call itself failed (thrown, or a non-success result): release the

@@ -1,5 +1,5 @@
 import type { Request, Response } from 'express';
-import { subscriptionCore } from '../lib/subscriptions.js';
+import { planRepository, subscriptionCore } from '../lib/subscriptions.js';
 import { SubscriptionError } from '../../../modules/subscription/core/error.js';
 
 export const subscribeHandler = async (
@@ -12,13 +12,37 @@ export const subscribeHandler = async (
     return;
   }
 
-  const accountId = req.tenantContext?.tenantId;
+  const accountId = req.effectiveTenantId;
   if (!accountId) {
-    res.status(400).json({ error: 'Missing tenant context' });
+    res.status(403).json({
+      error: 'Effective tenant authorization required',
+      code: 'TENANT_ACCESS_DENIED',
+    });
     return;
   }
 
   try {
+    const plan = await planRepository.getById(planId);
+    if (!plan) {
+      res.status(404).json({
+        error: `Plan not found: ${planId}`,
+        code: 'PLAN_NOT_FOUND',
+      });
+      return;
+    }
+
+    // Direct self-service activation is deliberately free-only. A normal
+    // authenticated caller choosing a paid plan id is not billing evidence.
+    // Paid plans must be established by a trusted billing/admin integration
+    // outside this self-service route.
+    if (plan.priceMinorUnits !== 0) {
+      res.status(403).json({
+        error: 'Paid plans require trusted billing or admin activation',
+        code: 'PAID_PLAN_REQUIRES_TRUSTED_ACTIVATION',
+      });
+      return;
+    }
+
     const subscription = await subscriptionCore.createSubscription({
       accountId,
       planId,
@@ -46,9 +70,12 @@ export const subscriptionStatusHandler = async (
   req: Request,
   res: Response
 ): Promise<void> => {
-  const accountId = req.tenantContext?.tenantId;
+  const accountId = req.effectiveTenantId;
   if (!accountId) {
-    res.status(400).json({ error: 'Missing tenant context' });
+    res.status(403).json({
+      error: 'Effective tenant authorization required',
+      code: 'TENANT_ACCESS_DENIED',
+    });
     return;
   }
 

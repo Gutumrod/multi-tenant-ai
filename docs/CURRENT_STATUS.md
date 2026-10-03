@@ -64,7 +64,9 @@ production-only scopes; the buyer-delivered secret scan is clean; module/server 
 database-backed repeatability checks passed. This does **not** replace the dedicated adversarial
 Security Assurance phase.
 
-- Dedicated adversarial Security Assurance gate (Phase B), including auth/authorization/tenant-isolation negative controls; Critical/High shipped-runtime findings block sale
+**Phase B remediation status 2026-10-03:** the first adversarial pass found two High release blockers: caller-controlled tenant selection was not bound to the trusted authenticated principal, and the self-service subscription route could directly activate a paid plan. A bounded remediation branch now binds protected routes to an authorized effective tenant, makes direct subscription activation explicitly free-only, and carries executable cross-tenant / paid-entitlement negative controls. Focused and regression evidence is green, but this is **not SECURITY-ASSURANCE PASS**: an independent reviewer must verify the exact remediation commit and the remaining Phase B attack surface. Until then the gate remains **HOLD / STOP SALE**.
+
+- Dedicated adversarial Security Assurance gate (Phase B) — **HOLD / STOP SALE pending independent review of the remediation revision and completion of remaining attack-surface review**; Critical/High shipped-runtime findings block sale
 - Verification against a real Supabase project for the buyer auth path, including tenant-isolation negative controls
 - A clean-install proof on a buyer-style environment with none of the internal dependencies, plus a second independent end-to-end pass over the corrected deployment manual
 - Owner review and legal sign-off on the DRAFT legal documents, and an explicit price/licence decision

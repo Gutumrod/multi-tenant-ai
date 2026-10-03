@@ -1,6 +1,7 @@
 import express from 'express';
 import { tenantMiddleware } from './middleware/tenant.js';
 import { authMiddleware } from './middleware/auth.js';
+import { tenantAuthorizationMiddleware } from './middleware/tenant-authorization.js';
 import { aiDemoHandler } from './routes/ai-demo.js';
 import {
   subscribeHandler,
@@ -148,23 +149,29 @@ export function createApp(): express.Express {
     }
   }
 
-  // Tenant and auth gated user profile endpoint
-  app.get('/me', paidRoutesAuth, (req, res) => {
+  // All protected business routes pass through both identity and tenant
+  // authorization. x-tenant-id remains a selector only; no handler below may
+  // use it as an effective account id until tenantAuthorizationMiddleware binds
+  // it to the trusted principal and sets req.effectiveTenantId.
+  app.use(paidRoutesAuth, tenantAuthorizationMiddleware);
+
+  // Tenant + auth + membership gated user profile endpoint
+  app.get('/me', (req, res) => {
     res.json({
       tenant: req.tenantContext,
       auth: req.authContext,
     });
   });
 
-  // Tenant and auth gated AI demo endpoint with circuit breaker & tracing
-  app.post('/ai/demo', paidRoutesAuth, aiDemoHandler);
+  // Tenant + auth + membership gated AI demo endpoint with circuit breaker & tracing
+  app.post('/ai/demo', aiDemoHandler);
 
-  // Tenant and auth gated Subscription endpoints
-  app.post('/subscription/subscribe', paidRoutesAuth, subscribeHandler);
-  app.get('/subscription/status', paidRoutesAuth, subscriptionStatusHandler);
+  // Tenant + auth + membership gated Subscription endpoints
+  app.post('/subscription/subscribe', subscribeHandler);
+  app.get('/subscription/status', subscriptionStatusHandler);
 
-  // Tenant and auth gated Payment demo charge endpoint
-  app.post('/payment/demo-charge', paidRoutesAuth, demoChargeHandler);
+  // Tenant + auth + membership gated Payment demo charge endpoint
+  app.post('/payment/demo-charge', demoChargeHandler);
 
   return app;
 }

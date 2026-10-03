@@ -18,9 +18,12 @@ export const aiDemoHandler = async (
     return;
   }
 
-  const accountId = req.tenantContext?.tenantId;
+  const accountId = req.effectiveTenantId;
   if (!accountId) {
-    res.status(400).json({ error: 'Missing tenant context' });
+    res.status(403).json({
+      error: 'Effective tenant authorization required',
+      code: 'TENANT_ACCESS_DENIED',
+    });
     return;
   }
 

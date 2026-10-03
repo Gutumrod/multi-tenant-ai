@@ -33,11 +33,11 @@
  *
  *   a. a sales-document figure reverted to the old `51` total   -> check FAIL
  *      (EN V4's set-database file total goes back to the pre-change `(5)`,
- *      which is the old five-file summary; the ledger still states `files(6)`)
+ *      which is the old five-file summary; the ledger still states `files(7)`)
  *   b. a sales-document figure reverted to the old `46`/`(5)` file total -> FAIL
  *      (TH V4's set-database file total goes back to `(5)`)
  *   c. the ledger's LIVE figure changed, documents untouched     -> check FAIL
- *      (C39's claim cell loses the live `Tests 62 passed (62)` total)
+ *      (C39's claim cell loses the live `Tests 71 passed (71)` total)
  *   e. a sales-document figure reverted to the superseded `58` total -> FAIL
  *   f. a buyer-facing citation restored to the working-record folder -> CHECK 10 FAIL
  *      (EN's "Also in the tree" line cites the vendor folder again)
@@ -118,8 +118,8 @@ const CASES = [
       replaceOnce(
         dir,
         EN,
-        '`DATABASE_URL` **set** → exits 0 with `Test Files 6 passed (6)`',
-        '`DATABASE_URL` **set** → exits 0 with `Test Files 5 passed (5)`'
+        '`DATABASE_URL` **set** → exits 0 with `Test Files 7 passed (7)`',
+        '`DATABASE_URL` **set** → exits 0 with `Test Files 6 passed (6)`'
       ),
   },
   {
@@ -130,8 +130,8 @@ const CASES = [
       replaceOnce(
         dir,
         TH,
-        '→ ออกด้วย 0 ด้วย `Test Files 6 passed (6)`',
-        '→ ออกด้วย 0 ด้วย `Test Files 5 passed (5)`'
+        '→ ออกด้วย 0 ด้วย `Test Files 7 passed (7)`',
+        '→ ออกด้วย 0 ด้วย `Test Files 6 passed (6)`'
       ),
   },
   {
@@ -142,8 +142,8 @@ const CASES = [
       replaceOnce(
         dir,
         LEDGER,
-        '`Tests 62 passed (62)`. / ตั้ง DATABASE_URL แล้วได้ 6 passed (6)',
-        '`Tests 59 passed (59)`. / ตั้ง DATABASE_URL แล้วได้ 6 passed (6)'
+        '`Tests 71 passed (71)`. / ตั้ง DATABASE_URL แล้วได้ 7 passed (7)',
+        '`Tests 70 passed (70)`. / ตั้ง DATABASE_URL แล้วได้ 7 passed (7)'
       ),
   },
   {
@@ -161,8 +161,8 @@ const CASES = [
         EN,
         // Anchored on the V4 claim's own line, so it appears exactly once even
         // though the figure itself is stated in several places in the document.
-        '`Tests 62 passed (62)` (measured in this work unit). So: the database-backed test',
-        '`Tests 58 passed (58)` (measured in this work unit). So: the database-backed test'
+        '`Tests 71 passed (71)` (measured in this work unit). So: the database-backed test',
+        '`Tests 62 passed (62)` (measured in this work unit). So: the database-backed test'
       ),
   },
   {

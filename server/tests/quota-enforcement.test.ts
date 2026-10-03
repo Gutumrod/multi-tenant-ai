@@ -58,6 +58,9 @@ function makeReq(body: unknown, tenantId: string) {
     body,
     headers: {},
     tenantContext: { tenantId, metadata: { resolvedVia: 'test' } },
+    // Handler-level tests call the protected handler directly rather than
+    // traversing app middleware, so model the post-authorization contract.
+    effectiveTenantId: tenantId,
   } as any;
 }
 

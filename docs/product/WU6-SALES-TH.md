@@ -177,17 +177,17 @@ repository to copy.
 - **V3** — `cd server && npm run typecheck` → ออกด้วย 0 และไม่พิมพ์ type error / exits 0
   and prints no type error.
 - **V4** — `cd server && npm test` ในสองกรณี ซึ่งเห็นจริงทั้งสอง: ไม่ตั้ง
-  `DATABASE_URL` → ออกด้วย 0 ด้วย `Test Files 5 passed | 1 skipped (6)` และ
-  `Tests 57 passed | 5 skipped (62)` (วัดในใบงานนี้) โดยห้าเทสต์ที่ข้ามคือของ
+  `DATABASE_URL` → ออกด้วย 0 ด้วย `Test Files 6 passed | 1 skipped (7)` และ
+  `Tests 66 passed | 5 skipped (71)` (วัดในใบงานนี้) โดยห้าเทสต์ที่ข้ามคือของ
   `tests/postgres-persistence.test.ts` ซึ่งข้ามตัวเองเมื่อไม่มีฐานข้อมูล; ตั้ง `DATABASE_URL`
-  → ออกด้วย 0 ด้วย `Test Files 6 passed (6)` และ `Tests 62 passed (62)` (วัดในใบงานนี้)
+  → ออกด้วย 0 ด้วย `Test Files 7 passed (7)` และ `Tests 71 passed (71)` (วัดในใบงานนี้)
   สรุป: ไฟล์เทสต์ที่ใช้ฐานข้อมูลจะรันก็ต่อเมื่อตั้ง `DATABASE_URL` และตัวเลขครบชุดเกิด**เฉพาะ**
   เมื่อมีเงื่อนไขนั้น และชุดเทสต์นี้**รันซ้ำได้** — มันลบแถวที่ตัวเองสร้างทิ้ง ใช้ฐานข้อมูลเดิม
   ซ้ำได้ทุกรอบ นี่คือการสังเกตสองข้อเดียวกับที่ระบุในข้อ 6 และใน
   `docs/product/WU5-DEPLOY.md` §6.1 / `cd server && npm test` in two cases, both
-  observed: with `DATABASE_URL` unset → exit 0, `Test Files 5 passed | 1 skipped (6)`
-  and `Tests 57 passed | 5 skipped (62)`; with `DATABASE_URL` set → exit 0,
-  `Test Files 6 passed (6)` and `Tests 62 passed (62)`. The full-suite figures hold only
+  observed: with `DATABASE_URL` unset → exit 0, `Test Files 6 passed | 1 skipped (7)`
+  and `Tests 66 passed | 5 skipped (71)`; with `DATABASE_URL` set → exit 0,
+  `Test Files 7 passed (7)` and `Tests 71 passed (71)`. The full-suite figures hold only
   when `DATABASE_URL` is set, and the suite is repeatable: it deletes the rows it
   created, so the same database can be used run after run.
 - **V5** — `cd server && DATABASE_URL='<connection string ของคุณเอง>' npm run start`
@@ -288,7 +288,7 @@ UI.** There is no in-browser UI test and **no screenshots** exist in this reposi
 
 `npm test` เขียนแถว subscription และแถว ledger ลงในฐานข้อมูลที่ตั้งไว้ และ**มันลบแถวที่
 ตัวเองสร้างทิ้งก่อนจบ** การรันซ้ำบนฐานข้อมูลเดิมจึงไม่ทิ้งอะไรไว้ วัดบนฐานข้อมูลทดสอบในเครื่อง
-ผู้เขียน: สามรอบรันติดกันรายงาน `Test Files 6 passed (6)` และ `Tests 62 passed (62)` ทุกรอบ
+ผู้เขียน: สามรอบรันติดกันรายงาน `Test Files 7 passed (7)` และ `Tests 71 passed (71)` ทุกรอบ
 และจำนวนแถวหลังทั้งสามรอบคือ `subscriptions` 0 และ `billing_event_ledger` 0 การชี้ชุดเทสต์
 ไปที่ฐานข้อมูลทดสอบแทน production ยังเป็นนิสัยที่ถูก แต่ชุดเทสต์นี้**รันซ้ำได้**: ใช้ฐานข้อมูล
 เดิมซ้ำได้ทุกรอบ `docs/product/WU5-DEPLOY.md` §6.1 ระบุสถานะเดียวกันด้วยตัวเลขเดียวกัน
@@ -300,7 +300,7 @@ UI.** There is no in-browser UI test and **no screenshots** exist in this reposi
 billing event สองตัวของไฟล์นี้คงที่ (`evt_apply_1`, `evt_replay_1`) และ `event_id` ของ ledger
 เป็น primary key — แถวที่ค้างจากรอบก่อนทำให้การส่งซ้ำถูก dedupe subscription จึงไม่ถึงสถานะ
 `cancelled` นั่นเป็น defect ของชุดเทสต์ และ**แก้แล้ว** รอบที่เคยล้มเหลวตอนนี้ผ่านด้วย
-`Test Files 6 passed (6)` และ `Tests 62 passed (62)` คำเตือนที่ล้าสมัยระบุว่าจำนวนแถวเปลี่ยนจาก
+`Test Files 7 passed (7)` และ `Tests 71 passed (71)` คำเตือนที่ล้าสมัยระบุว่าจำนวนแถวเปลี่ยนจาก
 subscription 5 แถว และ ledger 3 แถว เป็น 7 แถว และ 3 แถว และระบุว่าชุดเทสต์รันซ้ำกับฐานข้อมูล
 เดิมไม่ได้ **ทั้งสองข้อความถูกล้มเลิกและไม่จริงอีกต่อไป** ถ้าคุณพบคำเตือนเรื่องแถวค้างนั้น
 ในสำเนาอื่นของเอกสารชุดนี้ หรือในเอกสารใดที่เขียนก่อนหน้านี้ **คำเตือนนั้นล้าสมัยแล้ว**
@@ -309,13 +309,13 @@ subscription 5 แถว และ ledger 3 แถว เป็น 7 แถว �
 up, and the suite is repeatable.** `npm test` writes subscription and billing-ledger
 rows into whatever database is configured and **deletes exactly the rows it created
 again before it exits**, so repeated runs against one database leave nothing behind
-(three consecutive full-suite runs each reported `6 passed (6)` / `62 passed (62)`, with
+(three consecutive full-suite runs each reported `7 passed (7)` / `71 passed (71)`, with
 `subscriptions` 0 and `billing_event_ledger` 0 afterwards). **History, so that an older
 copy does not mislead you:** an earlier version of `server/tests/webhook.test.ts`
 deleted nothing, so a run left rows behind and re-running against the same database
 used to **fail** (`AssertionError: expected 'active' to be 'cancelled'`, because the
 fixed event ids `evt_apply_1` / `evt_replay_1` collided with the ledger's primary key);
-that defect is fixed, and the run that used to fail now passes with `62 passed (62)`.
+that defect is fixed, and the run that used to fail now passes with `71 passed (71)`.
 The obsolete warning's figures (5 subscriptions and 3 ledger rows to 7 and 3) and its
 claim that the suite was not repeatable are **superseded and no longer true**.
 

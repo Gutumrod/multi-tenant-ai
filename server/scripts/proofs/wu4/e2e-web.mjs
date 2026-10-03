@@ -470,20 +470,34 @@ async function main() {
   // --- 3. plan-select-persists-to-database --------------------------------
   try {
     const accountId = nextAccountId('plan');
-    const response = await subscribe(accountId, 'pro');
+
+    // Phase B security contract: a caller-selected paid plan is not billing
+    // evidence. Direct paid activation must be refused and must not create a row.
+    const paidAttempt = await subscribe(accountId, 'pro');
+    const afterPaidAttempt = await pool.query(
+      'SELECT id, account_id, plan_id, status FROM subscriptions WHERE account_id = $1',
+      [accountId]
+    );
+
+    // The self-service reference flow remains usable for the explicitly-free
+    // plan, which is the only plan this route may activate directly.
+    const response = await subscribe(accountId, 'free');
     const { rows } = await pool.query(
       'SELECT id, account_id, plan_id, status FROM subscriptions WHERE account_id = $1',
       [accountId]
     );
     const row = rows[0];
-    // The plans screen treats a second attempt as "already subscribed" (409).
-    const repeat = await subscribe(accountId, 'pro');
+    // The plans screen treats a second allowed attempt as "already subscribed" (409).
+    const repeat = await subscribe(accountId, 'free');
 
     const ok =
+      paidAttempt.status === 403 &&
+      paidAttempt.payload?.code === 'PAID_PLAN_REQUIRES_TRUSTED_ACTIVATION' &&
+      afterPaidAttempt.rows.length === 0 &&
       response.status === 201 &&
-      response.payload?.planId === 'pro' &&
+      response.payload?.planId === 'free' &&
       rows.length === 1 &&
-      row?.plan_id === 'pro' &&
+      row?.plan_id === 'free' &&
       row?.status === 'active' &&
       repeat.status === 409 &&
       repeat.payload?.code === 'SUBSCRIPTION_ALREADY_EXISTS';
@@ -491,9 +505,10 @@ async function main() {
     record(
       'plan-select-persists-to-database',
       ok,
-      `request=POST /subscription/subscribe {"planId":"pro"} x-tenant-id=<id> x-demo-account=<id> ` +
-        `response_status=${response.status} response_plan_id=${response.payload?.planId} ` +
-        `response_subscription_id=${response.payload?.id} ` +
+      `paid_request=POST /subscription/subscribe {"planId":"pro"} paid_status=${paidAttempt.status} ` +
+        `paid_code=${paidAttempt.payload?.code} rows_after_paid_attempt=${afterPaidAttempt.rows.length} ` +
+        `free_request=POST /subscription/subscribe {"planId":"free"} response_status=${response.status} ` +
+        `response_plan_id=${response.payload?.planId} response_subscription_id=${response.payload?.id} ` +
         `database_row=${JSON.stringify(row)} repeat_select_status=${repeat.status} ` +
         `repeat_code=${repeat.payload?.code} plans_page_saved=${pages['plans-th'].file}`
     );

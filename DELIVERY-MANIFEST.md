@@ -310,6 +310,7 @@ server/src/lib/supabase.ts
 server/src/lib/web-pages.ts
 server/src/middleware/auth.ts
 server/src/middleware/demo-auth.ts
+server/src/middleware/tenant-authorization.ts
 server/src/middleware/tenant.ts
 server/src/routes/ai-demo.ts
 server/src/routes/payment-demo.ts
@@ -317,6 +318,7 @@ server/src/routes/subscription-demo.ts
 server/tests/demo-auth-gate.test.ts
 server/tests/postgres-persistence.test.ts
 server/tests/quota-enforcement.test.ts
+server/tests/security-phase-b-tenant-entitlement.test.ts
 server/tests/server.test.ts
 server/tests/webhook-rate-limit.test.ts
 server/tests/webhook.test.ts
@@ -354,6 +356,7 @@ docs/house-swarm-7/PRESALE-CLEANUP-P3B.md
 docs/house-swarm-7/PRESALE-CLEANUP-P4.md
 docs/house-swarm-7/PRESALE-RELEASE-MASTER-PLAN-2026-10-02.md
 docs/house-swarm-7/PRESALE-PHASE-A-SECURITY-2026-10-02.md
+docs/house-swarm-7/PRESALE-PHASE-B-REMEDIATION-PLAN-2026-10-03.md
 ```
 
 ---
