@@ -259,7 +259,8 @@ Phase B — SECURITY-ASSURANCE   IN PROGRESS
 R1 tenant/entitlement fix      GREEN candidate; independent review still required
 R2 HTTP/provider hardening     GREEN candidate; independent review still required
 R3/R4 DB + quota hardening     GREEN candidate; independent review still required
-R5 migration startup race     REMEDIATED / fresh independent review required
+R5 migration startup race     GREEN candidate; independent review still required
+R6 durable webhook replay     GREEN candidate; fresh independent review required
 Sale/release                   HOLD / STOP SALE
 Phase C — REAL-SUPABASE        NOT AUTHORIZED YET
 Commercial release             NOT AUTHORIZED YET
