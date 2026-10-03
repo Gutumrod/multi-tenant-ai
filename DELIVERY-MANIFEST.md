@@ -323,6 +323,7 @@ server/tests/phase-b-migration-concurrency.test.ts
 server/tests/phase-b-quota-race.test.ts
 server/tests/phase-b-surface-security.test.ts
 server/tests/phase-b-webhook-durable-idempotency.test.ts
+server/tests/phase-b-webhook-route-restart.test.ts
 server/tests/postgres-persistence.test.ts
 server/tests/quota-enforcement.test.ts
 server/tests/server.test.ts
@@ -373,6 +374,7 @@ docs/house-swarm-7/EVIDENCE-MT01-PHASE-B-R3-FULL-MATRIX-GREEN-2026-10-04.md
 docs/house-swarm-7/EVIDENCE-MT01-PHASE-B-R4-QUOTA-RACE-CLOSURE-2026-10-04.md
 docs/house-swarm-7/EVIDENCE-MT01-PHASE-B-R5-MIGRATION-CONCURRENCY-2026-10-04.md
 docs/house-swarm-7/EVIDENCE-MT01-PHASE-B-R6-DURABLE-WEBHOOK-2026-10-04.md
+docs/house-swarm-7/EVIDENCE-MT01-PHASE-B-R7-WEBHOOK-ROUTE-REPLAY-2026-10-04.md
 docs/house-swarm-7/EVIDENCE-MT01-PHASE-B-OPENCODE-BLOCKED-2026-10-03.md
 docs/house-swarm-7/PRESALE-PHASE-B-REMEDIATION-PLAN-2026-10-03.md
 docs/house-swarm-7/TASK-MT01-PHASE-B-SEC-REMEDIATION-001.md
