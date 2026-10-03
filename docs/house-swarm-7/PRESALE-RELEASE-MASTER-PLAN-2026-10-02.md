@@ -6,7 +6,7 @@
 
 **Project:** MT01 — Multi-Tenant AI Starter Kit  
 **Owner direction:** sell a secure, buyer-usable starter kit; security is part of the product, not a post-sale add-on.  
-**Current working branch:** `work/mt01-mac-continuation-20261002`  
+**Current working branch:** `work/mt01-phase-b-remediation-20261003`
 **Plan authority:** this file is the single current execution plan for work from pre-sale hardening through the first immutable commercial release.
 
 ---
@@ -102,7 +102,7 @@ Measured on macOS in the existing project workspace on 2026-10-02:
 - high/critical findings are in the development/test stack including Vitest/Vite-related
   dependencies
 
-This is a release blocker until Phase A records the remediation result. Do not use
+~~This was a release blocker pending Phase A remediation.~~ Phase A is **PASS / CLOSED as of 2026-10-03**; see `PRESALE-PHASE-A-SECURITY-2026-10-02.md`. Do not use
 `npm audit fix --force` as an uncontrolled shortcut.
 
 ---
@@ -113,7 +113,7 @@ The project now has **five execution phases** containing **seven hard sale gates
 
 ---
 
-## Phase A — Dependency & Runtime Security
+## ~~Phase A — Dependency & Runtime Security~~ — PASS / CLOSED 2026-10-03
 
 ### Objective
 
@@ -170,7 +170,7 @@ A failure here blocks Phase B promotion.
 
 ---
 
-## Phase B — Full Security Assurance / Adversarial Review
+## Phase B — Full Security Assurance / Adversarial Review — IN PROGRESS 2026-10-03
 
 ### Objective
 
@@ -501,7 +501,7 @@ For execution tracking, the five phases resolve to seven hard gates:
 | # | Gate | Phase | Current state on 2026-10-02 |
 |---|---|---|---|
 | 1 | SECURITY-DEPS | A | **PASS 2026-10-03** — 9 package roots audit clean; secret/package/runtime gates green; independent Mac recheck recorded in Phase A report |
-| 2 | SECURITY-ASSURANCE | B | **OPEN** — dedicated adversarial pass not yet run |
+| 2 | SECURITY-ASSURANCE | B | **IN PROGRESS 2026-10-03** — adversarial review found two High blockers; remediation is active under `WF-DEV-01` |
 | 3 | REAL-SUPABASE | C | **OPEN** — explicitly untested |
 | 4 | BUYER-CLEAN-INSTALL + FRESH-DEPLOY-MANUAL | C | **OPEN** |
 | 5 | COMMERCIAL/LEGAL | D | **OPEN/PARTIAL** — drafts exist |
