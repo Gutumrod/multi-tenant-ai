@@ -135,6 +135,54 @@ describe('stripe webhook -> subscription state (multi-tenant-ai)', () => {
     expect(res.status).toBe(401);
   });
 
+  it('rejects a correctly signed but stale webhook timestamp (401)', async () => {
+    const body = makeEvent('evt_stale', 'invoice.paid', 'acct_stale');
+    const stale = Math.floor(Date.now() / 1000) - 601;
+    const res = await fetch(`${baseUrl}/payment/webhook`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'stripe-signature': stripeSignature(body, stale),
+      },
+      body,
+    });
+    expect(res.status).toBe(401);
+    await expect(res.json()).resolves.toMatchObject({ code: 'WEBHOOK_EXPIRED_TIMESTAMP' });
+  });
+
+  it('rejects a correctly signed malformed JSON webhook without leaking parser detail', async () => {
+    const body = '{not-json';
+    const now = Math.floor(Date.now() / 1000);
+    const res = await fetch(`${baseUrl}/payment/webhook`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'stripe-signature': stripeSignature(body, now),
+      },
+      body,
+    });
+    expect(res.status).toBe(401);
+    await expect(res.json()).resolves.toMatchObject({
+      error: 'Webhook signature verification failed',
+      code: 'WEBHOOK_MALFORMED_JSON',
+    });
+  });
+
+  it('rejects an oversized webhook body with a sanitized 413', async () => {
+    const body = JSON.stringify({ id: 'evt_big', type: 'invoice.paid', pad: 'x'.repeat(300 * 1024) });
+    const now = Math.floor(Date.now() / 1000);
+    const res = await fetch(`${baseUrl}/payment/webhook`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'stripe-signature': stripeSignature(body, now),
+      },
+      body,
+    });
+    expect(res.status).toBe(413);
+    await expect(res.json()).resolves.toMatchObject({ code: 'REQUEST_BODY_TOO_LARGE' });
+  });
+
   it('applies a verified payment event to subscription state', async () => {
     const accountId = newAccountId('acct_apply');
     // Seed a subscription via the core directly (HTTP subscribe is auth-gated

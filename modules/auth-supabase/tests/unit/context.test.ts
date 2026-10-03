@@ -51,6 +51,31 @@ describe('Auth Context', () => {
     await expect(getCurrentUser(client)).rejects.toMatchObject({ code: 'INVALID_SESSION' });
   });
 
+  it('should reject a forged JWT as INVALID_SESSION and pass the token to Supabase', async () => {
+    const getUser = vi.fn().mockResolvedValue({
+      data: { user: null },
+      error: { message: 'invalid JWT signature', code: 'bad_jwt', status: 401 }
+    });
+    const client = { auth: { getUser } } as unknown as SupabaseAuthClient;
+
+    await expect(requireUser(client, { jwt: 'forged.header.payload' })).rejects.toMatchObject({
+      code: 'INVALID_SESSION',
+      status: 401
+    });
+    expect(getUser).toHaveBeenCalledWith('forged.header.payload');
+  });
+
+  it('should reject an unknown user even when token verification returns no provider error', async () => {
+    const getUser = vi.fn().mockResolvedValue({ data: { user: null }, error: null });
+    const client = { auth: { getUser } } as unknown as SupabaseAuthClient;
+
+    await expect(requireUser(client, { jwt: 'unknown-user-token' })).rejects.toMatchObject({
+      code: 'UNAUTHENTICATED',
+      status: 401
+    });
+    expect(getUser).toHaveBeenCalledWith('unknown-user-token');
+  });
+
   it('should throw UNAUTHENTICATED in requireUser when no user', async () => {
     const client = {
       auth: {

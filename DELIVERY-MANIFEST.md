@@ -317,6 +317,7 @@ server/src/routes/payment-demo.ts
 server/src/routes/subscription-demo.ts
 server/tests/auth-input-boundary.test.ts
 server/tests/demo-auth-gate.test.ts
+server/tests/phase-b-db-security.test.ts
 server/tests/phase-b-high-security.test.ts
 server/tests/phase-b-surface-security.test.ts
 server/tests/postgres-persistence.test.ts
