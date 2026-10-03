@@ -8,9 +8,9 @@
 **Branch:** work/mt01-phase-b-remediation-20261003
 **Worktree:** D:\AI-Workspace\runtime\worktrees\mt01-phase-b-remediation-20261003
 **Accepted implementation base:** 9a7205189fa6ef98bd06a6fb9615e4ce34f9b3a6
-**Current checkpoint:** CP-B-02 SENIOR_REMEDIATION_READY
-**Current worker:** Claude / SENIOR_DIFFICULT_REMEDIATION_ENGINEER
-**Latest dispatch:** docs/house-swarm-7/DISPATCH-MT01-PHASE-B-R1-CLAUDE-2026-10-03.md
+**Current checkpoint:** CP-B-03 OWNER_AUTHORIZED_EMERGENCY_REMEDIATION
+**Current worker:** Sol / coordinator direct bounded execution (Owner-authorized deviation)
+**Latest dispatch:** docs/house-swarm-7/DISPATCH-MT01-PHASE-B-R1-SOL-EMERGENCY-2026-10-03.md
 **Release state:** HOLD — STOP SALE
 **Production readiness:** EVIDENCE_ONLY; no readiness transition authorized.
 
@@ -92,4 +92,4 @@ Stop after implementation + required evidence at READY FOR REVIEW R1. A separate
 ## Execution History
 
 - Attempt 1 — OpenCode / deepseek-v4.1-flash:cloud: **BLOCKED_EXECUTOR_UNAVAILABLE** before implementation; no source changes. Evidence: docs/house-swarm-7/EVIDENCE-MT01-PHASE-B-OPENCODE-BLOCKED-2026-10-03.md.
-- Current authorized round — Claude / SENIOR_DIFFICULT_REMEDIATION_ENGINEER: bounded High-severity remediation only; independent review remains mandatory.
+- Claude senior-remediation round — **BLOCKED_EXECUTOR_UNAVAILABLE** because OAuth expired before execution; no source changes.`n- Qwen/Ollama fallback probe — **BLOCKED_EXECUTOR_UNAVAILABLE** because Ollama Cloud also stalled; no source changes.`n- Current authorized round — Sol coordinator direct bounded execution under explicit Owner instruction; independent review remains mandatory.
