@@ -1,5 +1,7 @@
 # AGENT DISPATCH — MT01-PHASE-B-SEC-REMEDIATION-001 / OWNER-AUTHORIZED EMERGENCY ROUND
 
+> INTERNAL — NOT DELIVERED.
+
 **Dispatch Status:** READY
 **Authority:** explicit Owner instruction in the active task to proceed
 **Executor:** Sol / coordinator direct bounded execution (documented one-round deviation)

@@ -1,5 +1,7 @@
 # AGENT DISPATCH — MT01-PHASE-B-SEC-REMEDIATION-001 / CLAUDE ROUND
 
+> INTERNAL — NOT DELIVERED.
+
 Template Version: 1.2.0  
 Policy: wstera-workflows origin/main @ c8f41ac2b51445af2e7095995be17132d103064a / policies/AGENT-DISPATCH-POLICY.md v1.4.1  
 Dispatch Status: READY

@@ -1,5 +1,5 @@
 import type { Request, Response } from 'express';
-import { subscriptionCore } from '../lib/subscriptions.js';
+import { planRepository, subscriptionCore } from '../lib/subscriptions.js';
 import { SubscriptionError } from '../../../modules/subscription/core/error.js';
 
 export const subscribeHandler = async (
@@ -19,6 +19,20 @@ export const subscribeHandler = async (
   }
 
   try {
+    const plan = await planRepository.getById(planId);
+    if (!plan) {
+      res.status(404).json({ error: 'Plan not found: ' + planId, code: 'PLAN_NOT_FOUND' });
+      return;
+    }
+
+    if ((plan.priceMinorUnits ?? 0) > 0) {
+      res.status(403).json({
+        error: 'Paid plan activation requires a trusted billing or administrative transition',
+        code: 'PAID_PLAN_REQUIRES_BILLING',
+      });
+      return;
+    }
+
     const subscription = await subscriptionCore.createSubscription({
       accountId,
       planId,

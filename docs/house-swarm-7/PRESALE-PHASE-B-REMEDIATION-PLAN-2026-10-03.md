@@ -1,5 +1,7 @@
 # MT01 — Phase B Security Remediation Execution Plan
 
+> INTERNAL — NOT DELIVERED.
+
 **Date:** 2026-10-03  
 **Project:** MT01 — Multi-Tenant AI Starter Kit  
 **Repository:** `Gutumrod/multi-tenant-ai`  

@@ -1,5 +1,7 @@
 # MT01 Phase B — OpenCode Execution Blocker Evidence
 
+> INTERNAL — NOT DELIVERED.
+
 **Date:** 2026-10-03  
 **Task:** MT01-PHASE-B-SEC-REMEDIATION-001  
 **Branch:** work/mt01-phase-b-remediation-20261003  

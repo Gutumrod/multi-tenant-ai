@@ -1,6 +1,7 @@
 import express from 'express';
 import { tenantMiddleware } from './middleware/tenant.js';
 import { authMiddleware } from './middleware/auth.js';
+import { tenantAuthorizationMiddleware } from './middleware/tenant-authorization.js';
 import { aiDemoHandler } from './routes/ai-demo.js';
 import {
   subscribeHandler,
@@ -149,7 +150,7 @@ export function createApp(): express.Express {
   }
 
   // Tenant and auth gated user profile endpoint
-  app.get('/me', paidRoutesAuth, (req, res) => {
+  app.get('/me', paidRoutesAuth, tenantAuthorizationMiddleware, (req, res) => {
     res.json({
       tenant: req.tenantContext,
       auth: req.authContext,
@@ -157,14 +158,14 @@ export function createApp(): express.Express {
   });
 
   // Tenant and auth gated AI demo endpoint with circuit breaker & tracing
-  app.post('/ai/demo', paidRoutesAuth, aiDemoHandler);
+  app.post('/ai/demo', paidRoutesAuth, tenantAuthorizationMiddleware, aiDemoHandler);
 
   // Tenant and auth gated Subscription endpoints
-  app.post('/subscription/subscribe', paidRoutesAuth, subscribeHandler);
-  app.get('/subscription/status', paidRoutesAuth, subscriptionStatusHandler);
+  app.post('/subscription/subscribe', paidRoutesAuth, tenantAuthorizationMiddleware, subscribeHandler);
+  app.get('/subscription/status', paidRoutesAuth, tenantAuthorizationMiddleware, subscriptionStatusHandler);
 
   // Tenant and auth gated Payment demo charge endpoint
-  app.post('/payment/demo-charge', paidRoutesAuth, demoChargeHandler);
+  app.post('/payment/demo-charge', paidRoutesAuth, tenantAuthorizationMiddleware, demoChargeHandler);
 
   return app;
 }

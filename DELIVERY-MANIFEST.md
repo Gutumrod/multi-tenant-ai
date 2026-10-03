@@ -311,10 +311,13 @@ server/src/lib/web-pages.ts
 server/src/middleware/auth.ts
 server/src/middleware/demo-auth.ts
 server/src/middleware/tenant.ts
+server/src/middleware/tenant-authorization.ts
 server/src/routes/ai-demo.ts
 server/src/routes/payment-demo.ts
 server/src/routes/subscription-demo.ts
+server/tests/auth-input-boundary.test.ts
 server/tests/demo-auth-gate.test.ts
+server/tests/phase-b-high-security.test.ts
 server/tests/postgres-persistence.test.ts
 server/tests/quota-enforcement.test.ts
 server/tests/server.test.ts
@@ -354,6 +357,14 @@ docs/house-swarm-7/PRESALE-CLEANUP-P3B.md
 docs/house-swarm-7/PRESALE-CLEANUP-P4.md
 docs/house-swarm-7/PRESALE-RELEASE-MASTER-PLAN-2026-10-02.md
 docs/house-swarm-7/PRESALE-PHASE-A-SECURITY-2026-10-02.md
+docs/house-swarm-7/DISPATCH-MT01-PHASE-B-R1-CLAUDE-2026-10-03.md
+docs/house-swarm-7/DISPATCH-MT01-PHASE-B-R1-OPENCODE-2026-10-03.md
+docs/house-swarm-7/DISPATCH-MT01-PHASE-B-R1-SOL-EMERGENCY-2026-10-03.md
+docs/house-swarm-7/EVIDENCE-MT01-PHASE-B-EXECUTOR-FALLBACK-2026-10-03.md
+docs/house-swarm-7/EVIDENCE-MT01-PHASE-B-HIGH-RED-2026-10-03.md
+docs/house-swarm-7/EVIDENCE-MT01-PHASE-B-OPENCODE-BLOCKED-2026-10-03.md
+docs/house-swarm-7/PRESALE-PHASE-B-REMEDIATION-PLAN-2026-10-03.md
+docs/house-swarm-7/TASK-MT01-PHASE-B-SEC-REMEDIATION-001.md
 ```
 
 ---
