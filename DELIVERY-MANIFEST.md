@@ -318,6 +318,7 @@ server/src/routes/subscription-demo.ts
 server/tests/auth-input-boundary.test.ts
 server/tests/demo-auth-gate.test.ts
 server/tests/phase-b-high-security.test.ts
+server/tests/phase-b-surface-security.test.ts
 server/tests/postgres-persistence.test.ts
 server/tests/quota-enforcement.test.ts
 server/tests/server.test.ts
@@ -363,6 +364,7 @@ docs/house-swarm-7/DISPATCH-MT01-PHASE-B-R1-SOL-EMERGENCY-2026-10-03.md
 docs/house-swarm-7/EVIDENCE-MT01-PHASE-B-EXECUTOR-FALLBACK-2026-10-03.md
 docs/house-swarm-7/EVIDENCE-MT01-PHASE-B-HIGH-RED-2026-10-03.md
 docs/house-swarm-7/EVIDENCE-MT01-PHASE-B-R1-GREEN-2026-10-03.md
+docs/house-swarm-7/EVIDENCE-MT01-PHASE-B-R2-SURFACE-GREEN-2026-10-03.md
 docs/house-swarm-7/EVIDENCE-MT01-PHASE-B-OPENCODE-BLOCKED-2026-10-03.md
 docs/house-swarm-7/PRESALE-PHASE-B-REMEDIATION-PLAN-2026-10-03.md
 docs/house-swarm-7/TASK-MT01-PHASE-B-SEC-REMEDIATION-001.md

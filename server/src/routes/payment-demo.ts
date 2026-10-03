@@ -175,7 +175,7 @@ export const demoChargeHandler = async (
           ? 400
           : 502);
       res.status(status).json({
-        error: err?.message || 'Payment processing failed',
+        error: status >= 500 ? 'Payment processing failed' : (err?.message || 'Payment request rejected'),
         code: err?.code,
         provider: err?.provider,
         ...released,
@@ -187,16 +187,20 @@ export const demoChargeHandler = async (
   } catch (error: unknown) {
     const released = await releaseConsumed();
     if (error instanceof PaymentError) {
-      res.status(error.status || 400).json({
-        error: error.message,
+      const status = error.status || 400;
+      res.status(status).json({
+        error: status >= 500 ? 'Payment processing failed' : error.message,
         code: error.code,
         provider: error.provider,
         ...released,
       });
       return;
     }
-    const message = error instanceof Error ? error.message : String(error);
-    res.status(502).json({ error: message, ...released });
+    res.status(502).json({
+      error: 'Payment provider request failed',
+      code: 'PAYMENT_PROVIDER_REQUEST_FAILED',
+      ...released,
+    });
   }
 };
 
@@ -244,7 +248,7 @@ export const paymentWebhookHandler = async (
       return;
     }
     res.status(401).json({
-      error: result.error?.message || 'Webhook signature verification failed',
+      error: 'Webhook signature verification failed',
       code: result.error?.code,
     });
     return;
@@ -254,7 +258,7 @@ export const paymentWebhookHandler = async (
     const parseResult = stripeAdapter.parsePaymentEvent(result.payload);
     if (!parseResult.success) {
       res.status(400).json({
-        error: parseResult.error?.message || 'Failed to parse webhook event',
+        error: 'Failed to parse webhook event',
         code: parseResult.error?.code,
       });
       return;
@@ -269,9 +273,11 @@ export const paymentWebhookHandler = async (
     }
 
     res.status(200).json({ received: true });
-  } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : String(error);
-    res.status(400).json({ error: message });
+  } catch (_error: unknown) {
+    res.status(400).json({
+      error: 'Webhook event could not be processed',
+      code: 'WEBHOOK_PROCESSING_FAILED',
+    });
   }
 };
 

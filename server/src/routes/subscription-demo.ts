@@ -51,8 +51,10 @@ export const subscribeHandler = async (
       res.status(400).json({ error: error.message, code: error.code });
       return;
     }
-    const message = error instanceof Error ? error.message : String(error);
-    res.status(500).json({ error: message });
+    res.status(500).json({
+      error: 'Subscription request failed',
+      code: 'SUBSCRIPTION_REQUEST_FAILED',
+    });
   }
 };
 
@@ -83,8 +85,10 @@ export const subscriptionStatusHandler = async (
       limit,
       featureKey: 'ai_requests_per_month',
     });
-  } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : String(error);
-    res.status(500).json({ error: message });
+  } catch (_error: unknown) {
+    res.status(500).json({
+      error: 'Subscription status unavailable',
+      code: 'SUBSCRIPTION_STATUS_UNAVAILABLE',
+    });
   }
 };

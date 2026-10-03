@@ -9,7 +9,7 @@
 **Execution workflow:** `WF-DEV-01 v1.4.0` / `STANDARD`  
 **Locked remediation baseline:** `work/mt01-phase-a-security-20261002` @ `0b849eefa23ed7c6d47abf494e84a8f711575a8d`  
 **Target branch:** `work/mt01-phase-b-remediation-20261003`  
-**Current release state:** `HOLD — STOP SALE`
+**Current release state:** `SECURITY-ASSURANCE IN PROGRESS — SALE/RELEASE HOLD`
 
 ## 1. Purpose
 
@@ -254,11 +254,14 @@ Retains final authority over any Medium residual acceptance and progression beyo
 ## 10. Current checkpoint
 
 ```text
-Phase A — SECURITY-DEPS        PASS
-Phase B — SECURITY-ASSURANCE   HOLD / STOP SALE
-Phase B remediation            AUTHORIZED TO START
+Phase A — SECURITY-DEPS        PASS / CLOSED
+Phase B — SECURITY-ASSURANCE   IN PROGRESS
+R1 tenant/entitlement fix      GREEN candidate; independent review still required
+R2 HTTP/provider hardening     GREEN candidate; independent review still required
+DB-backed Phase B proof        BLOCKED on current Windows executor (no PostgreSQL/Docker runtime in PATH)
+Sale/release                   HOLD / STOP SALE
 Phase C — REAL-SUPABASE        NOT AUTHORIZED YET
 Commercial release             NOT AUTHORIZED YET
 ```
 
-The first implementation action is R-B1: add failing cross-tenant and paid-entitlement negative controls on the exact Phase A baseline.
+Next execution priority: complete the remaining Phase B adversarial matrix and current-revision PostgreSQL proof, freeze the exact revision, then hand it to an independent reviewer. Do not advance to Phase C from an implementation-only GREEN result.

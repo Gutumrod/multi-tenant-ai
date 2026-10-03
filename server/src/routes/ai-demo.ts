@@ -8,6 +8,8 @@ import { tracer, aiCircuitBreaker, getConfiguredProvider } from '../lib/ai.js';
 import { quotaGate, quotaRefusalResponse } from '../lib/quota.js';
 import { AI_REQUESTS_PER_MONTH } from '../lib/subscriptions.js';
 
+const MAX_PROMPT_CHARS = 32_000;
+
 export const aiDemoHandler = async (
   req: Request,
   res: Response
@@ -15,6 +17,14 @@ export const aiDemoHandler = async (
   const { prompt } = req.body || {};
   if (!prompt || typeof prompt !== 'string') {
     res.status(400).json({ error: 'Missing or invalid prompt in request body' });
+    return;
+  }
+
+  if (prompt.length > MAX_PROMPT_CHARS) {
+    res.status(413).json({
+      error: 'Prompt exceeds the maximum supported size',
+      code: 'PROMPT_TOO_LARGE',
+    });
     return;
   }
 
@@ -65,14 +75,25 @@ export const aiDemoHandler = async (
     );
 
     if (result.success === false) {
-      // The provider call failed (possibly through the circuit breaker without
-      // throwing): release the consumed unit so an error never burns quota.
-      await quotaGate.releaseQuota({ accountId, featureKey: AI_REQUESTS_PER_MONTH });
+      // Provider-returned failure details are untrusted and may contain request,
+      // upstream or credential-adjacent data. Release quota and return a stable,
+      // sanitized application error instead of proxying the provider payload.
+      const usage = await quotaGate.releaseQuota({
+        accountId,
+        featureKey: AI_REQUESTS_PER_MONTH,
+      });
+      res.status(502).json({
+        error: 'AI provider request failed',
+        code: 'AI_PROVIDER_REQUEST_FAILED',
+        provider: providerName,
+        usage,
+        limit: quota.limit,
+      });
+      return;
     }
 
-    // Existing fields are preserved; `usage` is the consumed quota counter and
-    // `limit` the plan limit for this feature. The provider's own token usage is
-    // preserved under `tokenUsage` because `usage` is now the quota counter.
+    // Existing success fields are preserved; `usage` is the consumed quota
+    // counter and `limit` the plan limit for this feature.
     res.json({
       ...result,
       usage: quota.usage,
@@ -87,8 +108,10 @@ export const aiDemoHandler = async (
         .json({ error: 'AI provider circuit is open, try again shortly' });
       return;
     }
-    const message = error instanceof Error ? error.message : String(error);
-    res.status(502).json({ error: message });
+    res.status(502).json({
+      error: 'AI provider request failed',
+      code: 'AI_PROVIDER_REQUEST_FAILED',
+    });
   } finally {
     span.end();
   }

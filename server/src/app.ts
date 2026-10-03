@@ -27,8 +27,19 @@ import {
 } from './lib/web-pages.js';
 import { join } from 'node:path';
 
+const JSON_BODY_LIMIT = '64kb';
+const WEBHOOK_BODY_LIMIT = '256kb';
+
 export function createApp(): express.Express {
   const app = express();
+
+  app.use((_req, res, next) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'DENY');
+    res.setHeader('Referrer-Policy', 'no-referrer');
+    res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+    next();
+  });
 
   // Stripe webhook endpoint must mount BEFORE the global express.json() so the
   // scoped express.raw() below can receive the raw request buffer for signature
@@ -55,12 +66,12 @@ export function createApp(): express.Express {
   // are quota-gated elsewhere and keep their existing behaviour.
   app.post(
     '/payment/webhook',
-    express.raw({ type: 'application/json' }),
+    express.raw({ type: 'application/json', limit: WEBHOOK_BODY_LIMIT }),
     webhookRateLimitMiddleware,
     paymentWebhookHandler
   );
 
-  app.use(express.json());
+  app.use(express.json({ limit: JSON_BODY_LIMIT }));
 
   // Health check endpoint (public, does not require tenant context)
   app.get('/health', (_req, res) => {
@@ -85,10 +96,9 @@ export function createApp(): express.Express {
         res
           .type('html')
           .send(renderPage(route.file, requestLocale(req.query)));
-      } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : String(error);
+      } catch (_error: unknown) {
         res.status(500).json({
-          error: `Sample UI page could not be rendered: ${message}`,
+          error: 'Sample UI page could not be rendered',
           code: 'UI_PAGE_RENDER_FAILED',
         });
       }
@@ -166,6 +176,32 @@ export function createApp(): express.Express {
 
   // Tenant and auth gated Payment demo charge endpoint
   app.post('/payment/demo-charge', paidRoutesAuth, tenantAuthorizationMiddleware, demoChargeHandler);
+
+  // Final fail-closed HTTP error boundary. In particular, do not let body-parser
+  // syntax/size errors fall through to Express' HTML/stack-style default response.
+  app.use((error: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+    const bodyError = error as { type?: string; status?: number };
+    if (bodyError?.type === 'entity.too.large' || bodyError?.status === 413) {
+      res.status(413).json({
+        error: 'Request body too large',
+        code: 'REQUEST_BODY_TOO_LARGE',
+      });
+      return;
+    }
+
+    if (bodyError?.type === 'entity.parse.failed') {
+      res.status(400).json({
+        error: 'Invalid JSON request body',
+        code: 'INVALID_JSON',
+      });
+      return;
+    }
+
+    res.status(500).json({
+      error: 'Internal server error',
+      code: 'INTERNAL_SERVER_ERROR',
+    });
+  });
 
   return app;
 }
